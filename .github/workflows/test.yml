@@ -19,7 +19,11 @@ jobs:
 
       - name: Install dependencies
         run: |
-          pip install -e ".[dev]"
+          pip install -e .
+
+      - name: Install dev dependencies
+        run: |
+          pip install ruff mypy
 
       - name: Run linter
         run: ruff check src/

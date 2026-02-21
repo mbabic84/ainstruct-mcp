@@ -1,12 +1,10 @@
 import hashlib
 import uuid
 from datetime import datetime
-from typing import Optional
 
-from sqlalchemy import Column, String, Text, Integer, DateTime, JSON, Boolean, create_engine
-from sqlalchemy.dialects.postgresql import UUID as PG_UUID
-from sqlalchemy.orm import declarative_base, sessionmaker
 from pydantic import BaseModel
+from sqlalchemy import JSON, Boolean, Column, DateTime, String, Text, create_engine
+from sqlalchemy.orm import declarative_base
 
 Base = declarative_base()
 

@@ -1,7 +1,14 @@
-from qdrant_client import QdrantClient
-from qdrant_client.models import Distance, VectorParams, PointStruct, Filter, FieldCondition, MatchValue
-from typing import Optional, List
 import uuid
+
+from qdrant_client import QdrantClient
+from qdrant_client.models import (
+    Distance,
+    FieldCondition,
+    Filter,
+    MatchValue,
+    PointStruct,
+    VectorParams,
+)
 
 from ..config import settings
 
@@ -30,7 +37,7 @@ class QdrantService:
                 ),
             )
 
-    def get_all_collections(self) -> List[str]:
+    def get_all_collections(self) -> list[str]:
         collections = self.client.get_collections().collections
         return [c.name for c in collections]
 
@@ -41,7 +48,7 @@ class QdrantService:
     ):
         if self.is_admin:
             raise ValueError("Admin cannot upsert to all collections")
-        
+
         points = [
             PointStruct(
                 id=str(uuid.uuid4()),
@@ -61,7 +68,7 @@ class QdrantService:
         self,
         query_vector: list[float],
         limit: int = 5,
-        filter_document_id: Optional[str] = None,
+        filter_document_id: str | None = None,
     ) -> list[dict]:
         if self.is_admin:
             all_results = []
@@ -70,10 +77,10 @@ class QdrantService:
                     collection, query_vector, limit, filter_document_id
                 )
                 all_results.extend(results)
-            
+
             all_results.sort(key=lambda x: x["score"], reverse=True)
             return all_results[:limit]
-        
+
         return self._search_collection(
             self.collection_name, query_vector, limit, filter_document_id
         )
@@ -83,7 +90,7 @@ class QdrantService:
         collection_name: str,
         query_vector: list[float],
         limit: int,
-        filter_document_id: Optional[str] = None,
+        filter_document_id: str | None = None,
     ) -> list[dict]:
         query_filter = None
         if filter_document_id:
@@ -142,7 +149,7 @@ class QdrantService:
     def delete_by_point_ids(self, point_ids: list[str]):
         if self.is_admin:
             raise ValueError("Admin cannot delete by point IDs across all collections")
-        
+
         self.client.delete(
             collection_name=self.collection_name,
             points_selector=point_ids,

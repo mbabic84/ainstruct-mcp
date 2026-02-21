@@ -1,4 +1,4 @@
-from typing import Optional
+
 import httpx
 
 from ..config import settings
@@ -9,7 +9,7 @@ class EmbeddingService:
         self.api_key = settings.openrouter_api_key
         self.model = settings.embedding_model
         self.dimensions = settings.embedding_dimensions
-        self._client: Optional[httpx.AsyncClient] = None
+        self._client: httpx.AsyncClient | None = None
 
     @property
     def client(self) -> httpx.AsyncClient:
@@ -50,7 +50,7 @@ class EmbeddingService:
             self._client = None
 
 
-_embedding_service: Optional[EmbeddingService] = None
+_embedding_service: EmbeddingService | None = None
 
 
 def get_embedding_service() -> EmbeddingService:

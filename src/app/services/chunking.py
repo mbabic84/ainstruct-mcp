@@ -1,6 +1,6 @@
 import re
+
 import tiktoken
-from typing import List
 
 from ..config import settings
 
@@ -49,7 +49,7 @@ class ChunkingService:
 
             if current_tokens + section_tokens > self.max_tokens and current_chunk:
                 chunks.append(self._create_chunk(current_chunk, title, len(chunks)))
-                
+
                 overlap_text = self._get_overlap_text(current_chunk)
                 current_chunk = [overlap_text] if overlap_text else []
                 current_tokens = self.count_tokens(overlap_text) if overlap_text else 0
@@ -73,10 +73,10 @@ class ChunkingService:
 
             if current_tokens + line_tokens > self.max_tokens and current_lines:
                 chunks.append(self._create_chunk(current_lines, title, start_index + len(chunks)))
-                
+
                 overlap_lines = self._get_overlap_lines(current_lines)
                 current_lines = overlap_lines if overlap_lines else []
-                current_tokens = sum(self.count_tokens(l) for l in current_lines)
+                current_tokens = sum(self.count_tokens(line) for line in current_lines)
 
             current_lines.append(line)
             current_tokens += line_tokens
@@ -98,10 +98,10 @@ class ChunkingService:
     def _get_overlap_text(self, chunks: list[str]) -> str:
         if not chunks or self.overlap_tokens == 0:
             return ""
-        
+
         overlap_text = []
         tokens = 0
-        
+
         for chunk in reversed(chunks):
             chunk_tokens = self.count_tokens(chunk)
             if tokens + chunk_tokens <= self.overlap_tokens:
@@ -109,7 +109,7 @@ class ChunkingService:
                 tokens += chunk_tokens
             else:
                 break
-        
+
         return "\n".join(overlap_text)
 
     def _get_overlap_lines(self, lines: list[str]) -> list[str]:

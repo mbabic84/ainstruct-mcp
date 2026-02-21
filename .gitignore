@@ -49,3 +49,9 @@ qdrant_storage/
 
 .kilocode
 opencode.json
+
+# Deploy keys
+deploy_key
+deploy_key.pub
+*.pem
+*.key

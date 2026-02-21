@@ -17,7 +17,7 @@ from .models import (
 
 
 class DocumentRepository:
-    def __init__(self, engine, api_key_id: str = None):
+    def __init__(self, engine, api_key_id: str | None = None):
         self.SessionLocal = sessionmaker(bind=engine)
         self.api_key_id = api_key_id
 
@@ -203,7 +203,7 @@ class ApiKeyRepository:
         finally:
             session.close()
 
-    def create(self, key: str, label: str, qdrant_collection: str = None) -> str:
+    def create(self, key: str, label: str, qdrant_collection: str | None = None) -> str:
         session = self._get_session()
         try:
             key_hash = self.hash_key(key)
@@ -253,7 +253,7 @@ class ApiKeyRepository:
 _engine = None
 
 
-def get_document_repository(api_key_id: str = None) -> DocumentRepository:
+def get_document_repository(api_key_id: str | None = None) -> DocumentRepository:
     global _engine
     if _engine is None:
         _engine = init_db(settings.db_path)

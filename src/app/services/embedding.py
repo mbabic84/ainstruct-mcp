@@ -44,7 +44,7 @@ class EmbeddingService:
         embeddings = await self.embed_texts([query])
         return embeddings[0]
 
-    async def close(self):
+    async def close(self) -> None:
         if self._client:
             await self._client.aclose()
             self._client = None

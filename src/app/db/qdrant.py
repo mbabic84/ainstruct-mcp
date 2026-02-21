@@ -14,7 +14,7 @@ from ..config import settings
 
 
 class QdrantService:
-    def __init__(self, collection_name: str = None, is_admin: bool = False):
+    def __init__(self, collection_name: str | None = None, is_admin: bool = False):
         self.client = QdrantClient(
             url=settings.qdrant_url,
             api_key=settings.qdrant_api_key,
@@ -81,6 +81,9 @@ class QdrantService:
             all_results.sort(key=lambda x: x["score"], reverse=True)
             return all_results[:limit]
 
+        if self.collection_name is None:
+            raise ValueError("Collection name is required for non-admin search")
+
         return self._search_collection(
             self.collection_name, query_vector, limit, filter_document_id
         )
@@ -116,11 +119,11 @@ class QdrantService:
             {
                 "id": r.id,
                 "score": r.score,
-                "document_id": r.payload.get("document_id"),
-                "chunk_index": r.payload.get("chunk_index"),
-                "content": r.payload.get("content"),
-                "token_count": r.payload.get("token_count"),
-                "title": r.payload.get("title"),
+                "document_id": r.payload.get("document_id") if r.payload else None,
+                "chunk_index": r.payload.get("chunk_index") if r.payload else None,
+                "content": r.payload.get("content") if r.payload else None,
+                "token_count": r.payload.get("token_count") if r.payload else None,
+                "title": r.payload.get("title") if r.payload else None,
                 "collection": collection_name,
             }
             for r in results
@@ -131,6 +134,8 @@ class QdrantService:
             for collection in self.get_all_collections():
                 self._delete_from_collection(collection, document_id)
         else:
+            if self.collection_name is None:
+                raise ValueError("Collection name is required for non-admin delete")
             self._delete_from_collection(self.collection_name, document_id)
 
     def _delete_from_collection(self, collection_name: str, document_id: str):
@@ -156,5 +161,5 @@ class QdrantService:
         )
 
 
-def get_qdrant_service(collection_name: str = None, is_admin: bool = False) -> QdrantService:
+def get_qdrant_service(collection_name: str | None = None, is_admin: bool = False) -> QdrantService:
     return QdrantService(collection_name, is_admin)

@@ -105,8 +105,9 @@ async def search_documents(input_data: SearchDocumentsInput) -> SearchDocumentsO
     embedding_service = get_embedding_service()
 
     is_admin = api_key_info.get("is_admin", False)
+    collection = api_key_info.get("qdrant_collection")
     qdrant = get_qdrant_service(
-        api_key_info["qdrant_collection"] if not is_admin else None,
+        str(collection) if collection and not is_admin else None,
         is_admin=is_admin
     )
 
@@ -179,8 +180,9 @@ async def get_document(input_data: GetDocumentInput) -> GetDocumentOutput | None
         raise ValueError("API key not authenticated")
 
     is_admin = api_key_info.get("is_admin", False)
+    api_key_id = api_key_info.get("id")
     doc_repo = get_document_repository(
-        api_key_info["id"] if not is_admin else None
+        str(api_key_id) if api_key_id and not is_admin else None
     )
 
     doc = doc_repo.get_by_id(input_data.document_id)
@@ -216,8 +218,9 @@ async def list_documents(input_data: ListDocumentsInput) -> ListDocumentsOutput:
         raise ValueError("API key not authenticated")
 
     is_admin = api_key_info.get("is_admin", False)
+    api_key_id = api_key_info.get("id")
     doc_repo = get_document_repository(
-        api_key_info["id"] if not is_admin else None
+        str(api_key_id) if api_key_id and not is_admin else None
     )
 
     docs = doc_repo.list_all(limit=input_data.limit, offset=input_data.offset)
@@ -257,11 +260,13 @@ async def delete_document(input_data: DeleteDocumentInput) -> DeleteDocumentOutp
         raise ValueError("API key not authenticated")
 
     is_admin = api_key_info.get("is_admin", False)
+    api_key_id = api_key_info.get("id")
+    collection = api_key_info.get("qdrant_collection")
     doc_repo = get_document_repository(
-        api_key_info["id"] if not is_admin else None
+        str(api_key_id) if api_key_id and not is_admin else None
     )
     qdrant = get_qdrant_service(
-        api_key_info["qdrant_collection"] if not is_admin else None,
+        str(collection) if collection and not is_admin else None,
         is_admin=is_admin
     )
 

@@ -1,3 +1,3 @@
-__all__ = ["config", "db", "mcp", "services", "tools"]
+"""AI Document Memory MCP Server package."""
 
-from . import config, db, mcp, services, tools
+__version__ = "0.1.0"

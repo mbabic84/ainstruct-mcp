@@ -1,41 +1,41 @@
 import hashlib
 import uuid
 from datetime import datetime
-from typing import Optional
 
-from sqlalchemy import Column, String, Text, Integer, DateTime, JSON, Boolean, create_engine
-from sqlalchemy.dialects.postgresql import UUID as PG_UUID
-from sqlalchemy.orm import declarative_base, sessionmaker
 from pydantic import BaseModel
+from sqlalchemy import JSON, Boolean, DateTime, String, Text, create_engine
+from sqlalchemy.orm import DeclarativeBase, Mapped, mapped_column
 
-Base = declarative_base()
+
+class Base(DeclarativeBase):
+    pass
 
 
 class DocumentModel(Base):
     __tablename__ = "documents"
 
-    id = Column(String(36), primary_key=True, default=lambda: str(uuid.uuid4()))
-    api_key_id = Column(String(36), nullable=False, index=True)
-    title = Column(String(500), nullable=False)
-    content = Column(Text, nullable=False)
-    content_hash = Column(String(64), nullable=False, index=True)
-    document_type = Column(String(20), default="markdown")
-    created_at = Column(DateTime, default=datetime.utcnow)
-    updated_at = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
-    doc_metadata = Column(JSON, default={})
-    qdrant_point_id = Column(String(36), nullable=True)
+    id: Mapped[str] = mapped_column(String(36), primary_key=True, default=lambda: str(uuid.uuid4()))
+    api_key_id: Mapped[str] = mapped_column(String(36), nullable=False, index=True)
+    title: Mapped[str] = mapped_column(String(500), nullable=False)
+    content: Mapped[str] = mapped_column(Text, nullable=False)
+    content_hash: Mapped[str] = mapped_column(String(64), nullable=False, index=True)
+    document_type: Mapped[str] = mapped_column(String(20), default="markdown")
+    created_at: Mapped[datetime] = mapped_column(DateTime, default=datetime.utcnow)
+    updated_at: Mapped[datetime] = mapped_column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
+    doc_metadata: Mapped[dict] = mapped_column(JSON, default=dict)
+    qdrant_point_id: Mapped[str | None] = mapped_column(String(36), nullable=True)
 
 
 class ApiKeyModel(Base):
     __tablename__ = "api_keys"
 
-    id = Column(String(36), primary_key=True, default=lambda: str(uuid.uuid4()))
-    key_hash = Column(String(64), nullable=False, unique=True, index=True)
-    label = Column(String(100), nullable=False)
-    qdrant_collection = Column(String(100), nullable=False, default=lambda: str(uuid.uuid4()))
-    created_at = Column(DateTime, default=datetime.utcnow)
-    last_used = Column(DateTime, nullable=True)
-    is_active = Column(Boolean, default=True)
+    id: Mapped[str] = mapped_column(String(36), primary_key=True, default=lambda: str(uuid.uuid4()))
+    key_hash: Mapped[str] = mapped_column(String(64), nullable=False, unique=True, index=True)
+    label: Mapped[str] = mapped_column(String(100), nullable=False)
+    qdrant_collection: Mapped[str] = mapped_column(String(100), nullable=False, default=lambda: str(uuid.uuid4()))
+    created_at: Mapped[datetime] = mapped_column(DateTime, default=datetime.utcnow)
+    last_used: Mapped[datetime | None] = mapped_column(DateTime, nullable=True)
+    is_active: Mapped[bool] = mapped_column(Boolean, default=True)
 
 
 class DocumentCreate(BaseModel):

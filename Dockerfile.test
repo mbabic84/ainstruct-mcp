@@ -1,0 +1,24 @@
+FROM python:3.14-slim
+
+# Create non-root user for security best practices
+RUN groupadd --gid 1000 appgroup && \
+    useradd --uid 1000 --gid appgroup --shell /bin/bash --create-home appuser
+
+WORKDIR /app
+
+# Copy and install Python dependencies as root
+COPY pyproject.toml .
+RUN pip install --no-cache-dir -e . && \
+    pip install --no-cache-dir ruff mypy
+
+# Copy source code
+COPY src/ ./src/
+
+# Set permissions
+RUN chown -R appuser:appgroup /app
+
+# Switch to non-root user
+USER appuser
+
+# Run tests
+CMD ["sh", "-c", "ruff check src/ && mypy src/"]

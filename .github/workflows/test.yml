@@ -4,6 +4,7 @@ on:
   pull_request:
     branches:
       - main
+  workflow_call:
 
 jobs:
   test:
@@ -14,11 +15,15 @@ jobs:
       - name: Set up Python
         uses: actions/setup-python@v5
         with:
-          python-version: "3.11"
+          python-version: "3.14"
 
       - name: Install dependencies
         run: |
-          pip install -e ".[dev]"
+          pip install -e .
+
+      - name: Install dev dependencies
+        run: |
+          pip install ruff mypy
 
       - name: Run linter
         run: ruff check src/

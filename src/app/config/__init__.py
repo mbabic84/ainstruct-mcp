@@ -1,5 +1,4 @@
 from pydantic_settings import BaseSettings, SettingsConfigDict
-from typing import Optional
 
 
 class Settings(BaseSettings):
@@ -11,9 +10,9 @@ class Settings(BaseSettings):
     )
 
     qdrant_url: str = "http://localhost:6333"
-    qdrant_api_key: Optional[str] = None
+    qdrant_api_key: str | None = None
 
-    openrouter_api_key: str
+    openrouter_api_key: str = ""
     embedding_model: str = "Qwen/Qwen3-Embedding-8B"
     embedding_dimensions: int = 4096
 

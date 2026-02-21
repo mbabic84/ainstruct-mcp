@@ -1,0 +1,41 @@
+from pydantic_settings import BaseSettings, SettingsConfigDict
+from typing import Optional
+
+
+class Settings(BaseSettings):
+    model_config = SettingsConfigDict(
+        env_file=".env",
+        env_file_encoding="utf-8",
+        case_sensitive=False,
+        extra="ignore",
+    )
+
+    qdrant_url: str = "http://localhost:6333"
+    qdrant_api_key: Optional[str] = None
+
+    openrouter_api_key: str
+    embedding_model: str = "Qwen/Qwen3-Embedding-8B"
+    embedding_dimensions: int = 4096
+
+    api_keys: str = ""
+    admin_api_key: str = ""
+
+    db_path: str = "./data/documents.db"
+
+    chunk_max_tokens: int = 400
+    chunk_overlap_tokens: int = 50
+
+    search_max_results: int = 5
+    search_max_tokens: int = 2000
+
+    host: str = "0.0.0.0"
+    port: int = 8000
+
+    @property
+    def api_keys_list(self) -> list[str]:
+        if not self.api_keys:
+            return []
+        return [k.strip() for k in self.api_keys.split(",") if k.strip()]
+
+
+settings = Settings()

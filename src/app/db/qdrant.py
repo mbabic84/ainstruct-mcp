@@ -58,6 +58,8 @@ class QdrantService:
             for chunk, vector in zip(chunks, vectors)
         ]
 
+        if self.collection_name is None:
+            raise ValueError("Collection name is required for upsert")
         self.client.upsert(
             collection_name=self.collection_name,
             points=points,
@@ -155,9 +157,14 @@ class QdrantService:
         if self.is_admin:
             raise ValueError("Admin cannot delete by point IDs across all collections")
 
+        if self.collection_name is None:
+            raise ValueError("Collection name is required for delete")
+
+        from qdrant_client.models import PointIdsList
+
         self.client.delete(
             collection_name=self.collection_name,
-            points_selector=point_ids,
+            points_selector=PointIdsList(points=list(point_ids)),
         )
 
 

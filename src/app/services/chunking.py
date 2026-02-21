@@ -10,10 +10,11 @@ class ChunkingService:
     def __init__(self) -> None:
         self.max_tokens = settings.chunk_max_tokens
         self.overlap_tokens = settings.chunk_overlap_tokens
+        self.encoding: tiktoken.Encoding | None = None
         try:
             self.encoding = tiktoken.get_encoding("cl100k_base")
         except Exception:
-            self.encoding = None
+            pass
 
     def count_tokens(self, text: str) -> int:
         if self.encoding:

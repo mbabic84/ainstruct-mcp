@@ -4,9 +4,11 @@ from datetime import datetime
 
 from pydantic import BaseModel
 from sqlalchemy import JSON, Boolean, DateTime, String, Text, create_engine
-from sqlalchemy.orm import Mapped, declarative_base, mapped_column
+from sqlalchemy.orm import DeclarativeBase, Mapped, mapped_column
 
-Base = declarative_base()
+
+class Base(DeclarativeBase):
+    pass
 
 
 class DocumentModel(Base):

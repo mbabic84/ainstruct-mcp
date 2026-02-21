@@ -1,26 +1,28 @@
 import re
+from typing import Any
+
 import tiktoken
-from typing import List
 
 from ..config import settings
 
 
 class ChunkingService:
-    def __init__(self):
+    def __init__(self) -> None:
         self.max_tokens = settings.chunk_max_tokens
         self.overlap_tokens = settings.chunk_overlap_tokens
+        self.encoding: tiktoken.Encoding | None = None
         try:
             self.encoding = tiktoken.get_encoding("cl100k_base")
         except Exception:
-            self.encoding = None
+            pass
 
     def count_tokens(self, text: str) -> int:
         if self.encoding:
             return len(self.encoding.encode(text))
         return len(text) // 4
 
-    def chunk_markdown(self, content: str, title: str = "") -> list[dict]:
-        chunks = []
+    def chunk_markdown(self, content: str, title: str = "") -> list[dict[str, Any]]:
+        chunks: list[dict[str, Any]] = []
         content = content.strip()
         if not content:
             return chunks
@@ -28,7 +30,7 @@ class ChunkingService:
         header_pattern = r"(?=^#{1,6}\s+.+$)"
         sections = re.split(header_pattern, content, flags=re.MULTILINE)
 
-        current_chunk = []
+        current_chunk: list[str] = []
         current_tokens = 0
 
         for section in sections:
@@ -49,7 +51,7 @@ class ChunkingService:
 
             if current_tokens + section_tokens > self.max_tokens and current_chunk:
                 chunks.append(self._create_chunk(current_chunk, title, len(chunks)))
-                
+
                 overlap_text = self._get_overlap_text(current_chunk)
                 current_chunk = [overlap_text] if overlap_text else []
                 current_tokens = self.count_tokens(overlap_text) if overlap_text else 0
@@ -62,10 +64,10 @@ class ChunkingService:
 
         return chunks
 
-    def _chunk_large_section(self, section: str, title: str, start_index: int) -> list[dict]:
+    def _chunk_large_section(self, section: str, title: str, start_index: int) -> list[dict[str, Any]]:
         lines = section.split("\n")
-        chunks = []
-        current_lines = []
+        chunks: list[dict[str, Any]] = []
+        current_lines: list[str] = []
         current_tokens = 0
 
         for line in lines:
@@ -73,10 +75,10 @@ class ChunkingService:
 
             if current_tokens + line_tokens > self.max_tokens and current_lines:
                 chunks.append(self._create_chunk(current_lines, title, start_index + len(chunks)))
-                
+
                 overlap_lines = self._get_overlap_lines(current_lines)
                 current_lines = overlap_lines if overlap_lines else []
-                current_tokens = sum(self.count_tokens(l) for l in current_lines)
+                current_tokens = sum(self.count_tokens(line) for line in current_lines)
 
             current_lines.append(line)
             current_tokens += line_tokens
@@ -86,7 +88,7 @@ class ChunkingService:
 
         return chunks
 
-    def _create_chunk(self, content_parts: list[str], title: str, index: int) -> dict:
+    def _create_chunk(self, content_parts: list[str], title: str, index: int) -> dict[str, Any]:
         content = "\n".join(content_parts)
         return {
             "content": content,
@@ -98,10 +100,10 @@ class ChunkingService:
     def _get_overlap_text(self, chunks: list[str]) -> str:
         if not chunks or self.overlap_tokens == 0:
             return ""
-        
-        overlap_text = []
+
+        overlap_text: list[str] = []
         tokens = 0
-        
+
         for chunk in reversed(chunks):
             chunk_tokens = self.count_tokens(chunk)
             if tokens + chunk_tokens <= self.overlap_tokens:
@@ -109,14 +111,14 @@ class ChunkingService:
                 tokens += chunk_tokens
             else:
                 break
-        
+
         return "\n".join(overlap_text)
 
     def _get_overlap_lines(self, lines: list[str]) -> list[str]:
         if not lines or self.overlap_tokens == 0:
             return []
 
-        overlap_lines = []
+        overlap_lines: list[str] = []
         tokens = 0
 
         for line in reversed(lines):
@@ -130,7 +132,7 @@ class ChunkingService:
         return overlap_lines
 
 
-_chunking_service: ChunkingService = None
+_chunking_service: ChunkingService | None = None
 
 
 def get_chunking_service() -> ChunkingService:

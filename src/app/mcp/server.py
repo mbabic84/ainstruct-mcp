@@ -1,18 +1,18 @@
 from fastmcp import FastMCP
 
+from ..tools.auth import setup_auth
 from ..tools.document_tools import (
-    store_document,
-    search_documents,
-    get_document,
-    list_documents,
-    delete_document,
-    StoreDocumentInput,
-    SearchDocumentsInput,
+    DeleteDocumentInput,
     GetDocumentInput,
     ListDocumentsInput,
-    DeleteDocumentInput,
+    SearchDocumentsInput,
+    StoreDocumentInput,
+    delete_document,
+    get_document,
+    list_documents,
+    search_documents,
+    store_document,
 )
-from ..tools.auth import setup_auth
 
 mcp = FastMCP(
     name="AI Document Memory",

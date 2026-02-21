@@ -1,24 +1,23 @@
-from typing import Optional
-from datetime import datetime
 import hashlib
 import uuid
+from datetime import datetime
 
-from sqlalchemy.orm import Session, sessionmaker
 from sqlalchemy import select
+from sqlalchemy.orm import Session, sessionmaker
 
+from ..config import settings
 from .models import (
-    DocumentModel,
     ApiKeyModel,
     DocumentCreate,
+    DocumentModel,
     DocumentResponse,
-    init_db,
     compute_content_hash,
+    init_db,
 )
-from ..config import settings
 
 
 class DocumentRepository:
-    def __init__(self, engine, api_key_id: str = None):
+    def __init__(self, engine, api_key_id: str | None = None):
         self.SessionLocal = sessionmaker(bind=engine)
         self.api_key_id = api_key_id
 
@@ -29,7 +28,7 @@ class DocumentRepository:
         session = self._get_session()
         try:
             content_hash = compute_content_hash(doc.content)
-            
+
             existing = session.execute(
                 select(DocumentModel).where(
                     DocumentModel.content_hash == content_hash,
@@ -74,13 +73,13 @@ class DocumentRepository:
         finally:
             session.close()
 
-    def get_by_id(self, doc_id: str) -> Optional[DocumentResponse]:
+    def get_by_id(self, doc_id: str) -> DocumentResponse | None:
         session = self._get_session()
         try:
             query = select(DocumentModel).where(DocumentModel.id == doc_id)
             if self.api_key_id:
                 query = query.where(DocumentModel.api_key_id == self.api_key_id)
-            
+
             db_doc = session.execute(query).scalar_one_or_none()
             if not db_doc:
                 return None
@@ -103,7 +102,7 @@ class DocumentRepository:
             query = select(DocumentModel).order_by(DocumentModel.created_at.desc())
             if self.api_key_id:
                 query = query.where(DocumentModel.api_key_id == self.api_key_id)
-            
+
             docs = session.execute(
                 query.limit(limit).offset(offset)
             ).scalars().all()
@@ -130,7 +129,7 @@ class DocumentRepository:
             query = select(DocumentModel).where(DocumentModel.id == doc_id)
             if self.api_key_id:
                 query = query.where(DocumentModel.api_key_id == self.api_key_id)
-            
+
             db_doc = session.execute(query).scalar_one_or_none()
             if not db_doc:
                 return False
@@ -146,7 +145,7 @@ class DocumentRepository:
             query = select(DocumentModel).where(DocumentModel.id == doc_id)
             if self.api_key_id:
                 query = query.where(DocumentModel.api_key_id == self.api_key_id)
-            
+
             db_doc = session.execute(query).scalar_one_or_none()
             if db_doc:
                 db_doc.qdrant_point_id = ",".join(point_ids)
@@ -166,14 +165,14 @@ class ApiKeyRepository:
     def hash_key(key: str) -> str:
         return hashlib.sha256(key.encode("utf-8")).hexdigest()
 
-    def validate(self, key: str) -> Optional[dict]:
+    def validate(self, key: str) -> dict | None:
         session = self._get_session()
         try:
             key_hash = self.hash_key(key)
             api_key = session.execute(
                 select(ApiKeyModel).where(
                     ApiKeyModel.key_hash == key_hash,
-                    ApiKeyModel.is_active == True,
+                    ApiKeyModel.is_active,
                 )
             ).scalar_one_or_none()
 
@@ -189,7 +188,7 @@ class ApiKeyRepository:
         finally:
             session.close()
 
-    def get_by_id(self, key_id: str) -> Optional[dict]:
+    def get_by_id(self, key_id: str) -> dict | None:
         session = self._get_session()
         try:
             api_key = session.get(ApiKeyModel, key_id)
@@ -204,7 +203,7 @@ class ApiKeyRepository:
         finally:
             session.close()
 
-    def create(self, key: str, label: str, qdrant_collection: str = None) -> str:
+    def create(self, key: str, label: str, qdrant_collection: str | None = None) -> str:
         session = self._get_session()
         try:
             key_hash = self.hash_key(key)
@@ -254,7 +253,7 @@ class ApiKeyRepository:
 _engine = None
 
 
-def get_document_repository(api_key_id: str = None) -> DocumentRepository:
+def get_document_repository(api_key_id: str | None = None) -> DocumentRepository:
     global _engine
     if _engine is None:
         _engine = init_db(settings.db_path)

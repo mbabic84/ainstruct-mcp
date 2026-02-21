@@ -1,14 +1,13 @@
 from contextvars import ContextVar
-from typing import Optional
 
-api_key_context: ContextVar[Optional[dict]] = ContextVar("api_key_context", default=None)
+api_key_context: ContextVar[dict | None] = ContextVar("api_key_context", default=None)
 
 
 def set_api_key_info(info: dict):
     api_key_context.set(info)
 
 
-def get_api_key_info() -> Optional[dict]:
+def get_api_key_info() -> dict | None:
     return api_key_context.get()
 
 

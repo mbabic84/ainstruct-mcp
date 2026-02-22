@@ -28,7 +28,8 @@ dev = [
 ]
 
 [tool.semantic-release]
-version_variables = ["src/__init__.py:__version__", "pyproject.toml:version"]
+version_variables = ["src/__init__.py:__version__"]
+version_toml = ["pyproject.toml:project.version"]
 
 [build-system]
 requires = ["setuptools>=61.0"]

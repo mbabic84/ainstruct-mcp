@@ -282,10 +282,14 @@ class TestTokenRefresh:
 
     @pytest.mark.asyncio
     async def test_refresh_invalid_token(self):
-        with patch("app.tools.user_tools.get_auth_service") as mock_auth_factory:
+        with patch("app.tools.user_tools.get_auth_service") as mock_auth_factory, \
+             patch("app.tools.user_tools.get_user_repository") as mock_repo_factory:
             mock_auth = MagicMock()
             mock_auth.validate_refresh_token.return_value = None
             mock_auth_factory.return_value = mock_auth
+            
+            mock_repo = MagicMock()
+            mock_repo_factory.return_value = mock_repo
             
             with pytest.raises(ValueError, match="Invalid or expired refresh token"):
                 await user_refresh(RefreshInput(refresh_token="invalid_token"))

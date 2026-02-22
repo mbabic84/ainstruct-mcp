@@ -1,3 +1,16 @@
+# [1.1.0](https://github.com/mbabic84/ainstruct-mcp/compare/v1.0.0...v1.1.0) (2026-02-22)
+
+
+### Bug Fixes
+
+* correct ruff target-version and mypy python_version ([4385e6d](https://github.com/mbabic84/ainstruct-mcp/commit/4385e6d5a56931c9a6aa918df02de9f7a3e8bba2))
+* use version_toml for precise pyproject.toml version replacement ([aab70bd](https://github.com/mbabic84/ainstruct-mcp/commit/aab70bdd3669d0d02c1f5270685cc72ec212a85d))
+
+
+### Features
+
+* add update_document tool for modifying stored documents ([3c34b97](https://github.com/mbabic84/ainstruct-mcp/commit/3c34b97f164e48bcfcbc0436184aebe0d8271bc3))
+
 # 1.0.0 (2026-02-21)
 
 

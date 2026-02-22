@@ -7,11 +7,13 @@ from ..tools.document_tools import (
     ListDocumentsInput,
     SearchDocumentsInput,
     StoreDocumentInput,
+    UpdateDocumentInput,
     delete_document,
     get_document,
     list_documents,
     search_documents,
     store_document,
+    update_document,
 )
 
 mcp = FastMCP(
@@ -25,7 +27,7 @@ async def store_document_tool(
     title: str,
     content: str,
     document_type: str = "markdown",
-    doc_metadata: dict = {},
+    doc_metadata: dict | None = None,
 ) -> dict:
     """
     Store a markdown document with automatic chunking and embedding generation.
@@ -43,7 +45,7 @@ async def store_document_tool(
         title=title,
         content=content,
         document_type=document_type,
-        doc_metadata=doc_metadata,
+        doc_metadata=doc_metadata or {},
     ))
     return {
         "document_id": result.document_id,
@@ -132,6 +134,42 @@ async def delete_document_tool(document_id: str) -> dict:
     """
     result = await delete_document(DeleteDocumentInput(document_id=document_id))
     return result.model_dump()
+
+
+@mcp.tool()
+async def update_document_tool(
+    document_id: str,
+    title: str,
+    content: str,
+    document_type: str = "markdown",
+    doc_metadata: dict | None = None,
+) -> dict:
+    """
+    Update an existing document, replacing its content and re-generating embeddings.
+
+    Args:
+        document_id: UUID of the document to update
+        title: New document title
+        content: New markdown content
+        document_type: Type of document (markdown, pdf, docx, html, text, json)
+        doc_metadata: Optional custom metadata
+
+    Returns:
+        Document ID, chunk count, and total token count
+    """
+    result = await update_document(UpdateDocumentInput(
+        document_id=document_id,
+        title=title,
+        content=content,
+        document_type=document_type,
+        doc_metadata=doc_metadata or {},
+    ))
+    return {
+        "document_id": result.document_id,
+        "chunk_count": result.chunk_count,
+        "token_count": result.token_count,
+        "message": result.message,
+    }
 
 
 setup_auth(mcp)

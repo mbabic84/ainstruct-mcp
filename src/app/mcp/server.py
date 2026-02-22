@@ -1,6 +1,27 @@
 from fastmcp import FastMCP
 
+from ..tools.admin_tools import (
+    DeleteUserInput,
+    GetUserInput,
+    ListUsersInput,
+    UpdateUserInput,
+    delete_user,
+    get_user,
+    list_users,
+    update_user,
+)
 from ..tools.auth import setup_auth
+from ..tools.collection_tools import (
+    CreateCollectionInput,
+    DeleteCollectionInput,
+    GetCollectionInput,
+    RenameCollectionInput,
+    create_collection,
+    delete_collection,
+    get_collection,
+    list_collections,
+    rename_collection,
+)
 from ..tools.document_tools import (
     DeleteDocumentInput,
     GetDocumentInput,
@@ -14,6 +35,26 @@ from ..tools.document_tools import (
     search_documents,
     store_document,
     update_document,
+)
+from ..tools.key_tools import (
+    CreateApiKeyInput,
+    RevokeApiKeyInput,
+    RotateApiKeyInput,
+    create_api_key,
+    list_api_keys,
+    revoke_api_key,
+    rotate_api_key,
+)
+from ..tools.user_tools import (
+    LoginInput,
+    PromoteAdminInput,
+    RefreshInput,
+    RegisterInput,
+    promote_to_admin,
+    user_login,
+    user_profile,
+    user_refresh,
+    user_register,
 )
 
 mcp = FastMCP(
@@ -170,6 +211,323 @@ async def update_document_tool(
         "token_count": result.token_count,
         "message": result.message,
     }
+
+
+@mcp.tool()
+async def user_register_tool(
+    email: str,
+    username: str,
+    password: str,
+) -> dict:
+    """
+    Register a new user account. This tool is public and does not require authentication.
+
+    Args:
+        email: User email address
+        username: Unique username
+        password: User password
+
+    Returns:
+        Created user information
+    """
+    result = await user_register(RegisterInput(
+        email=email,
+        username=username,
+        password=password,
+    ))
+    return result.model_dump()
+
+
+@mcp.tool()
+async def promote_to_admin_tool(
+    user_id: str,
+    admin_api_key: str | None = None,
+) -> dict:
+    """
+    Promote an existing user to admin. The first promotion is automatic (no key needed).
+    Subsequent promotions require the ADMIN_API_KEY from environment.
+
+    Args:
+        user_id: UUID of the user to promote
+        admin_api_key: Required if an admin already exists (from ADMIN_API_KEY env var)
+
+    Returns:
+        Updated user information with admin rights
+    """
+    result = await promote_to_admin(PromoteAdminInput(
+        user_id=user_id,
+        admin_api_key=admin_api_key,
+    ))
+    return result.model_dump()
+
+
+@mcp.tool()
+async def user_login_tool(username: str, password: str) -> dict:
+    """
+    Authenticate a user and receive access and refresh tokens.
+
+    Args:
+        username: User username
+        password: User password
+
+    Returns:
+        Access token, refresh token, and expiry information
+    """
+    result = await user_login(LoginInput(username=username, password=password))
+    return result.model_dump()
+
+
+@mcp.tool()
+async def user_profile_tool() -> dict:
+    """
+    Get the current authenticated user's profile information.
+
+    Returns:
+        Current user profile
+    """
+    result = await user_profile()
+    return result.model_dump()
+
+
+@mcp.tool()
+async def user_refresh_tool(refresh_token: str) -> dict:
+    """
+    Refresh an access token using a valid refresh token.
+
+    Args:
+        refresh_token: Valid refresh token
+
+    Returns:
+        New access token, refresh token, and expiry information
+    """
+    result = await user_refresh(RefreshInput(refresh_token=refresh_token))
+    return result.model_dump()
+
+
+@mcp.tool()
+async def create_api_key_tool(
+    label: str,
+    collection_id: str,
+    permission: str = "read_write",
+    expires_in_days: int | None = None,
+) -> dict:
+    """
+    Create a new API key for a specific collection.
+
+    Args:
+        label: Descriptive label for the API key
+        collection_id: UUID of the collection to grant access to
+        permission: Permission level ("read" or "read_write"). Default: "read_write"
+        expires_in_days: Optional expiry in days
+
+    Returns:
+        Created API key (only shown once)
+    """
+    result = await create_api_key(CreateApiKeyInput(
+        label=label,
+        collection_id=collection_id,
+        permission=permission,
+        expires_in_days=expires_in_days,
+    ))
+    return result.model_dump()
+
+
+@mcp.tool()
+async def list_api_keys_tool() -> dict:
+    """
+    List all API keys for the current user. Admins see all keys.
+
+    Returns:
+        List of API keys (without the actual key values)
+    """
+    result = await list_api_keys()
+    return {"keys": [k.model_dump() for k in result]}
+
+
+@mcp.tool()
+async def revoke_api_key_tool(key_id: str) -> dict:
+    """
+    Revoke (deactivate) an API key.
+
+    Args:
+        key_id: ID of the API key to revoke
+
+    Returns:
+        Success confirmation
+    """
+    result = await revoke_api_key(RevokeApiKeyInput(key_id=key_id))
+    return result
+
+
+@mcp.tool()
+async def rotate_api_key_tool(key_id: str) -> dict:
+    """
+    Rotate an API key. The old key is revoked and a new one is created.
+
+    Args:
+        key_id: ID of the API key to rotate
+
+    Returns:
+        New API key (only shown once)
+    """
+    result = await rotate_api_key(RotateApiKeyInput(key_id=key_id))
+    return result.model_dump()
+
+
+@mcp.tool()
+async def create_collection_tool(name: str) -> dict:
+    """
+    Create a new collection owned by the authenticated user.
+
+    Args:
+        name: User-friendly name for the collection
+
+    Returns:
+        Created collection information
+    """
+    result = await create_collection(CreateCollectionInput(name=name))
+    return result.model_dump()
+
+
+@mcp.tool()
+async def list_collections_tool() -> dict:
+    """
+    List all collections owned by the authenticated user.
+
+    Returns:
+        List of collections
+    """
+    result = await list_collections()
+    return {"collections": [c.model_dump() for c in result]}
+
+
+@mcp.tool()
+async def get_collection_tool(collection_id: str) -> dict:
+    """
+    Get details of a specific collection.
+
+    Args:
+        collection_id: UUID of the collection
+
+    Returns:
+        Collection details with document and API key counts
+    """
+    result = await get_collection(GetCollectionInput(collection_id=collection_id))
+    return result.model_dump()
+
+
+@mcp.tool()
+async def delete_collection_tool(collection_id: str) -> dict:
+    """
+    Delete a collection and all its documents. Requires no active API keys.
+
+    Args:
+        collection_id: UUID of the collection to delete
+
+    Returns:
+        Success confirmation
+    """
+    result = await delete_collection(DeleteCollectionInput(collection_id=collection_id))
+    return result
+
+
+@mcp.tool()
+async def rename_collection_tool(collection_id: str, name: str) -> dict:
+    """
+    Rename a collection.
+
+    Args:
+        collection_id: UUID of the collection to rename
+        name: New name for the collection
+
+    Returns:
+        Updated collection information
+    """
+    result = await rename_collection(RenameCollectionInput(
+        collection_id=collection_id,
+        name=name,
+    ))
+    return result.model_dump()
+
+
+@mcp.tool()
+async def list_users_tool(limit: int = 50, offset: int = 0) -> dict:
+    """
+    List all users. Requires admin scope.
+
+    Args:
+        limit: Number of users to return (default: 50)
+        offset: Pagination offset (default: 0)
+
+    Returns:
+        List of users
+    """
+    result = await list_users(ListUsersInput(limit=limit, offset=offset))
+    return {"users": [u.model_dump() for u in result]}
+
+
+@mcp.tool()
+async def get_user_tool(user_id: str) -> dict:
+    """
+    Get a specific user by ID. Requires admin scope.
+
+    Args:
+        user_id: UUID of the user
+
+    Returns:
+        User information
+    """
+    result = await get_user(GetUserInput(user_id=user_id))
+    return result.model_dump()
+
+
+@mcp.tool()
+async def update_user_tool(
+    user_id: str,
+    email: str | None = None,
+    username: str | None = None,
+    password: str | None = None,
+    is_active: bool | None = None,
+    is_superuser: bool | None = None,
+) -> dict:
+    """
+    Update a user. Requires admin scope.
+
+    Args:
+        user_id: UUID of the user to update
+        email: New email address
+        username: New username
+        password: New password
+        is_active: Account active status
+        is_superuser: Superuser status
+
+    Returns:
+        Updated user information
+    """
+    result = await update_user(UpdateUserInput(
+        user_id=user_id,
+        email=email,
+        username=username,
+        password=password,
+        is_active=is_active,
+        is_superuser=is_superuser,
+    ))
+    return result.model_dump()
+
+
+@mcp.tool()
+async def delete_user_tool(user_id: str) -> dict:
+    """
+    Delete a user. Requires admin scope.
+
+    Args:
+        user_id: UUID of the user to delete
+
+    Returns:
+        Success confirmation
+    """
+    result = await delete_user(DeleteUserInput(user_id=user_id))
+    return result
 
 
 setup_auth(mcp)

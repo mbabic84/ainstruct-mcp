@@ -37,6 +37,9 @@ async def list_collections() -> list[CollectionListResponse]:
         raise ValueError("JWT authentication required")
 
     user_id = user_info.get("id")
+    if not user_id:
+        raise ValueError("Invalid user info")
+
     repo = get_collection_repository()
     collections = repo.list_by_user(user_id)
 

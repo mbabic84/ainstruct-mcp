@@ -53,6 +53,8 @@ async def create_api_key(input_data: CreateApiKeyInput) -> ApiKeyResponse:
     )
 
     key_info = repo.get_by_id(key_id)
+    if not key_info:
+        raise ValueError("Failed to retrieve key info")
 
     return ApiKeyResponse(
         id=key_id,
@@ -131,6 +133,8 @@ async def rotate_api_key(input_data: RotateApiKeyInput) -> ApiKeyResponse:
 
     new_key_id, new_key = result
     new_key_info = repo.get_by_id(new_key_id)
+    if not new_key_info:
+        raise ValueError("Failed to retrieve new key info")
 
     return ApiKeyResponse(
         id=new_key_id,

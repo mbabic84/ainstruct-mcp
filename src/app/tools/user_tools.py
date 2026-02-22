@@ -72,10 +72,13 @@ async def promote_to_admin(input_data: PromoteAdminInput) -> UserResponse:
     if user.is_superuser:
         raise ValueError("User is already an admin")
 
-    return repo.update(
+    updated = repo.update(
         user_id=input_data.user_id,
         is_superuser=True,
     )
+    if not updated:
+        raise ValueError("Failed to update user")
+    return updated
 
 
 async def user_login(input_data: LoginInput) -> TokenResponse:
@@ -139,6 +142,8 @@ async def user_refresh(input_data: RefreshInput) -> TokenResponse:
         raise ValueError("Invalid or expired refresh token")
 
     user_id = payload.get("sub")
+    if not user_id:
+        raise ValueError("Invalid token payload")
     user = repo.get_by_id(user_id)
 
     if not user:

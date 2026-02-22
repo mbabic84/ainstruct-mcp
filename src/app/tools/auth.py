@@ -1,4 +1,5 @@
 import hashlib
+from collections.abc import Callable
 
 from fastmcp import FastMCP
 from fastmcp.server.dependencies import get_http_headers
@@ -6,7 +7,14 @@ from fastmcp.server.middleware import Middleware, MiddlewareContext
 
 from ..config import settings
 from ..db import get_api_key_repository
-from .context import clear_api_key_info, set_api_key_info
+from ..db.models import Permission, Scope
+from ..services import get_auth_service
+from .context import (
+    clear_all_auth,
+    set_api_key_info,
+    set_auth_type,
+    set_user_info,
+)
 
 
 def _key_to_collection(key: str) -> str:
@@ -22,8 +30,10 @@ def verify_api_key(api_key: str) -> dict | None:
         return {
             "id": "admin",
             "label": "admin",
+            "collection_id": None,
             "qdrant_collection": None,
             "is_admin": True,
+            "permission": Permission.READ_WRITE,
         }
 
     repo = get_api_key_repository()
@@ -33,33 +43,127 @@ def verify_api_key(api_key: str) -> dict | None:
             return {
                 "id": f"env_{hashlib.sha256(api_key.encode()).hexdigest()[:8]}",
                 "label": "env",
+                "collection_id": None,
                 "qdrant_collection": _key_to_collection(api_key),
                 "is_admin": False,
+                "permission": Permission.READ_WRITE,
             }
 
     return repo.validate(api_key)
 
 
+def verify_jwt_token(token: str) -> dict | None:
+    if not token:
+        return None
+
+    auth_service = get_auth_service()
+    payload = auth_service.validate_access_token(token)
+
+    if not payload:
+        return None
+
+    return {
+        "id": payload.get("sub"),
+        "username": payload.get("username"),
+        "email": payload.get("email"),
+        "is_superuser": payload.get("is_superuser", False),
+        "scopes": [Scope(s) for s in payload.get("scopes", ["read"])],
+    }
+
+
+def is_jwt_token(token: str) -> bool:
+    parts = token.split(".")
+    return len(parts) == 3
+
+
+PUBLIC_TOOLS: set[str] = {
+    "user_register_tool",
+    "user_login_tool",
+    "promote_to_admin_tool",
+}
+
+
+def is_public_tool(tool_name: str) -> bool:
+    return tool_name in PUBLIC_TOOLS
+
+
 class AuthMiddleware(Middleware):
     async def on_request(self, context: MiddlewareContext, call_next):
+        tool_name = getattr(context, "tool_name", None) or getattr(context, "name", None)
+
         headers = get_http_headers()
         auth_header = headers.get("authorization", "")
+
+        # For public tools, allow missing/empty auth
+        if tool_name and is_public_tool(tool_name):
+            if not auth_header or auth_header == "Bearer " or auth_header == "Bearer placeholder":
+                return await call_next(context)
 
         if not auth_header.startswith("Bearer "):
             raise ValueError("Missing or invalid Authorization header")
 
-        api_key = auth_header[7:].strip()
-        api_key_info = verify_api_key(api_key)
+        token = auth_header[7:].strip()
 
-        if not api_key_info:
-            raise ValueError("Invalid API key")
+        if not token:
+            raise ValueError("Missing token in Authorization header")
 
-        set_api_key_info(api_key_info)
+        if is_jwt_token(token):
+            user_info = verify_jwt_token(token)
+            if not user_info:
+                raise ValueError("Invalid or expired JWT token")
+            set_user_info(user_info)
+            set_auth_type("jwt")
+        else:
+            api_key_info = verify_api_key(token)
+            if not api_key_info:
+                raise ValueError("Invalid API key")
+            set_api_key_info(api_key_info)
+            set_auth_type("api_key")
 
         try:
             return await call_next(context)
         finally:
-            clear_api_key_info()
+            clear_all_auth()
+
+
+def require_scope(required_scope: Scope) -> Callable:
+    def decorator(func: Callable) -> Callable:
+        async def wrapper(*args, **kwargs):
+            from .context import get_api_key_info, get_user_info, has_write_permission
+
+            user_info = get_user_info()
+            if user_info:
+                if user_info.get("is_superuser"):
+                    return await func(*args, **kwargs)
+                scopes = user_info.get("scopes", [])
+                if required_scope in scopes:
+                    return await func(*args, **kwargs)
+
+            api_key_info = get_api_key_info()
+            if api_key_info:
+                if api_key_info.get("is_admin"):
+                    return await func(*args, **kwargs)
+                if required_scope == Scope.WRITE:
+                    if has_write_permission():
+                        return await func(*args, **kwargs)
+                elif required_scope == Scope.READ:
+                    return await func(*args, **kwargs)
+
+            raise ValueError(f"Insufficient permissions: requires '{required_scope.value}' scope")
+
+        return wrapper
+    return decorator
+
+
+def require_write_permission(func: Callable) -> Callable:
+    async def wrapper(*args, **kwargs):
+        from .context import has_write_permission
+
+        if not has_write_permission():
+            raise ValueError("Insufficient permissions: write access required")
+        return await func(*args, **kwargs)
+
+    return wrapper
 
 
 def setup_auth(mcp: FastMCP):

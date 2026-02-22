@@ -7,7 +7,7 @@ from ..db import (
     get_qdrant_service,
 )
 from ..services import get_chunking_service, get_embedding_service
-from .context import get_api_key_info
+from .context import get_auth_context, has_write_permission
 
 
 class StoreDocumentInput(BaseModel):
@@ -25,20 +25,26 @@ class StoreDocumentOutput(BaseModel):
 
 
 async def store_document(input_data: StoreDocumentInput) -> StoreDocumentOutput:
-    api_key_info = get_api_key_info()
-    if not api_key_info:
-        raise ValueError("API key not authenticated")
+    auth = get_auth_context()
+    if not auth:
+        raise ValueError("Not authenticated")
 
-    if api_key_info.get("is_admin"):
-        raise ValueError("Admin cannot store documents")
+    if auth.get("auth_type") == "jwt":
+        raise ValueError("JWT users cannot store documents directly. Create an API key with read_write permission.")
 
-    doc_repo = get_document_repository(api_key_info["id"])
-    qdrant = get_qdrant_service(api_key_info["qdrant_collection"])
+    if not has_write_permission():
+        raise ValueError("Insufficient permissions: read_write permission required to store documents")
+
+    collection = auth["qdrant_collection"]
+    collection_id = auth["collection_id"]
+
+    doc_repo = get_document_repository(collection_id)
+    qdrant = get_qdrant_service(collection)
     embedding_service = get_embedding_service()
     chunking_service = get_chunking_service()
 
     doc = doc_repo.create(DocumentCreate(
-        api_key_id=api_key_info["id"],
+        collection_id=collection_id,
         title=input_data.title,
         content=input_data.content,
         document_type=input_data.document_type,
@@ -98,14 +104,14 @@ class SearchDocumentsOutput(BaseModel):
 
 
 async def search_documents(input_data: SearchDocumentsInput) -> SearchDocumentsOutput:
-    api_key_info = get_api_key_info()
-    if not api_key_info:
-        raise ValueError("API key not authenticated")
+    auth = get_auth_context()
+    if not auth:
+        raise ValueError("Not authenticated")
 
     embedding_service = get_embedding_service()
 
-    is_admin = api_key_info.get("is_admin", False)
-    collection = api_key_info.get("qdrant_collection")
+    is_admin = auth.get("is_admin", False) or auth.get("is_superuser", False)
+    collection = auth.get("qdrant_collection")
     qdrant = get_qdrant_service(
         str(collection) if collection and not is_admin else None,
         is_admin=is_admin
@@ -165,7 +171,7 @@ class GetDocumentInput(BaseModel):
 
 class GetDocumentOutput(BaseModel):
     id: str
-    api_key_id: str
+    collection_id: str
     title: str
     content: str
     document_type: str
@@ -175,14 +181,14 @@ class GetDocumentOutput(BaseModel):
 
 
 async def get_document(input_data: GetDocumentInput) -> GetDocumentOutput | None:
-    api_key_info = get_api_key_info()
-    if not api_key_info:
-        raise ValueError("API key not authenticated")
+    auth = get_auth_context()
+    if not auth:
+        raise ValueError("Not authenticated")
 
-    is_admin = api_key_info.get("is_admin", False)
-    api_key_id = api_key_info.get("id")
+    is_admin = auth.get("is_admin", False) or auth.get("is_superuser", False)
+    collection_id = auth.get("collection_id")
     doc_repo = get_document_repository(
-        str(api_key_id) if api_key_id and not is_admin else None
+        str(collection_id) if collection_id and not is_admin else None
     )
 
     doc = doc_repo.get_by_id(input_data.document_id)
@@ -192,7 +198,7 @@ async def get_document(input_data: GetDocumentInput) -> GetDocumentOutput | None
 
     return GetDocumentOutput(
         id=doc.id,
-        api_key_id=doc.api_key_id,
+        collection_id=doc.collection_id,
         title=doc.title,
         content=doc.content,
         document_type=doc.document_type,
@@ -213,14 +219,14 @@ class ListDocumentsOutput(BaseModel):
 
 
 async def list_documents(input_data: ListDocumentsInput) -> ListDocumentsOutput:
-    api_key_info = get_api_key_info()
-    if not api_key_info:
-        raise ValueError("API key not authenticated")
+    auth = get_auth_context()
+    if not auth:
+        raise ValueError("Not authenticated")
 
-    is_admin = api_key_info.get("is_admin", False)
-    api_key_id = api_key_info.get("id")
+    is_admin = auth.get("is_admin", False) or auth.get("is_superuser", False)
+    collection_id = auth.get("collection_id")
     doc_repo = get_document_repository(
-        str(api_key_id) if api_key_id and not is_admin else None
+        str(collection_id) if collection_id and not is_admin else None
     )
 
     docs = doc_repo.list_all(limit=input_data.limit, offset=input_data.offset)
@@ -228,7 +234,7 @@ async def list_documents(input_data: ListDocumentsInput) -> ListDocumentsOutput:
     documents = [
         GetDocumentOutput(
             id=d.id,
-            api_key_id=d.api_key_id,
+            collection_id=d.collection_id,
             title=d.title,
             content=d.content,
             document_type=d.document_type,
@@ -255,15 +261,21 @@ class DeleteDocumentOutput(BaseModel):
 
 
 async def delete_document(input_data: DeleteDocumentInput) -> DeleteDocumentOutput:
-    api_key_info = get_api_key_info()
-    if not api_key_info:
-        raise ValueError("API key not authenticated")
+    auth = get_auth_context()
+    if not auth:
+        raise ValueError("Not authenticated")
 
-    is_admin = api_key_info.get("is_admin", False)
-    api_key_id = api_key_info.get("id")
-    collection = api_key_info.get("qdrant_collection")
+    if auth.get("auth_type") == "jwt":
+        raise ValueError("JWT users cannot delete documents directly. Create an API key with read_write permission.")
+
+    if not has_write_permission():
+        raise ValueError("Insufficient permissions: read_write permission required to delete documents")
+
+    is_admin = auth.get("is_admin", False) or auth.get("is_superuser", False)
+    collection_id = auth.get("collection_id")
+    collection = auth.get("qdrant_collection")
     doc_repo = get_document_repository(
-        str(api_key_id) if api_key_id and not is_admin else None
+        str(collection_id) if collection_id and not is_admin else None
     )
     qdrant = get_qdrant_service(
         str(collection) if collection and not is_admin else None,
@@ -304,16 +316,19 @@ class UpdateDocumentOutput(BaseModel):
 
 
 async def update_document(input_data: UpdateDocumentInput) -> UpdateDocumentOutput:
-    api_key_info = get_api_key_info()
-    if not api_key_info:
-        raise ValueError("API key not authenticated")
+    auth = get_auth_context()
+    if not auth:
+        raise ValueError("Not authenticated")
 
-    if api_key_info.get("is_admin"):
-        raise ValueError("Admin cannot update documents")
+    if auth.get("auth_type") == "jwt":
+        raise ValueError("JWT users cannot update documents directly. Create an API key with read_write permission.")
 
-    api_key_id = api_key_info["id"]
-    collection = api_key_info["qdrant_collection"]
-    doc_repo = get_document_repository(api_key_id)
+    if not has_write_permission():
+        raise ValueError("Insufficient permissions: read_write permission required to update documents")
+
+    collection_id = auth["collection_id"]
+    collection = auth["qdrant_collection"]
+    doc_repo = get_document_repository(collection_id)
     qdrant = get_qdrant_service(collection)
     embedding_service = get_embedding_service()
     chunking_service = get_chunking_service()

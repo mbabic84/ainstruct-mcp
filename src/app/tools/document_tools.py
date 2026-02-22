@@ -1,5 +1,5 @@
 
-from pydantic import BaseModel
+from pydantic import BaseModel, Field
 
 from ..db import (
     DocumentCreate,
@@ -14,7 +14,7 @@ class StoreDocumentInput(BaseModel):
     title: str
     content: str
     document_type: str = "markdown"
-    doc_metadata: dict = {}
+    doc_metadata: dict = Field(default_factory=dict)
 
 
 class StoreDocumentOutput(BaseModel):
@@ -285,4 +285,81 @@ async def delete_document(input_data: DeleteDocumentInput) -> DeleteDocumentOutp
     return DeleteDocumentOutput(
         success=True,
         message="Document deleted successfully",
+    )
+
+
+class UpdateDocumentInput(BaseModel):
+    document_id: str
+    title: str
+    content: str
+    document_type: str = "markdown"
+    doc_metadata: dict = Field(default_factory=dict)
+
+
+class UpdateDocumentOutput(BaseModel):
+    document_id: str
+    chunk_count: int
+    token_count: int
+    message: str
+
+
+async def update_document(input_data: UpdateDocumentInput) -> UpdateDocumentOutput:
+    api_key_info = get_api_key_info()
+    if not api_key_info:
+        raise ValueError("API key not authenticated")
+
+    if api_key_info.get("is_admin"):
+        raise ValueError("Admin cannot update documents")
+
+    api_key_id = api_key_info["id"]
+    collection = api_key_info["qdrant_collection"]
+    doc_repo = get_document_repository(api_key_id)
+    qdrant = get_qdrant_service(collection)
+    embedding_service = get_embedding_service()
+    chunking_service = get_chunking_service()
+
+    existing_doc = doc_repo.get_by_id(input_data.document_id)
+    if not existing_doc:
+        raise ValueError("Document not found")
+
+    qdrant.delete_by_document_id(input_data.document_id)
+
+    updated_doc = doc_repo.update(
+        doc_id=input_data.document_id,
+        title=input_data.title,
+        content=input_data.content,
+        document_type=input_data.document_type,
+        doc_metadata=input_data.doc_metadata,
+    )
+
+    if not updated_doc:
+        raise ValueError("Failed to update document")
+
+    chunks = chunking_service.chunk_markdown(input_data.content, input_data.title)
+
+    if chunks:
+        texts = [c["content"] for c in chunks]
+        embeddings = await embedding_service.embed_texts(texts)
+
+        chunks_with_meta = [
+            {
+                "document_id": updated_doc.id,
+                "chunk_index": c["chunk_index"],
+                "content": c["content"],
+                "token_count": c["token_count"],
+                "title": c["title"],
+            }
+            for c in chunks
+        ]
+
+        point_ids = qdrant.upsert_chunks(chunks_with_meta, embeddings)
+        doc_repo.update_qdrant_point_id(updated_doc.id, point_ids)
+
+    total_tokens = sum(c["token_count"] for c in chunks)
+
+    return UpdateDocumentOutput(
+        document_id=updated_doc.id,
+        chunk_count=len(chunks),
+        token_count=total_tokens,
+        message=f"Document updated successfully with {len(chunks)} chunks",
     )

@@ -1,3 +1,16 @@
+# [1.2.0](https://github.com/mbabic84/ainstruct-mcp/compare/v1.1.0...v1.2.0) (2026-02-22)
+
+
+### Bug Fixes
+
+* create data directory in Docker and fix missing mock in test ([6f3433c](https://github.com/mbabic84/ainstruct-mcp/commit/6f3433cfdcc3559fdbbc3b41c8305fd460531054))
+* use Docker for consistent testing and fix type errors ([f5bcab4](https://github.com/mbabic84/ainstruct-mcp/commit/f5bcab403d453e86fbaa8ce44a82893581cc0b9e))
+
+
+### Features
+
+* add user authentication, API keys, and collections ([7a7898c](https://github.com/mbabic84/ainstruct-mcp/commit/7a7898cd8aa8259e4e4af1436e6f03a6e26a3e1e))
+
 # [1.1.0](https://github.com/mbabic84/ainstruct-mcp/compare/v1.0.0...v1.1.0) (2026-02-22)
 
 

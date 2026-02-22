@@ -2,16 +2,13 @@ import pytest
 from unittest.mock import AsyncMock, MagicMock, patch
 import uuid
 
-import pytest
-from unittest.mock import AsyncMock, MagicMock, patch
-import uuid
-
 from app.tools.document_tools import (
     UpdateDocumentInput,
     UpdateDocumentOutput,
     update_document,
 )
-from app.tools.context import set_api_key_info, clear_api_key_info
+from app.tools.context import set_api_key_info, set_user_info, clear_all_auth
+from app.db.models import Permission
 
 
 @pytest.fixture
@@ -19,8 +16,24 @@ def mock_api_key_info():
     return {
         "id": "test-api-key-id",
         "label": "Test Key",
+        "collection_id": "test-collection-id",
+        "collection_name": "default",
         "qdrant_collection": "test-collection",
         "is_admin": False,
+        "auth_type": "api_key",
+        "permission": Permission.READ_WRITE,
+    }
+
+
+@pytest.fixture
+def mock_jwt_user_info():
+    return {
+        "id": "test-user-id",
+        "user_id": "test-user-id",
+        "username": "testuser",
+        "email": "test@example.com",
+        "is_superuser": False,
+        "auth_type": "jwt",
     }
 
 
@@ -28,7 +41,7 @@ def mock_api_key_info():
 def mock_document():
     doc = MagicMock()
     doc.id = str(uuid.uuid4())
-    doc.api_key_id = "test-api-key-id"
+    doc.collection_id = "test-collection-id"
     doc.title = "Old Title"
     doc.content = "Old content"
     doc.document_type = "markdown"
@@ -40,7 +53,7 @@ def mock_document():
 def mock_updated_document():
     doc = MagicMock()
     doc.id = str(uuid.uuid4())
-    doc.api_key_id = "test-api-key-id"
+    doc.collection_id = "test-collection-id"
     doc.title = "New Title"
     doc.content = "New content for the document"
     doc.document_type = "markdown"
@@ -66,10 +79,10 @@ def mock_embeddings():
 
 class TestUpdateDocument:
     def setup_method(self):
-        clear_api_key_info()
+        clear_all_auth()
 
     def teardown_method(self):
-        clear_api_key_info()
+        clear_all_auth()
 
     @pytest.mark.asyncio
     async def test_update_document_success(
@@ -77,11 +90,12 @@ class TestUpdateDocument:
     ):
         set_api_key_info(mock_api_key_info)
 
-        with patch("app.tools.document_tools.get_document_repository") as mock_repo_factory, \
-             patch("app.tools.document_tools.get_qdrant_service") as mock_qdrant_factory, \
-             patch("app.tools.document_tools.get_embedding_service") as mock_embedding_factory, \
-             patch("app.tools.document_tools.get_chunking_service") as mock_chunking_factory:
-
+        with (
+            patch("app.tools.document_tools.get_document_repository") as mock_repo_factory,
+            patch("app.tools.document_tools.get_qdrant_service") as mock_qdrant_factory,
+            patch("app.tools.document_tools.get_embedding_service") as mock_embedding_factory,
+            patch("app.tools.document_tools.get_chunking_service") as mock_chunking_factory,
+        ):
             mock_repo = MagicMock()
             mock_repo.get_by_id.return_value = mock_document
             mock_repo.update.return_value = mock_updated_document
@@ -138,9 +152,10 @@ class TestUpdateDocument:
     async def test_update_document_not_found(self, mock_api_key_info):
         set_api_key_info(mock_api_key_info)
 
-        with patch("app.tools.document_tools.get_document_repository") as mock_repo_factory, \
-             patch("app.tools.document_tools.get_qdrant_service") as mock_qdrant_factory:
-
+        with (
+            patch("app.tools.document_tools.get_document_repository") as mock_repo_factory,
+            patch("app.tools.document_tools.get_qdrant_service") as mock_qdrant_factory,
+        ):
             mock_repo = MagicMock()
             mock_repo.get_by_id.return_value = None
             mock_repo_factory.return_value = mock_repo
@@ -159,7 +174,7 @@ class TestUpdateDocument:
 
     @pytest.mark.asyncio
     async def test_update_document_not_authenticated(self):
-        clear_api_key_info()
+        clear_all_auth()
 
         input_data = UpdateDocumentInput(
             document_id="some-id",
@@ -167,14 +182,31 @@ class TestUpdateDocument:
             content="New content",
         )
 
-        with pytest.raises(ValueError, match="API key not authenticated"):
+        with pytest.raises(ValueError, match="Not authenticated"):
             await update_document(input_data)
 
     @pytest.mark.asyncio
-    async def test_update_document_admin_rejected(self):
+    async def test_update_document_jwt_user_rejected(self, mock_jwt_user_info):
+        set_user_info(mock_jwt_user_info)
+
+        input_data = UpdateDocumentInput(
+            document_id="some-id",
+            title="New Title",
+            content="New content",
+        )
+
+        with pytest.raises(ValueError, match="JWT users cannot update documents directly"):
+            await update_document(input_data)
+
+    @pytest.mark.asyncio
+    async def test_update_document_read_only_key_rejected(self):
         set_api_key_info({
-            "id": "admin-id",
-            "is_admin": True,
+            "id": "readonly-key-id",
+            "collection_id": "test-collection-id",
+            "qdrant_collection": "test-collection",
+            "is_admin": False,
+            "auth_type": "api_key",
+            "permission": Permission.READ,
         })
 
         input_data = UpdateDocumentInput(
@@ -183,7 +215,7 @@ class TestUpdateDocument:
             content="New content",
         )
 
-        with pytest.raises(ValueError, match="Admin cannot update documents"):
+        with pytest.raises(ValueError, match="Insufficient permissions"):
             await update_document(input_data)
 
     @pytest.mark.asyncio
@@ -194,11 +226,12 @@ class TestUpdateDocument:
 
         mock_updated_document.id = mock_document.id
 
-        with patch("app.tools.document_tools.get_document_repository") as mock_repo_factory, \
-             patch("app.tools.document_tools.get_qdrant_service") as mock_qdrant_factory, \
-             patch("app.tools.document_tools.get_embedding_service") as mock_embedding_factory, \
-             patch("app.tools.document_tools.get_chunking_service") as mock_chunking_factory:
-
+        with (
+            patch("app.tools.document_tools.get_document_repository") as mock_repo_factory,
+            patch("app.tools.document_tools.get_qdrant_service") as mock_qdrant_factory,
+            patch("app.tools.document_tools.get_embedding_service") as mock_embedding_factory,
+            patch("app.tools.document_tools.get_chunking_service") as mock_chunking_factory,
+        ):
             mock_repo = MagicMock()
             mock_repo.get_by_id.return_value = mock_document
             mock_repo.update.return_value = mock_updated_document

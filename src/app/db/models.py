@@ -4,7 +4,7 @@ import hashlib
 import secrets
 import uuid
 from datetime import datetime
-from enum import Enum
+from enum import StrEnum
 
 from pydantic import BaseModel, EmailStr
 from sqlalchemy import JSON, Boolean, DateTime, ForeignKey, String, Text, create_engine
@@ -15,13 +15,13 @@ class Base(DeclarativeBase):
     pass
 
 
-class Scope(str, Enum):
+class Scope(StrEnum):
     READ = "read"
     WRITE = "write"
     ADMIN = "admin"
 
 
-class Permission(str, Enum):
+class Permission(StrEnum):
     READ = "read"
     READ_WRITE = "read_write"
 

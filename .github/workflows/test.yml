@@ -23,10 +23,13 @@ jobs:
 
       - name: Install dev dependencies
         run: |
-          pip install ruff mypy
+          pip install ruff mypy pytest pytest-asyncio
 
       - name: Run linter
         run: ruff check src/
 
       - name: Run type check
         run: mypy src/
+
+      - name: Run tests
+        run: pytest tests/ -v

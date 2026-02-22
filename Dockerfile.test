@@ -9,10 +9,13 @@ WORKDIR /app
 # Copy and install Python dependencies as root
 COPY pyproject.toml .
 RUN pip install --no-cache-dir -e . && \
-    pip install --no-cache-dir ruff mypy
+    pip install --no-cache-dir ruff mypy pytest pytest-asyncio
 
 # Copy source code
 COPY src/ ./src/
+
+# Copy tests
+COPY tests/ ./tests/
 
 # Set permissions
 RUN chown -R appuser:appgroup /app
@@ -21,4 +24,4 @@ RUN chown -R appuser:appgroup /app
 USER appuser
 
 # Run tests
-CMD ["sh", "-c", "ruff check src/ && mypy src/"]
+CMD ["sh", "-c", "ruff check src/ && mypy src/ && pytest tests/ -v"]

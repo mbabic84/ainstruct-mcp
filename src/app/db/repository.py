@@ -153,6 +153,48 @@ class DocumentRepository:
         finally:
             session.close()
 
+    def update(
+        self,
+        doc_id: str,
+        title: str,
+        content: str,
+        document_type: str,
+        doc_metadata: dict,
+    ) -> DocumentResponse | None:
+        session = self._get_session()
+        try:
+            query = select(DocumentModel).where(DocumentModel.id == doc_id)
+            if self.api_key_id:
+                query = query.where(DocumentModel.api_key_id == self.api_key_id)
+
+            db_doc = session.execute(query).scalar_one_or_none()
+            if not db_doc:
+                return None
+
+            content_hash = compute_content_hash(content)
+
+            db_doc.title = title
+            db_doc.content = content
+            db_doc.content_hash = content_hash
+            db_doc.document_type = document_type
+            db_doc.doc_metadata = doc_metadata
+
+            session.commit()
+            session.refresh(db_doc)
+
+            return DocumentResponse(
+                id=db_doc.id,
+                api_key_id=db_doc.api_key_id,
+                title=db_doc.title,
+                content=db_doc.content,
+                document_type=db_doc.document_type,
+                created_at=db_doc.created_at,
+                updated_at=db_doc.updated_at,
+                doc_metadata=db_doc.doc_metadata or {},
+            )
+        finally:
+            session.close()
+
 
 class ApiKeyRepository:
     def __init__(self, engine):

@@ -6,6 +6,9 @@ RUN groupadd --gid 1000 appgroup && \
 
 WORKDIR /app
 
+# Create data directory for SQLite database
+RUN mkdir -p /app/data && chown appuser:appgroup /app/data
+
 # Copy and install Python dependencies as root
 COPY pyproject.toml .
 RUN pip install --no-cache-dir -e . && \

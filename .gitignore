@@ -48,7 +48,7 @@ htmlcov/
 qdrant_storage/
 
 .kilocode
-opencode.json
+opencode.*
 
 # Deploy keys
 deploy_key

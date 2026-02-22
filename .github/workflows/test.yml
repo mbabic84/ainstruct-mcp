@@ -12,24 +12,8 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
-      - name: Set up Python
-        uses: actions/setup-python@v5
-        with:
-          python-version: "3.14"
-
-      - name: Install dependencies
-        run: |
-          pip install -e .
-
-      - name: Install dev dependencies
-        run: |
-          pip install ruff mypy pytest pytest-asyncio
-
-      - name: Run linter
-        run: ruff check src/
-
-      - name: Run type check
-        run: mypy src/
+      - name: Build test image
+        run: docker build -f Dockerfile.test -t ainstruct-test .
 
       - name: Run tests
-        run: pytest tests/ -v
+        run: docker run --rm ainstruct-test

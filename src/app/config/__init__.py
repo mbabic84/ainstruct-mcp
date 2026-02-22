@@ -30,6 +30,13 @@ class Settings(BaseSettings):
     host: str = "0.0.0.0"
     port: int = 8000
 
+    jwt_secret_key: str = "change-this-secret-in-production"
+    jwt_algorithm: str = "HS256"
+    jwt_access_token_expire_minutes: int = 30
+    jwt_refresh_token_expire_days: int = 7
+
+    api_key_default_expiry_days: int | None = None
+
     @property
     def api_keys_list(self) -> list[str]:
         if not self.api_keys:

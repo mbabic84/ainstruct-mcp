@@ -57,7 +57,7 @@ async def update_user(input_data: UpdateUserInput) -> UserResponse:
     if input_data.password:
         password_hash = auth_service.hash_password(input_data.password)
 
-    return repo.update(
+    updated = repo.update(
         user_id=input_data.user_id,
         email=input_data.email,
         username=input_data.username,
@@ -65,6 +65,9 @@ async def update_user(input_data: UpdateUserInput) -> UserResponse:
         is_active=input_data.is_active,
         is_superuser=input_data.is_superuser,
     )
+    if not updated:
+        raise ValueError("Failed to update user")
+    return updated
 
 
 @require_scope(Scope.ADMIN)

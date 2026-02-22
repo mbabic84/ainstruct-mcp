@@ -62,6 +62,9 @@ module = [
     "httpx",
     "pydantic_settings",
     "pydantic",
+    "passlib",
+    "passlib.*",
+    "passlib.context",
 ]
 ignore_missing_imports = true
 

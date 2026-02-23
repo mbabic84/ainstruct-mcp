@@ -1,3 +1,10 @@
+## [1.6.1](https://github.com/mbabic84/ainstruct-mcp/compare/v1.6.0...v1.6.1) (2026-02-23)
+
+
+### Bug Fixes
+
+* make migrations idempotent for existing databases ([d8ae5bd](https://github.com/mbabic84/ainstruct-mcp/commit/d8ae5bd6e0b7ccf46dc5fa6f552b5e2e4628ed40))
+
 # [1.6.0](https://github.com/mbabic84/ainstruct-mcp/compare/v1.5.0...v1.6.0) (2026-02-23)
 
 

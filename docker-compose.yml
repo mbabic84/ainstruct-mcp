@@ -32,6 +32,12 @@ services:
       - qdrant
     profiles:
       - test
+    healthcheck:
+      test: ["CMD", "sh", "-c", "curl -s -o /dev/null http://localhost:8000/mcp || exit 0"]
+      interval: 2s
+      timeout: 5s
+      retries: 30
+      start_period: 10s
 
   mcp_client_test:
     build:
@@ -40,7 +46,8 @@ services:
     environment:
       - MCP_SERVER_URL=http://mcp_server_test:8000/mcp
     depends_on:
-      - mcp_server_test
+      mcp_server_test:
+        condition: service_healthy
     profiles:
       - test
 

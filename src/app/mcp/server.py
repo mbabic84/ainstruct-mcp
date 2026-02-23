@@ -1,5 +1,12 @@
-from fastmcp import FastMCP
+import asyncio
+import logging
 
+from alembic import command
+from alembic.config import Config
+from fastmcp import FastMCP
+from fastmcp.server.lifespan import lifespan
+
+from ..config import settings
 from ..tools.admin_tools import (
     DeleteUserInput,
     GetUserInput,
@@ -57,9 +64,27 @@ from ..tools.user_tools import (
     user_register,
 )
 
+log = logging.getLogger(__name__)
+
+
+@lifespan
+async def db_migrations_lifespan(server):
+    log.info("Running database migrations...")
+    try:
+        alembic_cfg = Config("alembic.ini")
+        alembic_cfg.set_main_option("sqlalchemy.url", f"sqlite:///{settings.db_path}")
+        await asyncio.to_thread(command.upgrade, alembic_cfg, "head")
+        log.info("Migrations applied successfully!")
+    except Exception as e:
+        log.error(f"Migration failed: {e}")
+        raise
+    yield {}
+
+
 mcp = FastMCP(
     name="AI Document Memory",
     instructions="MCP server for storing and searching markdown documents with semantic embeddings. Use this to store knowledge base documents, notes, and retrieve relevant information using semantic search.",
+    lifespan=db_migrations_lifespan,
 )
 
 

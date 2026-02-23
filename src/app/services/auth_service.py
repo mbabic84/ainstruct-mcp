@@ -1,7 +1,7 @@
 from datetime import datetime, timedelta
 
+import bcrypt
 import jwt
-from passlib.context import CryptContext
 
 from ..config import settings
 from ..db.models import Scope
@@ -9,17 +9,22 @@ from ..db.models import Scope
 
 class AuthService:
     def __init__(self):
-        self.pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
         self.secret_key = settings.jwt_secret_key
         self.algorithm = settings.jwt_algorithm
         self.access_token_expire_minutes = settings.jwt_access_token_expire_minutes
         self.refresh_token_expire_days = settings.jwt_refresh_token_expire_days
 
     def hash_password(self, password: str) -> str:
-        return self.pwd_context.hash(password)
+        """Hash a password using bcrypt."""
+        salt = bcrypt.gensalt()
+        return bcrypt.hashpw(password.encode('utf-8'), salt).decode('utf-8')
 
     def verify_password(self, plain_password: str, hashed_password: str) -> bool:
-        return self.pwd_context.verify(plain_password, hashed_password)
+        """Verify a password against a bcrypt hash."""
+        return bcrypt.checkpw(
+            plain_password.encode('utf-8'),
+            hashed_password.encode('utf-8')
+        )
 
     def create_access_token(
         self,

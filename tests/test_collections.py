@@ -180,16 +180,16 @@ class TestListCollections:
 
     @pytest.mark.asyncio
     async def test_list_collections_with_api_key_denied(self, mock_api_key_info):
-        """API key auth cannot list collections (requires JWT)."""
+        """API key auth cannot list collections (requires JWT or PAT)."""
         set_api_key_info(mock_api_key_info)
 
-        with pytest.raises(ValueError, match="JWT authentication required"):
+        with pytest.raises(ValueError, match="JWT or PAT authentication required"):
             await list_collections()
 
     @pytest.mark.asyncio
     async def test_list_collections_not_authenticated(self):
         """Unauthenticated request denied."""
-        with pytest.raises(ValueError, match="JWT authentication required"):
+        with pytest.raises(ValueError, match="JWT or PAT authentication required"):
             await list_collections()
 
 

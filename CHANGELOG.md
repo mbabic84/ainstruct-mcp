@@ -1,3 +1,20 @@
+# [1.3.0](https://github.com/mbabic84/ainstruct-mcp/compare/v1.2.0...v1.3.0) (2026-02-23)
+
+
+### Bug Fixes
+
+* auth middleware bugs and add test infrastructure ([8300b90](https://github.com/mbabic84/ainstruct-mcp/commit/8300b90784cfb5eb2ca5ead76854bc4c5d6ac2b9))
+* correct semantic-release sed pattern and pyproject.toml ([1c7d2dd](https://github.com/mbabic84/ainstruct-mcp/commit/1c7d2dd07c1b24b56b3af18a67b8b4dc079e7cec))
+* exclude integration tests from unit test container ([d3863b9](https://github.com/mbabic84/ainstruct-mcp/commit/d3863b9e53371993539ac00fcc9d8f6d0642c969))
+* remove trailing whitespace in auth middleware ([cf0cf17](https://github.com/mbabic84/ainstruct-mcp/commit/cf0cf17081c9bbda6960d07448d4479503aa2654))
+* use Python script for robust version updates in semantic-release ([4a80269](https://github.com/mbabic84/ainstruct-mcp/commit/4a80269c7b39803748c6046f9dee1a4068e7c114))
+* use separate test service without volume mount for integration tests ([a29524e](https://github.com/mbabic84/ainstruct-mcp/commit/a29524e57c004e63e48b7db04ef4dd7afa8e84a2))
+
+
+### Features
+
+* **ci:** add integration tests job to test workflow ([1893aba](https://github.com/mbabic84/ainstruct-mcp/commit/1893aba5e847bd4a431fba0261cb30fad6caf950))
+
 # [1.2.0](https://github.com/mbabic84/ainstruct-mcp/compare/v1.1.0...v1.2.0) (2026-02-22)
 
 

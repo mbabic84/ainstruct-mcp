@@ -77,6 +77,72 @@ This starts:
 - `mcp_server_test` - MCP server (ephemeral, no volume mount)
 - `mcp_client_test` - Test client running live protocol tests
 
+## Development Workflow (Recommended)
+
+For rapid iteration during development, use the `test_runner` service with volume mounts. This allows you to edit code locally and immediately run tests without rebuilding the container.
+
+```bash
+# Build the test image once
+docker compose build test_runner
+
+# Run tests with volume mounts (code changes reflected immediately)
+docker compose run --rm test_runner
+
+# Run specific test file
+docker compose run --rm -e PYTHONPATH=/app test_runner python3 -m pytest tests/unit/test_auth.py -v
+
+# Run specific test
+docker compose run --rm -e PYTHONPATH=/app test_runner python3 -m pytest tests/unit/test_auth.py::TestUserProfile::test_profile_success -v
+
+# Run with linting
+docker compose run --rm -e PYTHONPATH=/app test_runner ruff check src/
+
+# Run with type checking
+docker compose run --rm -e PYTHONPATH=/app test_runner mypy src/
+
+# Run all three (lint + type check + tests)
+docker compose run --rm -e PYTHONPATH=/app test_runner bash -c "ruff check src/ && mypy src/ && pytest tests/unit -v"
+```
+
+The `test_runner` service mounts:
+- `./src:/app/src` - Source code
+- `./tests:/app/tests` - Test files
+- `./pyproject.toml:/app/pyproject.toml` - Project config
+- `./alembic.ini:/app/alembic.ini` - Alembic config
+
+### Using docker-compose.yml test_runner Service
+
+The `test_runner` service is defined in `docker-compose.yml` with the `test` profile:
+
+```yaml
+test_runner:
+  build:
+    context: .
+    dockerfile: Dockerfile.test
+  volumes:
+    - ./src:/app/src
+    - ./tests:/app/tests
+    - ./pyproject.toml:/app/pyproject.toml
+    - ./alembic.ini:/app/alembic.ini
+  environment:
+    - PYTHONPATH=/app
+    - DATABASE_URL=sqlite:///./data/mcp_server.db
+    - USE_MOCK_EMBEDDINGS=true
+  working_dir: /app
+  profiles:
+    - test
+```
+
+To use it:
+
+```bash
+# Activate test profile (allows docker compose to find test_runner)
+export COMPOSE_PROFILES=test
+
+# Or prefix all commands with COMPOSE_PROFILES
+COMPOSE_PROFILES=test docker compose run --rm test_runner
+```
+
 ## Test Files Reference
 
 | Directory | Type | Description |

@@ -17,7 +17,7 @@ dependencies = [
     "SQLAlchemy>=2.0.46",
     "alembic>=1.18.0",
     "PyYAML>=6.0.0",
-    "passlib>=1.7.4",
+    "bcrypt>=4.2.0",
     "PyJWT>=2.8.0",
     "email-validator>=2.1.0",
 ]
@@ -40,14 +40,14 @@ build-backend = "setuptools.build_meta"
 
 [tool.ruff]
 line-length = 100
-target-version = "1.2.0"
+target-version = "py314"
 
 [tool.ruff.lint]
 select = ["E", "F", "I", "N", "W", "UP"]
 ignore = ["E501"]
 
 [tool.mypy]
-python_version = "1.2.0"
+python_version = "3.14"
 strict = false
 warn_return_any = false
 warn_unused_configs = false
@@ -62,9 +62,6 @@ module = [
     "httpx",
     "pydantic_settings",
     "pydantic",
-    "passlib",
-    "passlib.*",
-    "passlib.context",
 ]
 ignore_missing_imports = true
 

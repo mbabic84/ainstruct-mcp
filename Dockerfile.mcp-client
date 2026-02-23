@@ -1,0 +1,20 @@
+FROM python:3.14-slim
+
+WORKDIR /app
+
+# Install latest FastMCP client (3.x) and test dependencies
+RUN pip install --no-cache-dir \
+    "fastmcp>=3.0.0" \
+    httpx>=0.28.0 \
+    pytest>=8.0.0 \
+    pytest-asyncio>=0.23.0
+
+# Copy test scripts
+COPY tests/mcp_client_test.py ./tests/
+COPY tests/mcp_live_test.py ./tests/
+COPY tests/debug_connection.py ./tests/
+
+ENV PYTHONPATH=/app
+
+# Run debug script by default
+CMD ["python", "tests/debug_connection.py"]

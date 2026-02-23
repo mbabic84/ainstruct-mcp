@@ -26,14 +26,23 @@ from app.tools.key_tools import (
     create_api_key,
     list_api_keys,
 )
+from app.tools.pat_tools import (
+    CreatePatTokenInput,
+    create_pat_token,
+    list_pat_tokens,
+    revoke_pat_token,
+    RevokePatTokenInput,
+    rotate_pat_token,
+    RotatePatTokenInput,
+)
 from app.tools.document_tools import (
     StoreDocumentInput,
     SearchDocumentsInput,
     store_document,
     search_documents,
 )
-from app.tools.context import set_user_info, set_api_key_info, clear_all_auth
-from app.db.models import Permission, CollectionResponse
+from app.tools.context import set_user_info, set_api_key_info, set_pat_info, clear_all_auth
+from app.db.models import Permission, CollectionResponse, Scope
 
 
 class TestCompleteUserWorkflow:
@@ -488,3 +497,333 @@ class TestAPIKeyRotation:
             assert result.key == "ak_live_newkey123"
             # The rotate method should preserve collection_id
             mock_repo.rotate.assert_called_once_with("old-key-id")
+
+
+class TestPatTokenWorkflow:
+    """Test PAT token creation, usage, and management."""
+
+    def setup_method(self):
+        clear_all_auth()
+
+    def teardown_method(self):
+        clear_all_auth()
+
+    @pytest.mark.asyncio
+    async def test_create_pat_token_as_jwt_user(self):
+        """JWT user can create a PAT token."""
+        set_user_info({
+            "id": "user-123",
+            "username": "testuser",
+            "email": "test@example.com",
+            "is_superuser": False,
+            "scopes": [Scope.READ, Scope.WRITE],
+        })
+
+        with patch("app.tools.pat_tools.get_pat_token_repository") as mock_repo_factory:
+            mock_repo = MagicMock()
+            mock_repo.create.return_value = ("pat-id-123", "pat_live_testtoken123")
+            mock_repo.get_by_id.return_value = {
+                "id": "pat-id-123",
+                "label": "Test PAT",
+                "user_id": "user-123",
+                "scopes": [Scope.READ, Scope.WRITE],
+                "created_at": datetime.utcnow(),
+                "expires_at": None,
+                "is_active": True,
+                "last_used": None,
+            }
+            mock_repo_factory.return_value = mock_repo
+
+            result = await create_pat_token(CreatePatTokenInput(
+                label="Test PAT",
+            ))
+
+            assert result.id == "pat-id-123"
+            assert result.token == "pat_live_testtoken123"
+            assert result.label == "Test PAT"
+            assert result.user_id == "user-123"
+
+    @pytest.mark.asyncio
+    async def test_pat_token_inherits_user_scopes(self):
+        """PAT token inherits scopes from user at creation time."""
+        set_user_info({
+            "id": "user-123",
+            "username": "testuser",
+            "email": "test@example.com",
+            "is_superuser": False,
+            "scopes": [Scope.READ],  # Read-only user
+        })
+
+        with patch("app.tools.pat_tools.get_pat_token_repository") as mock_repo_factory:
+            mock_repo = MagicMock()
+            mock_repo.create.return_value = ("pat-id-123", "pat_live_testtoken123")
+            mock_repo.get_by_id.return_value = {
+                "id": "pat-id-123",
+                "label": "Read-only PAT",
+                "user_id": "user-123",
+                "scopes": [Scope.READ],
+                "created_at": datetime.utcnow(),
+                "expires_at": None,
+                "is_active": True,
+                "last_used": None,
+            }
+            mock_repo_factory.return_value = mock_repo
+
+            result = await create_pat_token(CreatePatTokenInput(
+                label="Read-only PAT",
+            ))
+
+            assert Scope.READ in result.scopes
+            assert Scope.WRITE not in result.scopes
+
+    @pytest.mark.asyncio
+    async def test_pat_token_with_custom_expiry(self):
+        """PAT token can have custom expiry."""
+        set_user_info({
+            "id": "user-123",
+            "username": "testuser",
+            "email": "test@example.com",
+            "is_superuser": False,
+            "scopes": [Scope.READ, Scope.WRITE],
+        })
+
+        with patch("app.tools.pat_tools.get_pat_token_repository") as mock_repo_factory:
+            mock_repo = MagicMock()
+            mock_repo.create.return_value = ("pat-id-123", "pat_live_testtoken123")
+            mock_repo.get_by_id.return_value = {
+                "id": "pat-id-123",
+                "label": "Test PAT",
+                "user_id": "user-123",
+                "scopes": [Scope.READ, Scope.WRITE],
+                "created_at": datetime.utcnow(),
+                "expires_at": datetime.utcnow(),
+                "is_active": True,
+                "last_used": None,
+            }
+            mock_repo_factory.return_value = mock_repo
+
+            result = await create_pat_token(CreatePatTokenInput(
+                label="Test PAT",
+                expires_in_days=180,
+            ))
+
+            mock_repo.create.assert_called_once()
+            call_kwargs = mock_repo.create.call_args[1]
+            assert call_kwargs["expires_in_days"] == 180
+
+    @pytest.mark.asyncio
+    async def test_pat_token_cannot_be_created_without_jwt(self):
+        """API key users cannot create PAT tokens."""
+        set_api_key_info({
+            "id": "api-key-1",
+            "user_id": "user-123",
+            "collection_id": "collection-1",
+            "permission": Permission.READ_WRITE,
+            "is_admin": False,
+        })
+
+        with pytest.raises(ValueError, match="JWT authentication required"):
+            await create_pat_token(CreatePatTokenInput(label="Test PAT"))
+
+    @pytest.mark.asyncio
+    async def test_pat_token_can_list_own_tokens(self):
+        """User can list their own PAT tokens."""
+        set_user_info({
+            "id": "user-123",
+            "username": "testuser",
+            "email": "test@example.com",
+            "is_superuser": False,
+            "scopes": [Scope.READ, Scope.WRITE],
+        })
+
+        with patch("app.tools.pat_tools.get_pat_token_repository") as mock_repo_factory:
+            mock_repo = MagicMock()
+            mock_repo.list_all.return_value = [
+                {
+                    "id": "pat-1",
+                    "label": "PAT 1",
+                    "user_id": "user-123",
+                    "scopes": [Scope.READ, Scope.WRITE],
+                    "created_at": datetime.utcnow(),
+                    "expires_at": None,
+                    "is_active": True,
+                    "last_used": None,
+                },
+                {
+                    "id": "pat-2",
+                    "label": "PAT 2",
+                    "user_id": "user-123",
+                    "scopes": [Scope.READ],
+                    "created_at": datetime.utcnow(),
+                    "expires_at": None,
+                    "is_active": True,
+                    "last_used": None,
+                },
+            ]
+            mock_repo_factory.return_value = mock_repo
+
+            result = await list_pat_tokens()
+
+            assert len(result) == 2
+            mock_repo.list_all.assert_called_once_with(user_id="user-123")
+
+    @pytest.mark.asyncio
+    async def test_pat_token_revoke(self):
+        """User can revoke their own PAT token."""
+        set_user_info({
+            "id": "user-123",
+            "username": "testuser",
+            "email": "test@example.com",
+            "is_superuser": False,
+            "scopes": [Scope.READ, Scope.WRITE],
+        })
+
+        with patch("app.tools.pat_tools.get_pat_token_repository") as mock_repo_factory:
+            mock_repo = MagicMock()
+            mock_repo.get_by_id.return_value = {
+                "id": "pat-1",
+                "label": "Test PAT",
+                "user_id": "user-123",
+                "scopes": [Scope.READ, Scope.WRITE],
+                "created_at": datetime.utcnow(),
+                "expires_at": None,
+                "is_active": True,
+                "last_used": None,
+            }
+            mock_repo.revoke.return_value = True
+            mock_repo_factory.return_value = mock_repo
+
+            result = await revoke_pat_token(RevokePatTokenInput(pat_id="pat-1"))
+
+            assert result["success"] is True
+
+    @pytest.mark.asyncio
+    async def test_pat_token_rotate(self):
+        """User can rotate their PAT token."""
+        set_user_info({
+            "id": "user-123",
+            "username": "testuser",
+            "email": "test@example.com",
+            "is_superuser": False,
+            "scopes": [Scope.READ, Scope.WRITE],
+        })
+
+        with patch("app.tools.pat_tools.get_pat_token_repository") as mock_repo_factory:
+            mock_repo = MagicMock()
+            mock_repo.get_by_id.return_value = {
+                "id": "pat-1",
+                "label": "Test PAT",
+                "user_id": "user-123",
+                "scopes": [Scope.READ, Scope.WRITE],
+                "created_at": datetime.utcnow(),
+                "expires_at": None,
+                "is_active": True,
+                "last_used": None,
+            }
+            mock_repo.rotate.return_value = ("pat-2", "pat_live_newtoken123")
+            mock_repo_factory.return_value = mock_repo
+
+            result = await rotate_pat_token(RotatePatTokenInput(pat_id="pat-1"))
+
+            assert result.id == "pat-2"
+            assert result.token == "pat_live_newtoken123"
+
+
+class TestPatTokenPermissions:
+    """Test PAT token permission enforcement."""
+
+    def setup_method(self):
+        clear_all_auth()
+
+    def teardown_method(self):
+        clear_all_auth()
+
+    @pytest.mark.asyncio
+    async def test_pat_token_can_list_collections(self):
+        """PAT token user can list their collections."""
+        set_pat_info({
+            "id": "pat-1",
+            "user_id": "user-123",
+            "username": "testuser",
+            "email": "test@example.com",
+            "scopes": [Scope.READ, Scope.WRITE],
+            "is_superuser": False,
+        })
+
+        with patch("app.tools.collection_tools.get_collection_repository") as mock_coll_factory:
+            mock_coll_repo = MagicMock()
+            mock_coll_repo.list_by_user.return_value = [
+                {
+                    "id": "collection-1",
+                    "name": "default",
+                    "user_id": "user-123",
+                    "created_at": datetime.utcnow(),
+                }
+            ]
+            mock_coll_factory.return_value = mock_coll_repo
+
+            from app.tools.collection_tools import list_collections
+
+            result = await list_collections()
+
+            assert len(result) == 1
+            assert result[0].name == "default"
+
+    @pytest.mark.asyncio
+    async def test_pat_token_cannot_directly_store_documents(self):
+        """PAT tokens cannot directly store documents - need API key for collection access."""
+        set_pat_info({
+            "id": "pat-1",
+            "user_id": "user-123",
+            "username": "testuser",
+            "email": "test@example.com",
+            "scopes": [Scope.READ, Scope.WRITE],
+            "is_superuser": False,
+        })
+
+        from app.tools.document_tools import store_document, StoreDocumentInput
+
+        with pytest.raises(KeyError):
+            await store_document(StoreDocumentInput(
+                title="Test",
+                content="Content",
+                collection_id="collection-1",
+            ))
+
+    @pytest.mark.asyncio
+    async def test_pat_token_read_only_cannot_write(self):
+        """PAT token with only read scope cannot write."""
+        set_pat_info({
+            "id": "pat-1",
+            "user_id": "user-123",
+            "username": "testuser",
+            "email": "test@example.com",
+            "scopes": [Scope.READ],
+            "is_superuser": False,
+        })
+
+        with pytest.raises(ValueError, match="Insufficient permissions"):
+            await store_document(StoreDocumentInput(
+                title="Test",
+                content="Content",
+                collection_id="collection-1",
+            ))
+
+    @pytest.mark.asyncio
+    async def test_pat_superuser_has_full_access(self):
+        """PAT token from superuser has full access."""
+        set_pat_info({
+            "id": "pat-1",
+            "user_id": "admin-123",
+            "username": "admin",
+            "email": "admin@example.com",
+            "scopes": [Scope.READ, Scope.WRITE, Scope.ADMIN],
+            "is_superuser": True,
+        })
+
+        from app.tools.context import has_scope, has_write_permission
+
+        assert has_scope(Scope.READ) is True
+        assert has_scope(Scope.WRITE) is True
+        assert has_scope(Scope.ADMIN) is True
+        assert has_write_permission() is True

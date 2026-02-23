@@ -12,10 +12,12 @@ __all__ = [
     "DocumentRepository",
     "UserRepository",
     "CollectionRepository",
+    "PatTokenRepository",
     "get_api_key_repository",
     "get_document_repository",
     "get_user_repository",
     "get_collection_repository",
+    "get_pat_token_repository",
 ]
 
 from .models import (
@@ -32,9 +34,11 @@ from .repository import (
     ApiKeyRepository,
     CollectionRepository,
     DocumentRepository,
+    PatTokenRepository,
     UserRepository,
     get_api_key_repository,
     get_collection_repository,
     get_document_repository,
+    get_pat_token_repository,
     get_user_repository,
 )

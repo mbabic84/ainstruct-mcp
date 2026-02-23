@@ -2,7 +2,7 @@ from pydantic import BaseModel
 
 from ..db import get_api_key_repository, get_collection_repository
 from ..db.models import ApiKeyListResponse, ApiKeyResponse, Permission
-from .context import get_current_user_id, get_user_info
+from .context import get_current_user_id, get_pat_info, get_user_info
 
 
 class CreateApiKeyInput(BaseModel):
@@ -26,8 +26,11 @@ async def create_api_key(input_data: CreateApiKeyInput) -> ApiKeyResponse:
         raise ValueError("Not authenticated")
 
     user_info = get_user_info()
-    if not user_info:
-        raise ValueError("JWT authentication required to create API keys")
+    pat_info = get_pat_info()
+
+    auth_info = user_info or pat_info
+    if not auth_info:
+        raise ValueError("JWT or PAT authentication required to create API keys")
 
     collection_repo = get_collection_repository()
     collection = collection_repo.get_by_id(input_data.collection_id)
@@ -35,7 +38,7 @@ async def create_api_key(input_data: CreateApiKeyInput) -> ApiKeyResponse:
     if not collection:
         raise ValueError("Collection not found")
 
-    if collection["user_id"] != user_info.get("id") and not user_info.get("is_superuser"):
+    if collection["user_id"] != auth_info.get("id") and not auth_info.get("is_superuser"):
         raise ValueError("Collection not found")
 
     try:
@@ -72,10 +75,13 @@ async def create_api_key(input_data: CreateApiKeyInput) -> ApiKeyResponse:
 
 async def list_api_keys() -> list[ApiKeyListResponse]:
     user_info = get_user_info()
+    pat_info = get_pat_info()
+
+    auth_info = user_info or pat_info
     user_id = None
 
-    if user_info and not user_info.get("is_superuser"):
-        user_id = user_info.get("id")
+    if auth_info and not auth_info.get("is_superuser"):
+        user_id = auth_info.get("id")
 
     repo = get_api_key_repository()
     keys = repo.list_all(user_id=user_id)
@@ -104,8 +110,11 @@ async def revoke_api_key(input_data: RevokeApiKeyInput) -> dict:
         raise ValueError("API key not found")
 
     user_info = get_user_info()
-    if user_info and not user_info.get("is_superuser"):
-        if key_info.get("user_id") != user_info.get("id"):
+    pat_info = get_pat_info()
+
+    auth_info = user_info or pat_info
+    if auth_info and not auth_info.get("is_superuser"):
+        if key_info.get("user_id") and key_info.get("user_id") != auth_info.get("id"):
             raise ValueError("You can only revoke your own API keys")
 
     success = repo.revoke(input_data.key_id)
@@ -123,8 +132,11 @@ async def rotate_api_key(input_data: RotateApiKeyInput) -> ApiKeyResponse:
         raise ValueError("API key not found")
 
     user_info = get_user_info()
-    if user_info and not user_info.get("is_superuser"):
-        if key_info.get("user_id") != user_info.get("id"):
+    pat_info = get_pat_info()
+
+    auth_info = user_info or pat_info
+    if auth_info and not auth_info.get("is_superuser"):
+        if key_info.get("user_id") and key_info.get("user_id") != auth_info.get("id"):
             raise ValueError("You can only rotate your own API keys")
 
     result = repo.rotate(input_data.key_id)

@@ -4,6 +4,7 @@ import bcrypt
 import jwt
 
 from ..config import settings
+from ..db import get_pat_token_repository
 from ..db.models import Scope
 
 
@@ -87,6 +88,17 @@ class AuthService:
 
     def get_access_token_expiry(self) -> int:
         return self.access_token_expire_minutes * 60
+
+
+def verify_pat_token(token: str) -> dict | None:
+    if not token:
+        return None
+    repo = get_pat_token_repository()
+    return repo.validate(token)
+
+
+def is_pat_token(token: str) -> bool:
+    return token.startswith("pat_live_")
 
 
 _auth_service: AuthService | None = None

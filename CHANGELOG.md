@@ -1,3 +1,15 @@
+# [1.5.0](https://github.com/mbabic84/ainstruct-mcp/compare/v1.4.0...v1.5.0) (2026-02-23)
+
+
+### Bug Fixes
+
+* update error message in tests to include PAT authentication ([8a50af6](https://github.com/mbabic84/ainstruct-mcp/commit/8a50af6f346a905ce7f9aceb333e52b4e588c2a2))
+
+
+### Features
+
+* add Personal Access Tokens (PAT) for long-lived auth ([83c0d46](https://github.com/mbabic84/ainstruct-mcp/commit/83c0d46e439155a3c42ca4681cb0ad7652f6cc83))
+
 # [1.4.0](https://github.com/mbabic84/ainstruct-mcp/compare/v1.3.0...v1.4.0) (2026-02-23)
 
 

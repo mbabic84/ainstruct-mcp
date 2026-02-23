@@ -1,3 +1,10 @@
+## [1.6.2](https://github.com/mbabic84/ainstruct-mcp/compare/v1.6.1...v1.6.2) (2026-02-23)
+
+
+### Bug Fixes
+
+* wire up PAT token tools in MCP server ([725a465](https://github.com/mbabic84/ainstruct-mcp/commit/725a465a1b97dc09426f6c514da9b0b507e7949d))
+
 ## [1.6.1](https://github.com/mbabic84/ainstruct-mcp/compare/v1.6.0...v1.6.1) (2026-02-23)
 
 

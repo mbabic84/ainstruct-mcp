@@ -62,6 +62,12 @@ class TestMCPServerHealth:
             assert "revoke_api_key_tool" in tool_names
             assert "rotate_api_key_tool" in tool_names
             
+            # PAT token tools
+            assert "create_pat_token_tool" in tool_names
+            assert "list_pat_tokens_tool" in tool_names
+            assert "revoke_pat_token_tool" in tool_names
+            assert "rotate_pat_token_tool" in tool_names
+            
             # Collection tools
             assert "create_collection_tool" in tool_names
             assert "list_collections_tool" in tool_names
@@ -442,6 +448,187 @@ class TestCollectionManagement:
                 })
                 
                 print(f"\nDeleted collection: {new_collection_id}")
+
+
+class TestPATTokens:
+    """Test PAT token management and authentication."""
+    
+    @pytest.mark.asyncio
+    async def test_create_and_list_pat_tokens(self):
+        """Test creating and listing PAT tokens."""
+        test_id = generate_test_id()
+        
+        async with MCPClient(SERVER_URL, transport=TRANSPORT) as client:
+            # Register and login
+            reg_result = await register_test_user(client, test_id)
+            login_result = await login_user(
+                client,
+                reg_result["username"],
+                reg_result["password"]
+            )
+            
+            async with MCPClient(SERVER_URL, auth_token=login_result["access_token"]) as auth_client:
+                # Create PAT token
+                pat_result = await auth_client.call_tool("create_pat_token_tool", {
+                    "label": "Test PAT Token",
+                })
+                
+                assert "token" in pat_result
+                assert pat_result["token"].startswith("pat_live_")
+                
+                pat_token = pat_result["token"]
+                print(f"\nCreated PAT token: {pat_token[:30]}...")
+                
+                # List PAT tokens
+                list_result = await auth_client.call_tool("list_pat_tokens_tool", {})
+                
+                tokens = list_result.get("tokens", [])
+                assert len(tokens) >= 1
+                
+                # Find our token (raw token not returned in list)
+                our_token = next(
+                    (t for t in tokens if t.get("label") == "Test PAT Token"),
+                    None
+                )
+                assert our_token is not None
+                
+                print(f"\nListed {len(tokens)} PAT tokens")
+    
+    @pytest.mark.asyncio
+    async def test_pat_token_authentication(self):
+        """Test authenticating with PAT token."""
+        test_id = generate_test_id()
+        
+        async with MCPClient(SERVER_URL, transport=TRANSPORT) as client:
+            # Register and login
+            reg_result = await register_test_user(client, test_id)
+            login_result = await login_user(
+                client,
+                reg_result["username"],
+                reg_result["password"]
+            )
+            
+            pat_token = None
+            
+            async with MCPClient(SERVER_URL, auth_token=login_result["access_token"]) as auth_client:
+                # Create PAT token
+                pat_result = await auth_client.call_tool("create_pat_token_tool", {
+                    "label": "Auth Test PAT",
+                })
+                pat_token = pat_result["token"]
+            
+            # Use PAT token for authentication
+            async with MCPClient(SERVER_URL, auth_token=pat_token) as pat_client:
+                # Should be able to access user profile
+                profile = await pat_client.call_tool("user_profile_tool", {})
+                
+                assert profile.get("username") == reg_result["username"]
+                assert profile.get("email") == reg_result["email"]
+                
+                print(f"\nPAT token auth worked for user: {profile.get('username')}")
+    
+    @pytest.mark.asyncio
+    async def test_pat_token_with_custom_expiry(self):
+        """Test creating PAT token with custom expiry."""
+        test_id = generate_test_id()
+        
+        async with MCPClient(SERVER_URL, transport=TRANSPORT) as client:
+            # Register and login
+            reg_result = await register_test_user(client, test_id)
+            login_result = await login_user(
+                client,
+                reg_result["username"],
+                reg_result["password"]
+            )
+            
+            async with MCPClient(SERVER_URL, auth_token=login_result["access_token"]) as auth_client:
+                # Create PAT token with 30-day expiry
+                pat_result = await auth_client.call_tool("create_pat_token_tool", {
+                    "label": "30-day PAT",
+                    "expires_in_days": 30,
+                })
+                
+                assert "token" in pat_result
+                assert pat_result["token"].startswith("pat_live_")
+                
+                print(f"\nCreated PAT with 30-day expiry")
+    
+    @pytest.mark.asyncio
+    async def test_pat_token_rotate(self):
+        """Test rotating PAT token."""
+        test_id = generate_test_id()
+        
+        async with MCPClient(SERVER_URL, transport=TRANSPORT) as client:
+            # Register and login
+            reg_result = await register_test_user(client, test_id)
+            login_result = await login_user(
+                client,
+                reg_result["username"],
+                reg_result["password"]
+            )
+            
+            pat_id = None
+            
+            async with MCPClient(SERVER_URL, auth_token=login_result["access_token"]) as auth_client:
+                # Create PAT token
+                pat_result = await auth_client.call_tool("create_pat_token_tool", {
+                    "label": "Rotate Test PAT",
+                })
+                pat_id = pat_result["id"]
+                old_token = pat_result["token"]
+                
+                # Rotate the token
+                rotate_result = await auth_client.call_tool("rotate_pat_token_tool", {
+                    "pat_id": pat_id,
+                })
+                
+                assert "token" in rotate_result
+                assert rotate_result["token"].startswith("pat_live_")
+                assert rotate_result["token"] != old_token
+                
+                new_token = rotate_result["token"]
+                print(f"\nRotated PAT token: {new_token[:30]}...")
+    
+    @pytest.mark.asyncio
+    async def test_pat_token_revoke(self):
+        """Test revoking PAT token."""
+        test_id = generate_test_id()
+        
+        async with MCPClient(SERVER_URL, transport=TRANSPORT) as client:
+            # Register and login
+            reg_result = await register_test_user(client, test_id)
+            login_result = await login_user(
+                client,
+                reg_result["username"],
+                reg_result["password"]
+            )
+            
+            pat_id = None
+            pat_token = None
+            
+            async with MCPClient(SERVER_URL, auth_token=login_result["access_token"]) as auth_client:
+                # Create PAT token
+                pat_result = await auth_client.call_tool("create_pat_token_tool", {
+                    "label": "Revoke Test PAT",
+                })
+                pat_id = pat_result["id"]
+                pat_token = pat_result["token"]
+                
+                # Revoke the token
+                revoke_result = await auth_client.call_tool("revoke_pat_token_tool", {
+                    "pat_id": pat_id,
+                })
+                
+                assert revoke_result.get("success") is True
+                print(f"\nRevoked PAT token: {pat_id}")
+            
+            # Verify revoked token no longer works
+            async with MCPClient(SERVER_URL, auth_token=pat_token) as revoked_client:
+                with pytest.raises(Exception) as exc_info:
+                    await revoked_client.call_tool("user_profile_tool", {})
+                
+                assert "invalid" in str(exc_info.value).lower() or "expired" in str(exc_info.value).lower()
+                print(f"\nRevoked token correctly rejected")
 
 
 if __name__ == "__main__":

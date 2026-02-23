@@ -2,7 +2,7 @@ from pydantic import BaseModel
 
 from ..db import get_collection_repository
 from ..db.models import CollectionListResponse, CollectionResponse
-from .context import get_current_user_id, get_user_info
+from .context import get_current_user_id, get_pat_info, get_user_info
 
 
 class CreateCollectionInput(BaseModel):
@@ -33,10 +33,13 @@ async def create_collection(input_data: CreateCollectionInput) -> CollectionResp
 
 async def list_collections() -> list[CollectionListResponse]:
     user_info = get_user_info()
-    if not user_info:
-        raise ValueError("JWT authentication required")
+    pat_info = get_pat_info()
 
-    user_id = user_info.get("id")
+    auth_info = user_info or pat_info
+    if not auth_info:
+        raise ValueError("JWT or PAT authentication required")
+
+    user_id = auth_info.get("id")
     if not user_id:
         raise ValueError("Invalid user info")
 

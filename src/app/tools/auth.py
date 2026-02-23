@@ -9,10 +9,12 @@ from ..config import settings
 from ..db import get_api_key_repository
 from ..db.models import Permission, Scope
 from ..services import get_auth_service
+from ..services.auth_service import is_pat_token, verify_pat_token
 from .context import (
     clear_all_auth,
     set_api_key_info,
     set_auth_type,
+    set_pat_info,
     set_user_info,
 )
 
@@ -124,7 +126,13 @@ class AuthMiddleware(Middleware):
         if not token:
             raise ValueError("Missing token in Authorization header")
 
-        if is_jwt_token(token):
+        if is_pat_token(token):
+            pat_info = verify_pat_token(token)
+            if not pat_info:
+                raise ValueError("Invalid or expired PAT token")
+            set_pat_info(pat_info)
+            set_auth_type("pat")
+        elif is_jwt_token(token):
             user_info = verify_jwt_token(token)
             if not user_info:
                 raise ValueError("Invalid or expired JWT token")
@@ -151,13 +159,21 @@ class AuthMiddleware(Middleware):
 def require_scope(required_scope: Scope) -> Callable:
     def decorator(func: Callable) -> Callable:
         async def wrapper(*args, **kwargs):
-            from .context import get_api_key_info, get_user_info, has_write_permission
+            from .context import get_api_key_info, get_pat_info, get_user_info, has_write_permission
 
             user_info = get_user_info()
             if user_info:
                 if user_info.get("is_superuser"):
                     return await func(*args, **kwargs)
                 scopes = user_info.get("scopes", [])
+                if required_scope in scopes:
+                    return await func(*args, **kwargs)
+
+            pat_info = get_pat_info()
+            if pat_info:
+                if pat_info.get("is_superuser"):
+                    return await func(*args, **kwargs)
+                scopes = pat_info.get("scopes", [])
                 if required_scope in scopes:
                     return await func(*args, **kwargs)
 

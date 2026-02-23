@@ -72,6 +72,7 @@ class UserModel(Base):
 
     collections: Mapped[list[CollectionModel]] = relationship("CollectionModel", back_populates="user")
     api_keys: Mapped[list[ApiKeyModel]] = relationship("ApiKeyModel", back_populates="user")
+    pat_tokens: Mapped[list[PatTokenModel]] = relationship("PatTokenModel", back_populates="user")
 
 
 class ApiKeyModel(Base):
@@ -90,6 +91,22 @@ class ApiKeyModel(Base):
 
     user: Mapped[UserModel | None] = relationship("UserModel", back_populates="api_keys")
     collection: Mapped[CollectionModel] = relationship("CollectionModel", back_populates="api_keys")
+
+
+class PatTokenModel(Base):
+    __tablename__ = "pat_tokens"
+
+    id: Mapped[str] = mapped_column(String(36), primary_key=True, default=lambda: str(uuid.uuid4()))
+    token_hash: Mapped[str] = mapped_column(String(64), nullable=False, unique=True, index=True)
+    label: Mapped[str] = mapped_column(String(100), nullable=False)
+    user_id: Mapped[str] = mapped_column(String(36), ForeignKey("users.id"), nullable=False, index=True)
+    scopes: Mapped[str] = mapped_column(String(100), nullable=False, default="")
+    expires_at: Mapped[datetime | None] = mapped_column(DateTime, nullable=True)
+    last_used: Mapped[datetime | None] = mapped_column(DateTime, nullable=True)
+    is_active: Mapped[bool] = mapped_column(Boolean, default=True)
+    created_at: Mapped[datetime] = mapped_column(DateTime, default=datetime.utcnow)
+
+    user: Mapped[UserModel] = relationship("UserModel", back_populates="pat_tokens")
 
 
 class CollectionCreate(BaseModel):
@@ -204,6 +221,34 @@ class ApiKeyListResponse(BaseModel):
     last_used: datetime | None
 
 
+class PatTokenCreate(BaseModel):
+    label: str
+    expires_in_days: int | None = None
+
+
+class PatTokenResponse(BaseModel):
+    id: str
+    label: str
+    token: str | None = None
+    user_id: str
+    scopes: list[Scope]
+    created_at: datetime
+    expires_at: datetime | None
+    is_active: bool
+    last_used: datetime | None
+
+
+class PatTokenListResponse(BaseModel):
+    id: str
+    label: str
+    user_id: str
+    scopes: list[Scope]
+    created_at: datetime
+    expires_at: datetime | None
+    is_active: bool
+    last_used: datetime | None
+
+
 def get_db_engine(db_path: str):
     return create_engine(f"sqlite:///{db_path}", connect_args={"check_same_thread": False})
 
@@ -224,6 +269,14 @@ def generate_api_key() -> str:
 
 def hash_api_key(key: str) -> str:
     return hashlib.sha256(key.encode("utf-8")).hexdigest()
+
+
+def generate_pat_token() -> str:
+    return f"pat_live_{secrets.token_urlsafe(32)}"
+
+
+def hash_pat_token(token: str) -> str:
+    return hashlib.sha256(token.encode("utf-8")).hexdigest()
 
 
 def parse_scopes(scopes_str: str) -> list[Scope]:

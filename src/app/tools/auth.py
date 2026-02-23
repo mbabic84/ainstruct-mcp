@@ -82,6 +82,7 @@ def is_jwt_token(token: str) -> bool:
 PUBLIC_TOOLS: set[str] = {
     "user_register_tool",
     "user_login_tool",
+    "user_refresh_tool",
     "promote_to_admin_tool",
 }
 

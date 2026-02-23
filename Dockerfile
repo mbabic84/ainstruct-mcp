@@ -14,6 +14,10 @@ RUN pip install --no-cache-dir -e .
 # Copy source code
 COPY src/ ./src/
 
+# Copy alembic files for migrations
+COPY alembic.ini .
+COPY migrations/ ./migrations/
+
 # Create data directory and set permissions
 RUN mkdir -p /app/data && \
     chown -R appuser:appgroup /app

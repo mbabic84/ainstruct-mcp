@@ -12,13 +12,19 @@ from .models import (
     DocumentCreate,
     DocumentModel,
     DocumentResponse,
+    PatTokenModel,
     Permission,
+    Scope,
     UserModel,
     UserResponse,
     compute_content_hash,
     generate_api_key,
+    generate_pat_token,
     hash_api_key,
+    hash_pat_token,
     init_db,
+    parse_scopes,
+    scopes_to_str,
 )
 
 
@@ -700,6 +706,179 @@ class ApiKeyRepository:
         return self.list_all(user_id=user_id)
 
 
+class PatTokenRepository:
+    def __init__(self, engine):
+        self.SessionLocal = sessionmaker(bind=engine)
+
+    def _get_session(self) -> Session:
+        return self.SessionLocal()
+
+    @staticmethod
+    def hash_token(token: str) -> str:
+        return hashlib.sha256(token.encode("utf-8")).hexdigest()
+
+    def validate(self, token: str) -> dict | None:
+        session = self._get_session()
+        try:
+            token_hash = self.hash_token(token)
+            pat_token = session.execute(
+                select(PatTokenModel).where(
+                    PatTokenModel.token_hash == token_hash,
+                    PatTokenModel.is_active.is_(True),
+                )
+            ).scalar_one_or_none()
+
+            if not pat_token:
+                return None
+
+            if pat_token.expires_at and pat_token.expires_at < datetime.utcnow():
+                return None
+
+            user = session.get(UserModel, pat_token.user_id)
+            if not user or not user.is_active:
+                return None
+
+            pat_token.last_used = datetime.utcnow()
+            session.commit()
+
+            return {
+                "id": pat_token.id,
+                "label": pat_token.label,
+                "user_id": pat_token.user_id,
+                "scopes": parse_scopes(pat_token.scopes),
+                "is_superuser": user.is_superuser,
+                "username": user.username,
+                "email": user.email,
+            }
+        finally:
+            session.close()
+
+    def get_by_id(self, token_id: str) -> dict | None:
+        session = self._get_session()
+        try:
+            pat_token = session.get(PatTokenModel, token_id)
+            if not pat_token:
+                return None
+            return {
+                "id": pat_token.id,
+                "label": pat_token.label,
+                "user_id": pat_token.user_id,
+                "scopes": parse_scopes(pat_token.scopes),
+                "created_at": pat_token.created_at,
+                "expires_at": pat_token.expires_at,
+                "is_active": pat_token.is_active,
+                "last_used": pat_token.last_used,
+            }
+        finally:
+            session.close()
+
+    def create(
+        self,
+        label: str,
+        user_id: str,
+        scopes: list[str],
+        expires_in_days: int | None = None,
+    ) -> tuple[str, str]:
+        session = self._get_session()
+        try:
+            token = generate_pat_token()
+            token_hash = hash_pat_token(token)
+
+            expires_at = None
+            if expires_in_days is not None:
+                expires_at = datetime.utcnow() + timedelta(days=expires_in_days)
+            elif settings.pat_default_expiry_days is not None:
+                expires_at = datetime.utcnow() + timedelta(days=settings.pat_default_expiry_days)
+
+            pat_token = PatTokenModel(
+                token_hash=token_hash,
+                label=label,
+                user_id=user_id,
+                scopes=scopes_to_str([Scope(s) for s in scopes]),
+                expires_at=expires_at,
+            )
+            session.add(pat_token)
+            session.commit()
+            return pat_token.id, token
+        finally:
+            session.close()
+
+    def list_all(self, user_id: str | None = None) -> list[dict]:
+        session = self._get_session()
+        try:
+            query = select(PatTokenModel)
+            if user_id:
+                query = query.where(PatTokenModel.user_id == user_id)
+            tokens = session.execute(query.order_by(PatTokenModel.created_at.desc())).scalars().all()
+            return [
+                {
+                    "id": t.id,
+                    "label": t.label,
+                    "user_id": t.user_id,
+                    "scopes": parse_scopes(t.scopes),
+                    "created_at": t.created_at,
+                    "expires_at": t.expires_at,
+                    "is_active": t.is_active,
+                    "last_used": t.last_used,
+                }
+                for t in tokens
+            ]
+        finally:
+            session.close()
+
+    def delete(self, token_id: str) -> bool:
+        session = self._get_session()
+        try:
+            token = session.get(PatTokenModel, token_id)
+            if not token:
+                return False
+            session.delete(token)
+            session.commit()
+            return True
+        finally:
+            session.close()
+
+    def revoke(self, token_id: str) -> bool:
+        session = self._get_session()
+        try:
+            token = session.get(PatTokenModel, token_id)
+            if not token:
+                return False
+            token.is_active = False
+            session.commit()
+            return True
+        finally:
+            session.close()
+
+    def rotate(self, token_id: str) -> tuple[str, str] | None:
+        session = self._get_session()
+        try:
+            old_token = session.get(PatTokenModel, token_id)
+            if not old_token:
+                return None
+
+            old_token.is_active = False
+
+            new_token = generate_pat_token()
+            token_hash = hash_pat_token(new_token)
+
+            new_pat_token = PatTokenModel(
+                token_hash=token_hash,
+                label=old_token.label,
+                user_id=old_token.user_id,
+                scopes=old_token.scopes,
+                expires_at=old_token.expires_at,
+            )
+            session.add(new_pat_token)
+            session.commit()
+            return new_pat_token.id, new_token
+        finally:
+            session.close()
+
+    def list_by_user(self, user_id: str) -> list[dict]:
+        return self.list_all(user_id=user_id)
+
+
 _engine = None
 
 
@@ -729,3 +908,10 @@ def get_collection_repository() -> CollectionRepository:
     if _engine is None:
         _engine = init_db(settings.db_path)
     return CollectionRepository(_engine)
+
+
+def get_pat_token_repository() -> PatTokenRepository:
+    global _engine
+    if _engine is None:
+        _engine = init_db(settings.db_path)
+    return PatTokenRepository(_engine)

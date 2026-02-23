@@ -5,6 +5,19 @@ from ..db.models import Permission, Scope
 api_key_context: ContextVar[dict | None] = ContextVar("api_key_context", default=None)
 user_context: ContextVar[dict | None] = ContextVar("user_context", default=None)
 auth_type_context: ContextVar[str | None] = ContextVar("auth_type_context", default=None)
+pat_context: ContextVar[dict | None] = ContextVar("pat_context", default=None)
+
+
+def set_pat_info(info: dict):
+    pat_context.set(info)
+
+
+def get_pat_info() -> dict | None:
+    return pat_context.get()
+
+
+def clear_pat_info():
+    pat_context.set(None)
 
 
 def set_api_key_info(info: dict):
@@ -50,6 +63,9 @@ def get_current_user_id() -> str | None:
     api_key_info = get_api_key_info()
     if api_key_info:
         return api_key_info.get("user_id")
+    pat_info = get_pat_info()
+    if pat_info:
+        return pat_info.get("user_id")
     return None
 
 
@@ -62,11 +78,17 @@ def has_scope(required_scope: Scope) -> bool:
     if api_key_info and api_key_info.get("is_admin"):
         return True
 
+    pat_info = get_pat_info()
+    if pat_info and pat_info.get("is_superuser"):
+        return True
+
     user_scopes = []
     if user_info:
         user_scopes = user_info.get("scopes", [])
     elif api_key_info:
         user_scopes = api_key_info.get("scopes", [])
+    elif pat_info:
+        user_scopes = pat_info.get("scopes", [])
 
     return required_scope in user_scopes
 
@@ -83,12 +105,20 @@ def has_write_permission() -> bool:
         permission = api_key_info.get("permission")
         return permission == Permission.READ_WRITE
 
+    pat_info = get_pat_info()
+    if pat_info:
+        if pat_info.get("is_superuser"):
+            return True
+        scopes = pat_info.get("scopes", [])
+        return Scope.WRITE in scopes
+
     return False
 
 
 def get_auth_context() -> dict:
     user_info = get_user_info()
     api_key_info = get_api_key_info()
+    pat_info = get_pat_info()
 
     if user_info:
         return {
@@ -100,6 +130,18 @@ def get_auth_context() -> dict:
             "is_admin": user_info.get("is_superuser", False),
             "is_superuser": user_info.get("is_superuser", False),
             "auth_type": "jwt",
+        }
+
+    if pat_info:
+        return {
+            "id": pat_info.get("id"),
+            "user_id": pat_info.get("user_id"),
+            "username": pat_info.get("username"),
+            "email": pat_info.get("email"),
+            "scopes": pat_info.get("scopes", []),
+            "is_admin": pat_info.get("is_superuser", False),
+            "is_superuser": pat_info.get("is_superuser", False),
+            "auth_type": "pat",
         }
 
     if api_key_info:
@@ -119,10 +161,11 @@ def get_auth_context() -> dict:
 
 
 def is_authenticated() -> bool:
-    return bool(get_user_info() or get_api_key_info())
+    return bool(get_user_info() or get_api_key_info() or get_pat_info())
 
 
 def clear_all_auth():
     clear_api_key_info()
     clear_user_info()
+    clear_pat_info()
     clear_auth_type()

@@ -37,6 +37,9 @@ class Settings(BaseSettings):
 
     api_key_default_expiry_days: int | None = None
 
+    pat_default_expiry_days: int = 90
+    pat_max_expiry_days: int = 365
+
     @property
     def api_keys_list(self) -> list[str]:
         if not self.api_keys:

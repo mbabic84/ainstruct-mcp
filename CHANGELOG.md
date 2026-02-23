@@ -1,3 +1,16 @@
+# [1.6.0](https://github.com/mbabic84/ainstruct-mcp/compare/v1.5.0...v1.6.0) (2026-02-23)
+
+
+### Bug Fixes
+
+* include alembic files in Docker image for migrations ([9d49f97](https://github.com/mbabic84/ainstruct-mcp/commit/9d49f977690ba7d96cfae894a541b99dadd901f2))
+* remove PAT code incorrectly merged from main ([6d1e99e](https://github.com/mbabic84/ainstruct-mcp/commit/6d1e99e2923d33fa608b1fd378e3055a3c62f46e))
+
+
+### Features
+
+* add automatic database migrations on server startup ([7589395](https://github.com/mbabic84/ainstruct-mcp/commit/7589395e9cbac5beafc2aa6fbeb9362d53ffe0aa))
+
 # [1.5.0](https://github.com/mbabic84/ainstruct-mcp/compare/v1.4.0...v1.5.0) (2026-02-23)
 
 

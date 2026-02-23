@@ -341,12 +341,13 @@ async def update_document(input_data: UpdateDocumentInput) -> UpdateDocumentOutp
     collection = auth["qdrant_collection"]
     doc_repo = get_document_repository(collection_id)
     qdrant = get_qdrant_service(collection)
-    embedding_service = get_embedding_service()
-    chunking_service = get_chunking_service()
 
     existing_doc = doc_repo.get_by_id(input_data.document_id)
     if not existing_doc:
         raise ValueError("Document not found")
+
+    embedding_service = get_embedding_service()
+    chunking_service = get_chunking_service()
 
     qdrant.delete_by_document_id(input_data.document_id)
 

@@ -38,6 +38,7 @@ class AuthService:
         if scopes is None:
             scopes = [Scope.READ, Scope.WRITE]
 
+        import uuid
         expire = datetime.utcnow() + timedelta(minutes=self.access_token_expire_minutes)
         payload = {
             "sub": user_id,
@@ -48,16 +49,19 @@ class AuthService:
             "exp": expire,
             "iat": datetime.utcnow(),
             "type": "access",
+            "jti": uuid.uuid4().hex,  # Unique identifier to ensure token uniqueness
         }
         return jwt.encode(payload, self.secret_key, algorithm=self.algorithm)
 
     def create_refresh_token(self, user_id: str) -> str:
+        import uuid
         expire = datetime.utcnow() + timedelta(days=self.refresh_token_expire_days)
         payload = {
             "sub": user_id,
             "exp": expire,
             "iat": datetime.utcnow(),
             "type": "refresh",
+            "jti": uuid.uuid4().hex,  # Unique identifier to ensure token uniqueness
         }
         return jwt.encode(payload, self.secret_key, algorithm=self.algorithm)
 

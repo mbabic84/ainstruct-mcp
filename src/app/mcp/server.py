@@ -52,6 +52,15 @@ from ..tools.key_tools import (
     revoke_api_key,
     rotate_api_key,
 )
+from ..tools.pat_tools import (
+    CreatePatTokenInput,
+    RevokePatTokenInput,
+    RotatePatTokenInput,
+    create_pat_token,
+    list_pat_tokens,
+    revoke_pat_token,
+    rotate_pat_token,
+)
 from ..tools.user_tools import (
     LoginInput,
     PromoteAdminInput,
@@ -396,6 +405,70 @@ async def rotate_api_key_tool(key_id: str) -> dict:
         New API key (only shown once)
     """
     result = await rotate_api_key(RotateApiKeyInput(key_id=key_id))
+    return result.model_dump()
+
+
+@mcp.tool()
+async def create_pat_token_tool(
+    label: str,
+    expires_in_days: int | None = None,
+) -> dict:
+    """
+    Create a new Personal Access Token (PAT) for the authenticated user.
+
+    Args:
+        label: Descriptive label for the PAT
+        expires_in_days: Optional expiry in days
+
+    Returns:
+        Created PAT token (only shown once)
+    """
+    result = await create_pat_token(CreatePatTokenInput(
+        label=label,
+        expires_in_days=expires_in_days,
+    ))
+    return result.model_dump()
+
+
+@mcp.tool()
+async def list_pat_tokens_tool() -> dict:
+    """
+    List all PAT tokens for the current user. Admins see all tokens.
+
+    Returns:
+        List of PAT tokens (without the actual token values)
+    """
+    result = await list_pat_tokens()
+    return {"tokens": [t.model_dump() for t in result]}
+
+
+@mcp.tool()
+async def revoke_pat_token_tool(pat_id: str) -> dict:
+    """
+    Revoke (deactivate) a PAT token.
+
+    Args:
+        pat_id: ID of the PAT token to revoke
+
+    Returns:
+        Success confirmation
+    """
+    result = await revoke_pat_token(RevokePatTokenInput(pat_id=pat_id))
+    return result
+
+
+@mcp.tool()
+async def rotate_pat_token_tool(pat_id: str) -> dict:
+    """
+    Rotate a PAT token. The old token is revoked and a new one is created.
+
+    Args:
+        pat_id: ID of the PAT token to rotate
+
+    Returns:
+        New PAT token (only shown once)
+    """
+    result = await rotate_pat_token(RotatePatTokenInput(pat_id=pat_id))
     return result.model_dump()
 
 

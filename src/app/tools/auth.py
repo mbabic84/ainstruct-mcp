@@ -97,21 +97,21 @@ def is_public_tool(tool_name: str) -> bool:
 
 class AuthMiddleware(Middleware):
     """Authentication middleware for FastMCP."""
-    
+
     async def on_initialize(self, context: MiddlewareContext, call_next):
         """Allow initialize requests without auth."""
         return await call_next(context)
-    
+
     async def on_call_tool(self, context: MiddlewareContext, call_next):
         """Handle authentication for tool calls."""
         # Get tool name from the message (message IS the CallToolRequestParams)
         message = context.message
         tool_name = getattr(message, 'name', None)
-        
+
         # For public tools, allow without auth
         if tool_name and tool_name in PUBLIC_TOOLS:
             return await call_next(context)
-        
+
         # Check auth header for all other tools
         headers = get_http_headers(include={"authorization"})
         auth_header = headers.get("authorization", "")
@@ -141,7 +141,7 @@ class AuthMiddleware(Middleware):
             return await call_next(context)
         finally:
             clear_all_auth()
-    
+
     async def on_list_tools(self, context: MiddlewareContext, call_next):
         """Allow listing tools without auth (for discovery)."""
         # NOTE: Tools are listed without auth, but calling protected tools still requires auth

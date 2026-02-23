@@ -118,12 +118,11 @@ async def user_login(input_data: LoginInput) -> TokenResponse:
 
 
 async def user_profile() -> dict:
-    from .context import get_auth_context, get_user_info
+    from .context import get_auth_context
 
     # Check for any authentication (JWT, PAT, or API key)
-    user_info = get_user_info()
     auth_context = get_auth_context()
-    
+
     if not auth_context or not auth_context.get("user_id"):
         raise ValueError("Not authenticated")
 

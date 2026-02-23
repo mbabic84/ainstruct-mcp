@@ -11,9 +11,8 @@ RUN pip install --no-cache-dir \
     pytest>=8.0.0 \
     pytest-asyncio>=0.23.0
 
-COPY tests/mcp_client_test.py ./tests/
-COPY tests/mcp_live_test.py ./tests/
-COPY tests/debug_connection.py ./tests/
+COPY tests/e2e/mcp_live_test.py ./tests/e2e/
+COPY tests/e2e/mcp_client_test.py ./tests/e2e/
 
 RUN chown -R appuser:appgroup /app
 
@@ -21,4 +20,4 @@ USER appuser
 
 ENV PYTHONPATH=/app
 
-CMD ["python", "tests/debug_connection.py"]
+CMD ["pytest", "tests/e2e/mcp_live_test.py", "-v"]

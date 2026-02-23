@@ -1,3 +1,10 @@
+# [1.4.0](https://github.com/mbabic84/ainstruct-mcp/compare/v1.3.0...v1.4.0) (2026-02-23)
+
+
+### Features
+
+* migrate to Alpine base image for SQLite 3.51.2 security fix ([7692bcd](https://github.com/mbabic84/ainstruct-mcp/commit/7692bcd8f9a788f95aec10c8417f5d0422261161))
+
 # [1.3.0](https://github.com/mbabic84/ainstruct-mcp/compare/v1.2.0...v1.3.0) (2026-02-23)
 
 

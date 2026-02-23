@@ -8,7 +8,7 @@ import os
 import pytest
 import uuid
 
-from mcp_client_test import (
+from tests.e2e.mcp_client_test import (
     MCPClient,
     generate_test_id,
     register_test_user,

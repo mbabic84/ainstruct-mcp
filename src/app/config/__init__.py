@@ -16,6 +16,10 @@ class Settings(BaseSettings):
     embedding_model: str = "Qwen/Qwen3-Embedding-8B"
     embedding_dimensions: int = 4096
 
+    # When set to true, use mock embeddings (deterministic hash-based vectors)
+    # This is useful for testing without external API calls
+    use_mock_embeddings: bool = False
+
     api_keys: str = ""
     admin_api_key: str = ""
 

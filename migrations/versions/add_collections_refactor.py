@@ -20,25 +20,32 @@ depends_on: Union[str, Sequence[str], None] = None
 
 def upgrade() -> None:
     conn = op.get_bind()
+    inspector = sa.inspect(conn)
+    existing_tables = inspector.get_table_names()
     
-    op.create_table('collections',
-        sa.Column('id', sa.String(length=36), nullable=False),
-        sa.Column('name', sa.String(length=100), nullable=False),
-        sa.Column('qdrant_collection', sa.String(length=100), nullable=False),
-        sa.Column('user_id', sa.String(length=36), nullable=False),
-        sa.Column('created_at', sa.DateTime(), nullable=False),
-        sa.Column('updated_at', sa.DateTime(), nullable=False),
-        sa.ForeignKeyConstraint(['user_id'], ['users.id'], ),
-        sa.PrimaryKeyConstraint('id')
-    )
-    with op.batch_alter_table('collections', schema=None) as batch_op:
-        batch_op.create_index(batch_op.f('ix_collections_user_id'), ['user_id'], unique=False)
+    if 'collections' not in existing_tables:
+        op.create_table('collections',
+            sa.Column('id', sa.String(length=36), nullable=False),
+            sa.Column('name', sa.String(length=100), nullable=False),
+            sa.Column('qdrant_collection', sa.String(length=100), nullable=False),
+            sa.Column('user_id', sa.String(length=36), nullable=False),
+            sa.Column('created_at', sa.DateTime(), nullable=False),
+            sa.Column('updated_at', sa.DateTime(), nullable=False),
+            sa.ForeignKeyConstraint(['user_id'], ['users.id'], ),
+            sa.PrimaryKeyConstraint('id')
+        )
+        with op.batch_alter_table('collections', schema=None) as batch_op:
+            batch_op.create_index(batch_op.f('ix_collections_user_id'), ['user_id'], unique=False)
     
-    op.add_column('api_keys', sa.Column('collection_id', sa.String(length=36), nullable=True))
-    op.add_column('api_keys', sa.Column('permission', sa.String(length=20), nullable=True))
+    api_keys_columns = [c['name'] for c in inspector.get_columns('api_keys')] if 'api_keys' in existing_tables else []
+    if 'collection_id' not in api_keys_columns:
+        op.add_column('api_keys', sa.Column('collection_id', sa.String(length=36), nullable=True))
+    if 'permission' not in api_keys_columns:
+        op.add_column('api_keys', sa.Column('permission', sa.String(length=20), nullable=True))
     
-    with op.batch_alter_table('api_keys', schema=None) as batch_op:
-        batch_op.create_index(batch_op.f('ix_api_keys_collection_id'), ['collection_id'], unique=False)
+    if 'collection_id' not in api_keys_columns:
+        with op.batch_alter_table('api_keys', schema=None) as batch_op:
+            batch_op.create_index(batch_op.f('ix_api_keys_collection_id'), ['collection_id'], unique=False)
     
     users = conn.execute(text("SELECT id FROM users")).fetchall()
     collection_mapping = {}
@@ -74,23 +81,26 @@ def upgrade() -> None:
                     {"cid": collection_id, "perm": permission, "kid": key_id}
                 )
     
-    op.add_column('documents', sa.Column('collection_id', sa.String(length=36), nullable=True))
+    documents_columns = [c['name'] for c in inspector.get_columns('documents')] if 'documents' in existing_tables else []
+    if 'collection_id' not in documents_columns:
+        op.add_column('documents', sa.Column('collection_id', sa.String(length=36), nullable=True))
+        
+        with op.batch_alter_table('documents', schema=None) as batch_op:
+            batch_op.create_index(batch_op.f('ix_documents_collection_id'), ['collection_id'], unique=False)
+        
+        for user_id, collection_id in collection_mapping.items():
+            conn.execute(
+                text("""
+                    UPDATE documents SET collection_id = :cid
+                    WHERE api_key_id IN (SELECT id FROM api_keys WHERE user_id = :uid)
+                """),
+                {"cid": collection_id, "uid": user_id}
+            )
     
-    with op.batch_alter_table('documents', schema=None) as batch_op:
-        batch_op.create_index(batch_op.f('ix_documents_collection_id'), ['collection_id'], unique=False)
-    
-    for user_id, collection_id in collection_mapping.items():
-        conn.execute(
-            text("""
-                UPDATE documents SET collection_id = :cid
-                WHERE api_key_id IN (SELECT id FROM api_keys WHERE user_id = :uid)
-            """),
-            {"cid": collection_id, "uid": user_id}
-        )
-    
-    with op.batch_alter_table('documents', schema=None) as batch_op:
-        batch_op.drop_index('ix_documents_api_key_id')
-        batch_op.drop_column('api_key_id')
+    if 'api_key_id' in documents_columns:
+        with op.batch_alter_table('documents', schema=None) as batch_op:
+            batch_op.drop_index('ix_documents_api_key_id')
+            batch_op.drop_column('api_key_id')
     
     with op.batch_alter_table('collections', schema=None) as batch_op:
         batch_op.alter_column('user_id', existing_nullable=False, nullable=False)
@@ -98,8 +108,10 @@ def upgrade() -> None:
     with op.batch_alter_table('api_keys', schema=None) as batch_op:
         batch_op.alter_column('collection_id', existing_nullable=True, nullable=False)
         batch_op.alter_column('permission', existing_nullable=True, nullable=False)
-        batch_op.drop_column('qdrant_collection')
-        batch_op.drop_column('scopes')
+        if 'qdrant_collection' in api_keys_columns:
+            batch_op.drop_column('qdrant_collection')
+        if 'scopes' in api_keys_columns:
+            batch_op.drop_column('scopes')
     
     with op.batch_alter_table('documents', schema=None) as batch_op:
         batch_op.create_foreign_key('fk_documents_collection', 'collections', ['collection_id'], ['id'])

@@ -16,6 +16,12 @@ RUN pip install --no-cache-dir -e . && \
 # Copy source code
 COPY src/ ./src/
 
+# Copy migrations
+COPY migrations/ ./migrations/
+
+# Copy alembic.ini
+COPY alembic.ini .
+
 # Copy tests
 COPY tests/ ./tests/
 
@@ -25,5 +31,5 @@ RUN chown -R appuser:appgroup /app
 # Switch to non-root user
 USER appuser
 
-# Run tests (exclude integration tests that require live server)
-CMD ["sh", "-c", "ruff check src/ && mypy src/ && pytest tests/ -v --ignore=tests/mcp_live_test.py"]
+# Run tests (exclude e2e tests that require live external services)
+CMD ["sh", "-c", "PYTHONPATH=/app ruff check src/ && mypy src/ && PYTHONPATH=/app pytest tests/unit tests/integration -v"]

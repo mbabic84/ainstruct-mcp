@@ -34,7 +34,7 @@ jobs:
           DATABASE_URL=sqlite:///./data/mcp_server.db
           EOF
 
-      - name: Run integration tests
+      - name: Run e2e tests
         run: docker compose --profile test up --build --abort-on-container-exit
 
       - name: Show test logs

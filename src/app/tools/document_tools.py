@@ -230,9 +230,11 @@ async def list_documents(input_data: ListDocumentsInput) -> ListDocumentsOutput:
     if auth_type == "pat" and not collection_id and not is_admin:
         from ..db import get_collection_repository
         collection_repo = get_collection_repository()
-        collections = collection_repo.list_all(auth.get("user_id"))
-        if collections:
-            collection_id = collections[0].id
+        user_id = auth.get("user_id")
+        if user_id:
+            collections = collection_repo.list_by_user(user_id)
+            if collections:
+                collection_id = collections[0]["id"]
 
     doc_repo = get_document_repository(
         str(collection_id) if collection_id and not is_admin else None

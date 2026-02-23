@@ -223,7 +223,7 @@ class TestUserProfile:
         
         with patch("app.tools.user_tools.get_user_repository") as mock_repo_factory:
             mock_repo = MagicMock()
-            mock_repo.get_by_id.return_value = MagicMock(
+            mock_user_obj = MagicMock(
                 id=mock_user["id"],
                 email=mock_user["email"],
                 username=mock_user["username"],
@@ -231,12 +231,21 @@ class TestUserProfile:
                 is_superuser=False,
                 created_at=mock_user["created_at"],
             )
+            mock_user_obj.model_dump.return_value = {
+                "id": mock_user["id"],
+                "email": mock_user["email"],
+                "username": mock_user["username"],
+                "is_active": True,
+                "is_superuser": False,
+                "created_at": mock_user["created_at"],
+            }
+            mock_repo.get_by_id.return_value = mock_user_obj
             mock_repo_factory.return_value = mock_repo
             
             result = await user_profile()
             
-            assert result.id == mock_user["id"]
-            assert result.email == mock_user["email"]
+            assert result["id"] == mock_user["id"]
+            assert result["email"] == mock_user["email"]
 
     @pytest.mark.asyncio
     async def test_profile_not_authenticated(self):

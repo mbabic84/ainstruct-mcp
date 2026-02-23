@@ -1,15 +1,11 @@
-FROM python:3.14-slim
+FROM python:3.14-alpine
 
-# Create non-root user for security best practices
-RUN groupadd --gid 1000 appgroup && \
-    useradd --uid 1000 --gid appgroup --shell /bin/bash --create-home appuser
+RUN addgroup -g 1000 appgroup && \
+    adduser -u 1000 -G appgroup -D appuser
 
 WORKDIR /app
 
-# Install dependencies as root first
-RUN apt-get update && apt-get install -y --no-install-recommends \
-    curl \
-    && rm -rf /var/lib/apt/lists/*
+RUN apk add --no-cache curl
 
 # Copy and install Python dependencies as root
 COPY pyproject.toml .

@@ -21,5 +21,16 @@ services:
       - qdrant_storage:/qdrant/storage
     restart: unless-stopped
 
+  mcp_client_test:
+    build:
+      context: .
+      dockerfile: Dockerfile.mcp-client
+    environment:
+      - MCP_SERVER_URL=http://mcp_server:8000/mcp
+    depends_on:
+      - mcp_server
+    profiles:
+      - test
+
 volumes:
   qdrant_storage:

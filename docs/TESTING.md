@@ -9,23 +9,29 @@ This guide explains how to run tests locally, matching the GitHub Actions workfl
 
 ## Test Structure
 
-The test suite is divided into two phases:
+```
+tests/
+├── unit/              # Mock-based tests, no external dependencies
+├── integration/       # Database tests (SQLite, migrations)
+├── e2e/               # End-to-end tests (requires Qdrant)
+└── __init__.py
+```
 
 | Phase | What it runs | Requirements |
 |-------|--------------|--------------|
-| **Lint & Unit** | Ruff linting, MyPy type checking, 75 unit tests | Docker only |
-| **Integration** | 9 live MCP protocol tests | Docker Compose with server + Qdrant |
+| **Lint & Unit + Integration** | Ruff, MyPy, 104 unit + 9 migration tests | Docker only |
+| **E2E** | 9 live MCP protocol tests | Docker Compose with Qdrant |
 
 ## Quick Start
 
 ### Run All Tests (Same as CI)
 
 ```bash
-# 1. Lint and unit tests
+# 1. Lint, unit, and integration tests
 docker build -f Dockerfile.test -t ainstruct-test .
 docker run --rm ainstruct-test
 
-# 2. Integration tests
+# 2. E2E tests
 cat > .env << 'EOF'
 API_KEYS=test_key_123
 ADMIN_API_KEY=admin_secret_key
@@ -39,7 +45,7 @@ docker compose --profile test up --build --abort-on-container-exit
 
 ### Run Specific Test Phase
 
-**Lint and Unit Tests Only:**
+**Lint, Unit, and Integration Tests:**
 
 ```bash
 docker build -f Dockerfile.test -t ainstruct-test .
@@ -49,9 +55,9 @@ docker run --rm ainstruct-test
 This runs:
 - `ruff check src/` - Code linting
 - `mypy src/` - Type checking
-- `pytest tests/ -v --ignore=tests/mcp_live_test.py` - 75 unit tests
+- `pytest tests/unit tests/integration -v` - 104 unit + 9 migration tests
 
-**Integration Tests Only:**
+**E2E Tests Only:**
 
 ```bash
 # Create test environment
@@ -73,12 +79,11 @@ This starts:
 
 ## Test Files Reference
 
-| File | Type | Description |
-|------|------|-------------|
-| `tests/test_*.py` | Unit | Mock-based unit tests (75 tests) |
-| `tests/mcp_live_test.py` | Integration | Live MCP protocol tests (9 tests) |
-| `tests/mcp_client_test.py` | Support | Test client utilities |
-| `tests/debug_connection.py` | Debug | Manual connection testing |
+| Directory | Type | Description |
+|-----------|------|-------------|
+| `tests/unit/` | Unit | Mock-based tests (104 tests) |
+| `tests/integration/` | Integration | Migration tests with real SQLite (9 tests) |
+| `tests/e2e/` | E2E | Live MCP protocol tests (9 tests) |
 
 ## Advanced Usage
 
@@ -101,31 +106,20 @@ docker compose up -d
 # Run tests locally against it
 export MCP_SERVER_URL=http://localhost:8001/mcp
 pip install fastmcp>=3.0.0 httpx pytest pytest-asyncio
-pytest tests/mcp_live_test.py -v
-```
-
-### Debug Connection Issues
-
-```bash
-# Start server
-docker compose up -d mcp_server qdrant
-
-# Run debug script
-export MCP_SERVER_URL=http://localhost:8001/mcp
-python tests/debug_connection.py
+pytest tests/e2e/mcp_live_test.py -v
 ```
 
 ## Troubleshooting
 
-### Database Errors in Integration Tests
+### Database Errors in E2E Tests
 
 ```
 sqlite3.OperationalError: unable to open database file
 ```
 
-This error occurs when running `docker compose up` instead of `docker compose --profile test up`. The integration tests use `mcp_server_test` which has no volume mount, avoiding permission issues.
+This error occurs when running `docker compose up` instead of `docker compose --profile test up`. The E2E tests use `mcp_server_test` which has no volume mount, avoiding permission issues.
 
-**Solution:** Always use `--profile test` for integration tests:
+**Solution:** Always use `--profile test` for E2E tests:
 ```bash
 docker compose --profile test up --build --abort-on-container-exit
 ```

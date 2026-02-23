@@ -76,10 +76,18 @@ def is_jwt_token(token: str) -> bool:
     return len(parts) == 3
 
 
+# Public tools that don't require authentication
 PUBLIC_TOOLS: set[str] = {
     "user_register_tool",
     "user_login_tool",
     "promote_to_admin_tool",
+}
+
+# MCP protocol methods that don't require authentication
+PUBLIC_PROTOCOL_METHODS: set[str] = {
+    "initialize",
+    "notifications/initialized",
+    "ping",
 }
 
 
@@ -88,16 +96,25 @@ def is_public_tool(tool_name: str) -> bool:
 
 
 class AuthMiddleware(Middleware):
-    async def on_request(self, context: MiddlewareContext, call_next):
-        tool_name = getattr(context, "tool_name", None) or getattr(context, "name", None)
+    """Authentication middleware for FastMCP."""
 
-        headers = get_http_headers()
+    async def on_initialize(self, context: MiddlewareContext, call_next):
+        """Allow initialize requests without auth."""
+        return await call_next(context)
+
+    async def on_call_tool(self, context: MiddlewareContext, call_next):
+        """Handle authentication for tool calls."""
+        # Get tool name from the message (message IS the CallToolRequestParams)
+        message = context.message
+        tool_name = getattr(message, 'name', None)
+
+        # For public tools, allow without auth
+        if tool_name and tool_name in PUBLIC_TOOLS:
+            return await call_next(context)
+
+        # Check auth header for all other tools
+        headers = get_http_headers(include={"authorization"})
         auth_header = headers.get("authorization", "")
-
-        # For public tools, allow missing/empty auth
-        if tool_name and is_public_tool(tool_name):
-            if not auth_header or auth_header == "Bearer " or auth_header == "Bearer placeholder":
-                return await call_next(context)
 
         if not auth_header.startswith("Bearer "):
             raise ValueError("Missing or invalid Authorization header")
@@ -124,6 +141,11 @@ class AuthMiddleware(Middleware):
             return await call_next(context)
         finally:
             clear_all_auth()
+
+    async def on_list_tools(self, context: MiddlewareContext, call_next):
+        """Allow listing tools without auth (for discovery)."""
+        # NOTE: Tools are listed without auth, but calling protected tools still requires auth
+        return await call_next(context)
 
 
 def require_scope(required_scope: Scope) -> Callable:

@@ -26,5 +26,5 @@ RUN chown -R appuser:appgroup /app
 # Switch to non-root user
 USER appuser
 
-# Run tests
-CMD ["sh", "-c", "ruff check src/ && mypy src/ && pytest tests/ -v"]
+# Run tests (exclude integration tests that require live server)
+CMD ["sh", "-c", "ruff check src/ && mypy src/ && pytest tests/ -v --ignore=tests/mcp_live_test.py"]

@@ -19,17 +19,33 @@ tests/
 
 | Phase | What it runs | Requirements |
 |-------|--------------|--------------|
-| **Lint & Unit + Integration** | Ruff, MyPy, 104 unit + 9 migration tests | Docker only |
-| **E2E** | 9 live MCP protocol tests | Docker Compose with Qdrant |
+| **Lint & Unit + Integration** | Ruff, MyPy, 113 tests | Docker only |
+| **E2E** | 14 live MCP protocol tests | Docker Compose with Qdrant |
 
 ## Quick Start
 
 ### Run All Tests (Same as CI)
 
+**Option 1: Using the test script (recommended)**
+```bash
+./run_tests.sh
+```
+
+**Option 2: Manual steps**
 ```bash
 # 1. Lint, unit, and integration tests
-docker build -f Dockerfile.test -t ainstruct-test .
-docker run --rm ainstruct-test
+docker build -f Dockerfile.test-base -t ainstruct-test-base .
+docker run --rm \
+    --mount type=bind,source="$(pwd)"/src,target=/app/src \
+    --mount type=bind,source="$(pwd)"/tests,target=/app/tests \
+    --mount type=bind,source="$(pwd)"/pyproject.toml,target=/app/pyproject.toml \
+    --mount type=bind,source="$(pwd)"/alembic.ini,target=/app/alembic.ini \
+    --mount type=bind,source="$(pwd)"/migrations,target=/app/migrations \
+    -w /app \
+    -e PYTHONPATH=/app \
+    -e USE_MOCK_EMBEDDINGS=true \
+    ainstruct-test-base \
+    sh -c "ruff check src/ && mypy src/ && pytest tests/unit tests/integration -v"
 
 # 2. E2E tests
 cat > .env << 'EOF'
@@ -48,14 +64,27 @@ docker compose --profile test up --build --abort-on-container-exit
 **Lint, Unit, and Integration Tests:**
 
 ```bash
-docker build -f Dockerfile.test -t ainstruct-test .
-docker run --rm ainstruct-test
+# Build base image once (installs dependencies only)
+docker build -f Dockerfile.test-base -t ainstruct-test-base .
+
+# Run with volume mounts (code changes reflected immediately)
+docker run --rm \
+    --mount type=bind,source="$(pwd)"/src,target=/app/src \
+    --mount type=bind,source="$(pwd)"/tests,target=/app/tests \
+    --mount type=bind,source="$(pwd)"/pyproject.toml,target=/app/pyproject.toml \
+    --mount type=bind,source="$(pwd)"/alembic.ini,target=/app/alembic.ini \
+    --mount type=bind,source="$(pwd)"/migrations,target=/app/migrations \
+    -w /app \
+    -e PYTHONPATH=/app \
+    -e USE_MOCK_EMBEDDINGS=true \
+    ainstruct-test-base \
+    sh -c "ruff check src/ && mypy src/ && pytest tests/unit tests/integration -v"
 ```
 
 This runs:
 - `ruff check src/` - Code linting
 - `mypy src/` - Type checking
-- `pytest tests/unit tests/integration -v` - 104 unit + 9 migration tests
+- `pytest tests/unit tests/integration -v` - 113 tests
 
 **E2E Tests Only:**
 
@@ -82,17 +111,17 @@ This starts:
 For rapid iteration during development, use the `test_runner` service with volume mounts. This allows you to edit code locally and immediately run tests without rebuilding the container.
 
 ```bash
-# Build the test image once
-docker compose build test_runner
+# Build the test base image once
+docker build -f Dockerfile.test-base -t ainstruct-test-base .
 
 # Run tests with volume mounts (code changes reflected immediately)
 docker compose run --rm test_runner
 
 # Run specific test file
-docker compose run --rm -e PYTHONPATH=/app test_runner python3 -m pytest tests/unit/test_auth.py -v
+docker compose run --rm -e PYTHONPATH=/app test_runner pytest tests/unit/test_auth.py -v
 
 # Run specific test
-docker compose run --rm -e PYTHONPATH=/app test_runner python3 -m pytest tests/unit/test_auth.py::TestUserProfile::test_profile_success -v
+docker compose run --rm -e PYTHONPATH=/app test_runner pytest tests/unit/test_auth.py::TestUserProfile::test_profile_success -v
 
 # Run with linting
 docker compose run --rm -e PYTHONPATH=/app test_runner ruff check src/
@@ -101,7 +130,7 @@ docker compose run --rm -e PYTHONPATH=/app test_runner ruff check src/
 docker compose run --rm -e PYTHONPATH=/app test_runner mypy src/
 
 # Run all three (lint + type check + tests)
-docker compose run --rm -e PYTHONPATH=/app test_runner bash -c "ruff check src/ && mypy src/ && pytest tests/unit -v"
+docker compose run --rm -e PYTHONPATH=/app test_runner sh -c "ruff check src/ && mypy src/ && pytest tests/unit tests/integration -v"
 ```
 
 The `test_runner` service mounts:
@@ -109,6 +138,7 @@ The `test_runner` service mounts:
 - `./tests:/app/tests` - Test files
 - `./pyproject.toml:/app/pyproject.toml` - Project config
 - `./alembic.ini:/app/alembic.ini` - Alembic config
+- `./migrations:/app/migrations` - Database migrations
 
 ### Using docker-compose.yml test_runner Service
 
@@ -118,19 +148,20 @@ The `test_runner` service is defined in `docker-compose.yml` with the `test` pro
 test_runner:
   build:
     context: .
-    dockerfile: Dockerfile.test
+    dockerfile: Dockerfile.test-base
   volumes:
     - ./src:/app/src
     - ./tests:/app/tests
     - ./pyproject.toml:/app/pyproject.toml
     - ./alembic.ini:/app/alembic.ini
+    - ./migrations:/app/migrations
   environment:
     - PYTHONPATH=/app
-    - DATABASE_URL=sqlite:///./data/mcp_server.db
     - USE_MOCK_EMBEDDINGS=true
   working_dir: /app
   profiles:
     - test
+  command: ["sh", "-c", "ruff check src/ && mypy src/ && pytest tests/unit tests/integration -v"]
 ```
 
 To use it:
@@ -149,31 +180,7 @@ COMPOSE_PROFILES=test docker compose run --rm test_runner
 |-----------|------|-------------|
 | `tests/unit/` | Unit | Mock-based tests (104 tests) |
 | `tests/integration/` | Integration | Migration tests with real SQLite (9 tests) |
-| `tests/e2e/` | E2E | Live MCP protocol tests (9 tests) |
-
-## Advanced Usage
-
-### Run Local Development Server
-
-For local development with persistent storage:
-
-```bash
-docker compose up -d
-```
-
-This starts `mcp_server` with volume mount (`./data:/app/data`) on port 8001.
-
-### Run Tests Against Local Server
-
-```bash
-# Start development server
-docker compose up -d
-
-# Run tests locally against it
-export MCP_SERVER_URL=http://localhost:8001/mcp
-pip install fastmcp>=3.0.0 httpx pytest pytest-asyncio
-pytest tests/e2e/mcp_live_test.py -v
-```
+| `tests/e2e/` | E2E | Live MCP protocol tests (14 tests) |
 
 ## Troubleshooting
 
@@ -226,8 +233,18 @@ The GitHub Actions workflow (`.github/workflows/test.yml`) runs two jobs:
 
 **Job 1: lint-and-unit**
 ```yaml
-- docker build -f Dockerfile.test -t ainstruct-test .
-- docker run --rm ainstruct-test
+- docker build -f Dockerfile.test-base -t ainstruct-test-base .
+- docker run --rm
+    --mount type=bind,source=${{ github.workspace }}/src,target=/app/src
+    --mount type=bind,source=${{ github.workspace }}/tests,target=/app/tests
+    --mount type=bind,source=${{ github.workspace }}/pyproject.toml,target=/app/pyproject.toml
+    --mount type=bind,source=${{ github.workspace }}/alembic.ini,target=/app/alembic.ini
+    --mount type=bind,source=${{ github.workspace }}/migrations,target=/app/migrations
+    -w /app
+    -e PYTHONPATH=/app
+    -e USE_MOCK_EMBEDDINGS=true
+    ainstruct-test-base
+    sh -c "ruff check src/ && mypy src/ && pytest tests/unit tests/integration -v"
 ```
 
 **Job 2: integration** (runs after lint-and-unit passes)

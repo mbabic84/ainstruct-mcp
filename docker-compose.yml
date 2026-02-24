@@ -1,27 +1,12 @@
 services:
-  mcp_server:
-    build: .
-    ports:
-      - "8001:8000"
-    env_file:
-      - .env
-    environment:
-      - QDRANT_URL=http://qdrant:6333
-    volumes:
-      - ./data:/app/data
-    restart: unless-stopped
-    depends_on:
-      - qdrant
-    profiles:
-      - default
-
   qdrant:
     image: qdrant/qdrant:latest
     ports:
       - "6334:6333"
     volumes:
       - qdrant_storage:/qdrant/storage
-    restart: unless-stopped
+    profiles:
+      - test
 
   mcp_server_test:
     build: .
@@ -30,7 +15,8 @@ services:
       - DATABASE_URL=sqlite:///./data/mcp_server.db
       - USE_MOCK_EMBEDDINGS=true
     depends_on:
-      - qdrant
+      qdrant:
+        condition: service_started
     profiles:
       - test
     healthcheck:
@@ -55,20 +41,20 @@ services:
   test_runner:
     build:
       context: .
-      dockerfile: Dockerfile.test
+      dockerfile: Dockerfile.test-base
     volumes:
       - ./src:/app/src
       - ./tests:/app/tests
       - ./pyproject.toml:/app/pyproject.toml
       - ./alembic.ini:/app/alembic.ini
+      - ./migrations:/app/migrations
     environment:
       - PYTHONPATH=/app
-      - DATABASE_URL=sqlite:///./data/mcp_server.db
       - USE_MOCK_EMBEDDINGS=true
     working_dir: /app
     profiles:
       - test
-    command: ["python3", "-m", "pytest", "tests/unit/test_auth.py::test_readonly_key_denies_write", "tests/unit/test_pat_tokens.py::test_pat_token_authentication", "tests/unit/test_pat_tokens.py::test_pat_token_revoke", "-v"]
+    command: ["sh", "-c", "ruff check src/ && mypy src/ && pytest tests/unit tests/integration -v"]
 
 volumes:
   qdrant_storage:

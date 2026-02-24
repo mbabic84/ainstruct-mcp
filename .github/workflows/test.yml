@@ -12,11 +12,22 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
-      - name: Build test image
-        run: docker build -f Dockerfile.test -t ainstruct-test .
+      - name: Build test base image
+        run: docker build -f Dockerfile.test-base -t ainstruct-test-base .
 
       - name: Run linting and unit tests
-        run: docker run --rm ainstruct-test
+        run: |
+          docker run --rm \
+            --mount type=bind,source=${{ github.workspace }}/src,target=/app/src \
+            --mount type=bind,source=${{ github.workspace }}/tests,target=/app/tests \
+            --mount type=bind,source=${{ github.workspace }}/pyproject.toml,target=/app/pyproject.toml \
+            --mount type=bind,source=${{ github.workspace }}/alembic.ini,target=/app/alembic.ini \
+            --mount type=bind,source=${{ github.workspace }}/migrations,target=/app/migrations \
+            -w /app \
+            -e PYTHONPATH=/app \
+            -e USE_MOCK_EMBEDDINGS=true \
+            ainstruct-test-base \
+            sh -c "ruff check src/ && mypy src/ && pytest tests/unit tests/integration -v"
 
   integration:
     runs-on: ubuntu-latest
@@ -33,6 +44,9 @@ jobs:
           QDRANT_URL=http://qdrant:6333
           DATABASE_URL=sqlite:///./data/mcp_server.db
           EOF
+
+      - name: Build test base image
+        run: docker build -f Dockerfile.test-base -t ainstruct-test-base .
 
       - name: Run e2e tests
         run: docker compose --profile test up --build --abort-on-container-exit

@@ -1,3 +1,10 @@
+## [1.6.4](https://github.com/mbabic84/ainstruct-mcp/compare/v1.6.3...v1.6.4) (2026-02-24)
+
+
+### Bug Fixes
+
+* check for user_id column before querying api_keys table ([6c65311](https://github.com/mbabic84/ainstruct-mcp/commit/6c65311fd7bce39801d322a5904911f6a484a647))
+
 ## [1.6.3](https://github.com/mbabic84/ainstruct-mcp/compare/v1.6.2...v1.6.3) (2026-02-24)
 
 

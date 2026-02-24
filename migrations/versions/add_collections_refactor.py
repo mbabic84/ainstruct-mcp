@@ -49,6 +49,15 @@ def upgrade() -> None:
     
     has_scopes_column = 'scopes' in api_keys_columns
     has_qdrant_collection_column = 'qdrant_collection' in api_keys_columns
+    has_user_id_column = 'user_id' in api_keys_columns
+    
+    if not has_user_id_column:
+        with op.batch_alter_table('api_keys', schema=None) as batch_op:
+            batch_op.add_column(sa.Column('user_id', sa.String(length=36), nullable=True))
+            batch_op.create_index(batch_op.f('ix_api_keys_user_id'), ['user_id'], unique=False)
+    
+    api_keys_columns = [c['name'] for c in inspector.get_columns('api_keys')] if 'api_keys' in existing_tables else []
+    has_user_id_column = 'user_id' in api_keys_columns
     
     users = conn.execute(text("SELECT id FROM users")).fetchall()
     collection_mapping = {}

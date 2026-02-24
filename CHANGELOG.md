@@ -1,3 +1,10 @@
+# [3.1.0](https://github.com/mbabic84/ainstruct-mcp/compare/v3.0.1...v3.1.0) (2026-02-24)
+
+
+### Features
+
+* add PAT multi-collection document access ([fbbfe8b](https://github.com/mbabic84/ainstruct-mcp/commit/fbbfe8b621a6c286e16334160910d285dafe5218))
+
 ## [3.0.1](https://github.com/mbabic84/ainstruct-mcp/compare/v3.0.0...v3.0.1) (2026-02-24)
 
 

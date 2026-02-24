@@ -1,28 +1,27 @@
 FROM python:3.14-alpine
 
-RUN addgroup -g 1000 appgroup && \
-    adduser -u 1000 -G appgroup -D appuser
+RUN apk add --no-cache curl
 
 WORKDIR /app
 
-RUN apk add --no-cache curl
+RUN python -m venv /app/venv && \
+    ln -s /app/venv/bin/python /app/python
 
-# Copy and install Python dependencies as root
+ENV VIRTUAL_ENV=/app/venv
+ENV PATH=/app/venv/bin:$PATH
+
 COPY pyproject.toml .
-RUN pip install --no-cache-dir -e .
-
-# Copy source code
 COPY src/ ./src/
-
-# Copy alembic files for migrations
 COPY alembic.ini .
 COPY migrations/ ./migrations/
 
-# Create data directory and set permissions
-RUN mkdir -p /app/data && \
+RUN pip install --no-cache-dir -e .
+
+RUN addgroup -g 1000 appgroup && \
+    adduser -u 1000 -G appgroup -D appuser && \
+    mkdir -p /app/data && \
     chown -R appuser:appgroup /app
 
-# Switch to non-root user
 USER appuser
 
 ENV PYTHONPATH=/app/src

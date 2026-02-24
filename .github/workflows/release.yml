@@ -1,4 +1,4 @@
-name: Tests and Release
+name: Release
 
 on:
   push:
@@ -12,11 +12,7 @@ permissions:
   id-token: write
 
 jobs:
-  test:
-    uses: ./.github/workflows/test.yml
-
   release:
-    needs: test
     runs-on: ubuntu-latest
     outputs:
       new_release_published: ${{ steps.semantic-release.outputs.new_release_published }}

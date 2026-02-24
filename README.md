@@ -213,6 +213,10 @@ docker-compose up -d
 
 4. The MCP server is available at `http://localhost:8000/mcp`
 
+## Testing
+
+For local development and running tests, see [Testing Guide](./docs/TESTING.md).
+
 ## Transport Protocol
 
 This server uses `streamable-http` transport (recommended over SSE-based `http`).

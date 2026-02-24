@@ -117,20 +117,22 @@ async def user_login(input_data: LoginInput) -> TokenResponse:
     )
 
 
-async def user_profile() -> UserResponse:
-    from .context import get_user_info
+async def user_profile() -> dict:
+    from .context import get_auth_context
 
-    user_info = get_user_info()
-    if not user_info:
+    # Check for any authentication (JWT, PAT, or API key)
+    auth_context = get_auth_context()
+
+    if not auth_context or not auth_context.get("user_id"):
         raise ValueError("Not authenticated")
 
     repo = get_user_repository()
-    user = repo.get_by_id(user_info["id"])
+    user = repo.get_by_id(auth_context["user_id"])
 
     if not user:
         raise ValueError("User not found")
 
-    return user
+    return user.model_dump()
 
 
 async def user_refresh(input_data: RefreshInput) -> TokenResponse:

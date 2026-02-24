@@ -1,4 +1,4 @@
-from pydantic import BaseModel
+from pydantic import BaseModel, EmailStr
 
 from ..db import get_user_repository
 from ..db.models import Scope, UserResponse
@@ -24,7 +24,7 @@ class GetUserInput(BaseModel):
 
 class UpdateUserInput(BaseModel):
     user_id: str
-    email: str | None = None
+    email: EmailStr | None = None
     username: str | None = None
     password: str | None = None
     is_active: bool | None = None

@@ -636,5 +636,294 @@ class TestPATTokens:
                 print(f"\nRevoked token correctly rejected: {profile_result}")
 
 
+class TestPATDocumentAccess:
+    """Test PAT token document access across all user collections."""
+    
+    @pytest.mark.asyncio
+    async def test_pat_document_operations(self):
+        """Test PAT can create, get, update, delete documents."""
+        test_id = generate_test_id()
+        
+        async with MCPClient(SERVER_URL, transport=TRANSPORT) as client:
+            # Register and login
+            reg_result = await register_test_user(client, test_id)
+            login_result = await login_user(
+                client,
+                reg_result["username"],
+                reg_result["password"]
+            )
+            
+            pat_token = None
+            collection_id = None
+            
+            # Get collection ID and create PAT token
+            async with MCPClient(SERVER_URL, auth_token=login_result["access_token"]) as auth_client:
+                collections_result = await auth_client.call_tool("list_collections_tool", {})
+                collection_id = collections_result["collections"][0]["id"]
+                
+                pat_result = await auth_client.call_tool("create_pat_token_tool", {
+                    "label": "Doc Test PAT",
+                })
+                pat_token = pat_result["token"]
+            
+            # Use PAT for document operations
+            async with MCPClient(SERVER_URL, auth_token=pat_token) as pat_client:
+                # Store document
+                store_result = await pat_client.call_tool("store_document_tool", {
+                    "title": "PAT Test Document",
+                    "content": "# PAT Test\n\nThis document is stored via PAT token.",
+                    "document_type": "markdown",
+                })
+                
+                assert "document_id" in store_result
+                document_id = store_result["document_id"]
+                print(f"\nPAT stored document: {document_id}")
+                
+                # Get document
+                get_result = await pat_client.call_tool("get_document_tool", {
+                    "document_id": document_id,
+                })
+                
+                assert get_result.get("title") == "PAT Test Document"
+                print(f"\nPAT retrieved document: {get_result.get('title')}")
+                
+                # Update document
+                update_result = await pat_client.call_tool("update_document_tool", {
+                    "document_id": document_id,
+                    "title": "Updated PAT Document",
+                    "content": "# Updated\n\nThis was updated via PAT.",
+                    "document_type": "markdown",
+                })
+                
+                assert update_result.get("document_id") == document_id
+                print(f"\nPAT updated document")
+                
+                # Delete document
+                delete_result = await pat_client.call_tool("delete_document_tool", {
+                    "document_id": document_id,
+                })
+                
+                assert delete_result.get("success") is True
+                print(f"\nPAT deleted document")
+
+    @pytest.mark.asyncio
+    async def test_pat_list_all_documents(self):
+        """Test PAT list_documents returns all user's documents across collections."""
+        test_id = generate_test_id()
+        
+        async with MCPClient(SERVER_URL, transport=TRANSPORT) as client:
+            # Register and login
+            reg_result = await register_test_user(client, test_id)
+            login_result = await login_user(
+                client,
+                reg_result["username"],
+                reg_result["password"]
+            )
+            
+            pat_token = None
+            collection_ids = []
+            
+            async with MCPClient(SERVER_URL, auth_token=login_result["access_token"]) as auth_client:
+                # Get default collection
+                collections_result = await auth_client.call_tool("list_collections_tool", {})
+                collection_ids.append(collections_result["collections"][0]["id"])
+                
+                # Create a second collection
+                new_coll = await auth_client.call_tool("create_collection_tool", {
+                    "name": "Second Collection",
+                })
+                collection_ids.append(new_coll["id"])
+                
+                # Create API key for each collection to store documents
+                key1_result = await auth_client.call_tool("create_api_key_tool", {
+                    "label": "Key1",
+                    "collection_id": collection_ids[0],
+                    "permission": "read_write",
+                })
+                key2_result = await auth_client.call_tool("create_api_key_tool", {
+                    "label": "Key2",
+                    "collection_id": collection_ids[1],
+                    "permission": "read_write",
+                })
+                
+                # Create PAT token
+                pat_result = await auth_client.call_tool("create_pat_token_tool", {
+                    "label": "List Test PAT",
+                })
+                pat_token = pat_result["token"]
+            
+            # Store documents in each collection using API keys
+            for key, coll_id in [(key1_result["key"], collection_ids[0]), 
+                                  (key2_result["key"], collection_ids[1])]:
+                async with MCPClient(SERVER_URL, auth_token=key) as key_client:
+                    await key_client.call_tool("store_document_tool", {
+                        "title": f"Doc in {coll_id[:8]}",
+                        "content": f"Document in collection {coll_id}",
+                        "document_type": "markdown",
+                    })
+            
+            # Use PAT to list all documents (should see both)
+            async with MCPClient(SERVER_URL, auth_token=pat_token) as pat_client:
+                list_result = await pat_client.call_tool("list_documents_tool", {
+                    "limit": 50,
+                })
+                
+                total = list_result.get("total", 0)
+                assert total >= 2, f"Expected at least 2 documents, got {total}"
+                print(f"\nPAT listed {total} documents across all collections")
+
+    @pytest.mark.asyncio
+    async def test_pat_search_all_collections(self):
+        """Test PAT search returns results from all user collections."""
+        test_id = generate_test_id()
+        
+        async with MCPClient(SERVER_URL, transport=TRANSPORT) as client:
+            # Register and login
+            reg_result = await register_test_user(client, test_id)
+            login_result = await login_user(
+                client,
+                reg_result["username"],
+                reg_result["password"]
+            )
+            
+            pat_token = None
+            collection_ids = []
+            
+            async with MCPClient(SERVER_URL, auth_token=login_result["access_token"]) as auth_client:
+                # Get default collection
+                collections_result = await auth_client.call_tool("list_collections_tool", {})
+                collection_ids.append(collections_result["collections"][0]["id"])
+                
+                # Create a second collection
+                new_coll = await auth_client.call_tool("create_collection_tool", {
+                    "name": "Search Test Collection",
+                })
+                collection_ids.append(new_coll["id"])
+                
+                # Create API keys for each collection
+                key1_result = await auth_client.call_tool("create_api_key_tool", {
+                    "label": "SearchKey1",
+                    "collection_id": collection_ids[0],
+                    "permission": "read_write",
+                })
+                key2_result = await auth_client.call_tool("create_api_key_tool", {
+                    "label": "SearchKey2",
+                    "collection_id": collection_ids[1],
+                    "permission": "read_write",
+                })
+                
+                # Create PAT token
+                pat_result = await auth_client.call_tool("create_pat_token_tool", {
+                    "label": "Search Test PAT",
+                })
+                pat_token = pat_result["token"]
+            
+            # Store searchable documents in each collection
+            async with MCPClient(SERVER_URL, auth_token=key1_result["key"]) as key_client:
+                await key_client.call_tool("store_document_tool", {
+                    "title": "Python Guide",
+                    "content": "# Python Programming\n\nLearn Python basics.",
+                    "document_type": "markdown",
+                })
+            
+            async with MCPClient(SERVER_URL, auth_token=key2_result["key"]) as key_client:
+                await key_client.call_tool("store_document_tool", {
+                    "title": "JavaScript Guide",
+                    "content": "# JavaScript Programming\n\nLearn JavaScript basics.",
+                    "document_type": "markdown",
+                })
+            
+            # Use PAT to search (should search both collections)
+            async with MCPClient(SERVER_URL, auth_token=pat_token) as pat_client:
+                search_result = await pat_client.call_tool("search_documents_tool", {
+                    "query": "programming",
+                    "max_results": 10,
+                })
+                
+                total = search_result.get("total_results", 0)
+                assert total >= 2, f"Expected results from both collections, got {total}"
+                print(f"\nPAT search found {total} results across all collections")
+
+
+class TestCollections:
+    """Test collection management."""
+    
+    @pytest.mark.asyncio
+    async def test_default_collection_created(self):
+        """Verify default collection is created on registration."""
+        test_id = generate_test_id()
+        
+        async with MCPClient(SERVER_URL, transport=TRANSPORT) as client:
+            # Register
+            reg_result = await register_test_user(client, test_id)
+            
+            # Login
+            login_result = await login_user(
+                client,
+                reg_result["username"],
+                reg_result["password"]
+            )
+            
+            # List collections with JWT token
+            async with MCPClient(SERVER_URL, auth_token=login_result["access_token"]) as auth_client:
+                collections_result = await auth_client.call_tool("list_collections_tool", {})
+                
+                collections = collections_result.get("collections", [])
+                assert len(collections) >= 1
+                
+                # Find default collection
+                default_coll = next(
+                    (c for c in collections if c["name"] == "default"),
+                    None
+                )
+                assert default_coll is not None
+                assert default_coll.get("id") is not None
+                
+                print(f"\nFound default collection: {default_coll.get('id')}")
+
+    @pytest.mark.asyncio
+    async def test_pat_can_access_all_collections(self):
+        """Test PAT has access to all user collections."""
+        test_id = generate_test_id()
+        
+        async with MCPClient(SERVER_URL, transport=TRANSPORT) as client:
+            # Register and login
+            reg_result = await register_test_user(client, test_id)
+            login_result = await login_user(
+                client,
+                reg_result["username"],
+                reg_result["password"]
+            )
+            
+            collection_ids = []
+            
+            async with MCPClient(SERVER_URL, auth_token=login_result["access_token"]) as auth_client:
+                # Get default collection
+                collections_result = await auth_client.call_tool("list_collections_tool", {})
+                collection_ids.append(collections_result["collections"][0]["id"])
+                
+                # Create additional collections
+                for i in range(2):
+                    new_coll = await auth_client.call_tool("create_collection_tool", {
+                        "name": f"PAT Test Collection {i+1}",
+                    })
+                    collection_ids.append(new_coll["id"])
+                
+                # Create PAT token
+                pat_result = await auth_client.call_tool("create_pat_token_tool", {
+                    "label": "Collection Access PAT",
+                })
+                pat_token = pat_result["token"]
+            
+            # Use PAT to list collections - should see all
+            async with MCPClient(SERVER_URL, auth_token=pat_token) as pat_client:
+                collections_result = await pat_client.call_tool("list_collections_tool", {})
+                
+                collections = collections_result.get("collections", [])
+                assert len(collections) >= 3, f"Expected at least 3 collections, got {len(collections)}"
+                
+                print(f"\nPAT can see {len(collections)} collections")
+
+
 if __name__ == "__main__":
     pytest.main([__file__, "-v", "-s"])

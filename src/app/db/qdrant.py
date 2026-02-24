@@ -167,6 +167,22 @@ class QdrantService:
             points_selector=PointIdsList(points=list(point_ids)),
         )
 
+    def search_multi(
+        self,
+        collection_names: list[str],
+        query_vector: list[float],
+        limit: int = 5,
+        filter_document_id: str | None = None,
+    ) -> list[dict]:
+        all_results = []
+        for coll in collection_names:
+            results = self._search_collection(
+                coll, query_vector, limit, filter_document_id
+            )
+            all_results.extend(results)
+        all_results.sort(key=lambda x: x["score"], reverse=True)
+        return all_results[:limit]
+
 
 def get_qdrant_service(collection_name: str | None = None, is_admin: bool = False) -> QdrantService:
     return QdrantService(collection_name, is_admin)

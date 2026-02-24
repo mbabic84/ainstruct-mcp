@@ -1,3 +1,10 @@
+## [3.2.2](https://github.com/mbabic84/ainstruct-mcp/compare/v3.2.1...v3.2.2) (2026-02-24)
+
+
+### Bug Fixes
+
+* add cascade delete to ORM relationships ([b21a0ee](https://github.com/mbabic84/ainstruct-mcp/commit/b21a0ee3bf84cda52a642ebbc142cede20097e2a))
+
 ## [3.2.1](https://github.com/mbabic84/ainstruct-mcp/compare/v3.2.0...v3.2.1) (2026-02-24)
 
 

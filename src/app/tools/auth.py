@@ -91,7 +91,6 @@ PUBLIC_TOOLS: set[str] = {
     "user_register_tool",
     "user_login_tool",
     "user_refresh_tool",
-    "promote_to_admin_tool",
 }
 
 # Tools requiring JWT or PAT authentication (user-level access)
@@ -257,6 +256,10 @@ class AuthMiddleware(Middleware):
             api_key_info = verify_api_key(token)
             if api_key_info:
                 auth_level = AuthLevel.API_KEY
+
+        # Service admin (admin_api_key): only allow update_user_tool
+        if api_key_info and api_key_info.get("is_admin"):
+            return [tool for tool in result if tool.name == "update_user_tool"]
 
         def can_access_tool(tool) -> bool:
             required = get_tool_auth_level(tool.name)

@@ -1,3 +1,15 @@
+## [1.6.3](https://github.com/mbabic84/ainstruct-mcp/compare/v1.6.2...v1.6.3) (2026-02-24)
+
+
+### Bug Fixes
+
+* defer embedding service init to after doc existence check ([3bc5fdc](https://github.com/mbabic84/ainstruct-mcp/commit/3bc5fdce0d99a1503f556a43b0bd4093f60bef4b))
+* handle error string responses in E2E tests ([7fda5fa](https://github.com/mbabic84/ainstruct-mcp/commit/7fda5faacc8d079f7129c3eb411bcc694de6b112))
+* handle missing columns in migration and reorganize tests ([ba28bc2](https://github.com/mbabic84/ainstruct-mcp/commit/ba28bc25974086572e7b6cee55ee415586340622))
+* resolve mypy type errors for collection lookup and user_profile ([b7b47ae](https://github.com/mbabic84/ainstruct-mcp/commit/b7b47ae7b9e4b2483958fa4e97f1f8e5e8345553))
+* resolve PAT token auth and read-only key permission issues ([60f983f](https://github.com/mbabic84/ainstruct-mcp/commit/60f983f5e0b63d28e0c4ef6a501e6388d7eabfb2))
+* update e2e test configuration for new test structure ([8eaad00](https://github.com/mbabic84/ainstruct-mcp/commit/8eaad0073d796efedd17adc0629daa9c09fee218))
+
 ## [1.6.2](https://github.com/mbabic84/ainstruct-mcp/compare/v1.6.1...v1.6.2) (2026-02-23)
 
 

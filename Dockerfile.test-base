@@ -10,21 +10,17 @@ RUN python -m venv /app/venv && \
 ENV VIRTUAL_ENV=/app/venv
 ENV PATH=/app/venv/bin:$PATH
 
-RUN pip install --no-cache-dir \
-    "fastmcp>=3.0.0" \
-    httpx>=0.28.0 \
-    pytest>=8.0.0 \
-    pytest-asyncio>=0.23.0
+COPY pyproject.toml .
 
-COPY tests/e2e/mcp_live_test.py ./tests/e2e/
-COPY tests/e2e/mcp_client_test.py ./tests/e2e/
+RUN --mount=type=cache,target=/root/.cache/pip \
+    pip install --no-cache-dir -e . && \
+    pip install --no-cache-dir ruff mypy pytest pytest-asyncio
 
 RUN addgroup -g 1000 appgroup && \
     adduser -u 1000 -G appgroup -D appuser && \
+    mkdir -p /app/data && \
     chown -R appuser:appgroup /app
 
 USER appuser
 
 ENV PYTHONPATH=/app
-
-CMD ["pytest", "tests/e2e/mcp_live_test.py", "-v"]

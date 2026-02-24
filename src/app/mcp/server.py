@@ -319,8 +319,7 @@ async def user_profile_tool() -> dict:
     Returns:
         Current user profile
     """
-    result = await user_profile()
-    return result.model_dump()
+    return await user_profile()
 
 
 @mcp.tool()

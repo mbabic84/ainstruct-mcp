@@ -8,7 +8,7 @@ import os
 import pytest
 import uuid
 
-from mcp_client_test import (
+from tests.e2e.mcp_client_test import (
     MCPClient,
     generate_test_id,
     register_test_user,
@@ -382,15 +382,16 @@ class TestReadonlyPermissions:
                 list_result = await ro_client.call_tool("list_documents_tool", {})
                 print(f"\nRead-only key can list documents: {list_result.get('total', 0)} documents")
                 
-                # Should NOT be able to store
-                with pytest.raises(Exception) as exc_info:
-                    await ro_client.call_tool("store_document_tool", {
-                        "title": "Should Fail",
-                        "content": "This should not work",
-                    })
+                # Should NOT be able to store - error is returned as string response
+                store_result = await ro_client.call_tool("store_document_tool", {
+                    "title": "Should Fail",
+                    "content": "This should not work",
+                })
                 
-                assert "permission" in str(exc_info.value).lower() or "insufficient" in str(exc_info.value).lower()
-                print(f"\nRead-only key correctly denied write: {exc_info.value}")
+                # Error is returned as string, not raised as exception
+                error_msg = str(store_result).lower()
+                assert "permission" in error_msg or "insufficient" in error_msg, f"Expected permission error, got: {store_result}"
+                print(f"\nRead-only key correctly denied write: {store_result}")
 
 
 class TestCollectionManagement:
@@ -622,13 +623,14 @@ class TestPATTokens:
                 assert revoke_result.get("success") is True
                 print(f"\nRevoked PAT token: {pat_id}")
             
-            # Verify revoked token no longer works
+            # Verify revoked token no longer works - error is returned as string response
             async with MCPClient(SERVER_URL, auth_token=pat_token) as revoked_client:
-                with pytest.raises(Exception) as exc_info:
-                    await revoked_client.call_tool("user_profile_tool", {})
+                profile_result = await revoked_client.call_tool("user_profile_tool", {})
                 
-                assert "invalid" in str(exc_info.value).lower() or "expired" in str(exc_info.value).lower()
-                print(f"\nRevoked token correctly rejected")
+                # Error is returned as string, not raised as exception
+                error_msg = str(profile_result).lower()
+                assert "invalid" in error_msg or "expired" in error_msg, f"Expected invalid/expired error, got: {profile_result}"
+                print(f"\nRevoked token correctly rejected: {profile_result}")
 
 
 if __name__ == "__main__":

@@ -771,7 +771,10 @@ class TestPatTokenPermissions:
 
     @pytest.mark.asyncio
     async def test_pat_token_cannot_directly_store_documents(self):
-        """PAT tokens cannot directly store documents - need API key for collection access."""
+        """PAT tokens can now store documents when they have collections."""
+        from unittest.mock import patch, MagicMock
+        from app.tools.context import get_auth_context
+        
         set_pat_info({
             "id": "pat-1",
             "user_id": "user-123",
@@ -780,15 +783,14 @@ class TestPatTokenPermissions:
             "scopes": [Scope.READ, Scope.WRITE],
             "is_superuser": False,
         })
-
-        from app.tools.document_tools import store_document, StoreDocumentInput
-
-        with pytest.raises(KeyError):
-            await store_document(StoreDocumentInput(
-                title="Test",
-                content="Content",
-                collection_id="collection-1",
-            ))
+        
+        with patch("app.tools.context.get_collection_repository") as mock_repo:
+            mock_repo.return_value.list_by_user.return_value = [
+                {"id": "collection-1", "qdrant_collection": "qdrant-1"}
+            ]
+            auth = get_auth_context()
+            assert "collection_ids" in auth
+            assert "collection-1" in auth["collection_ids"]
 
     @pytest.mark.asyncio
     async def test_pat_token_read_only_cannot_write(self):

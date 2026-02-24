@@ -115,12 +115,21 @@ def has_write_permission() -> bool:
     return False
 
 
+def get_collection_repository():
+    from ..db.repository import get_collection_repository as _get_collection_repo
+    return _get_collection_repo()
+
+
 def get_auth_context() -> dict:
     user_info = get_user_info()
     api_key_info = get_api_key_info()
     pat_info = get_pat_info()
 
     if user_info:
+        collection_repo = get_collection_repository()
+        user_id = user_info.get("id")
+        user_collections = collection_repo.list_by_user(user_id) if user_id else []
+
         return {
             "id": user_info.get("id"),
             "user_id": user_info.get("id"),
@@ -130,9 +139,15 @@ def get_auth_context() -> dict:
             "is_admin": user_info.get("is_superuser", False),
             "is_superuser": user_info.get("is_superuser", False),
             "auth_type": "jwt",
+            "collection_ids": [c["id"] for c in user_collections],
+            "qdrant_collections": [c["qdrant_collection"] for c in user_collections],
         }
 
     if pat_info:
+        collection_repo = get_collection_repository()
+        user_id = pat_info.get("user_id")
+        user_collections = collection_repo.list_by_user(user_id) if user_id else []
+
         return {
             "id": pat_info.get("id"),
             "user_id": pat_info.get("user_id"),
@@ -142,6 +157,8 @@ def get_auth_context() -> dict:
             "is_admin": pat_info.get("is_superuser", False),
             "is_superuser": pat_info.get("is_superuser", False),
             "auth_type": "pat",
+            "collection_ids": [c["id"] for c in user_collections],
+            "qdrant_collections": [c["qdrant_collection"] for c in user_collections],
         }
 
     if api_key_info:

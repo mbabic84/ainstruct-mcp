@@ -15,6 +15,9 @@ services:
       - DATABASE_URL=sqlite:///./data/mcp_server.db
       - USE_MOCK_EMBEDDINGS=true
       - UVICORN_TIMEOUT_GRACEFUL_SHUTDOWN=10
+      - API_KEYS=test_key_123
+      - ADMIN_API_KEY=admin_secret_key
+      - JWT_SECRET_KEY=your-super-secret-jwt-key-change-in-production
     depends_on:
       qdrant:
         condition: service_started

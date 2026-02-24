@@ -1,3 +1,16 @@
+# [2.0.0](https://github.com/mbabic84/ainstruct-mcp/compare/v1.6.5...v2.0.0) (2026-02-24)
+
+
+### Features
+
+* add permission-based tool filtering ([664803d](https://github.com/mbabic84/ainstruct-mcp/commit/664803d2e2ac94a63211313847db4b090ef4e51f))
+
+
+### BREAKING CHANGES
+
+* list_tools without auth now returns only 4 public tools
+instead of all tools. Clients must authenticate to see protected tools.
+
 ## [1.6.5](https://github.com/mbabic84/ainstruct-mcp/compare/v1.6.4...v1.6.5) (2026-02-24)
 
 

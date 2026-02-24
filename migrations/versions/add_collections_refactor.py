@@ -47,17 +47,35 @@ def upgrade() -> None:
         with op.batch_alter_table('api_keys', schema=None) as batch_op:
             batch_op.create_index(batch_op.f('ix_api_keys_collection_id'), ['collection_id'], unique=False)
     
+    has_scopes_column = 'scopes' in api_keys_columns
+    has_qdrant_collection_column = 'qdrant_collection' in api_keys_columns
+    
     users = conn.execute(text("SELECT id FROM users")).fetchall()
     collection_mapping = {}
     for user in users:
         user_id = user[0]
-        existing_keys = conn.execute(
-            text("SELECT id, qdrant_collection, scopes FROM api_keys WHERE user_id = :user_id"),
-            {"user_id": user_id}
-        ).fetchall()
+        
+        if has_scopes_column and has_qdrant_collection_column:
+            existing_keys = conn.execute(
+                text("SELECT id, qdrant_collection, scopes FROM api_keys WHERE user_id = :user_id"),
+                {"user_id": user_id}
+            ).fetchall()
+        elif has_qdrant_collection_column:
+            existing_keys = conn.execute(
+                text("SELECT id, qdrant_collection FROM api_keys WHERE user_id = :user_id"),
+                {"user_id": user_id}
+            ).fetchall()
+        else:
+            existing_keys = conn.execute(
+                text("SELECT id FROM api_keys WHERE user_id = :user_id"),
+                {"user_id": user_id}
+            ).fetchall()
         
         if existing_keys:
-            qdrant_collection = existing_keys[0][1]
+            if has_qdrant_collection_column:
+                qdrant_collection = existing_keys[0][1]
+            else:
+                qdrant_collection = f"default_{user_id}"
             collection_name = "default"
             
             result = conn.execute(
@@ -73,8 +91,11 @@ def upgrade() -> None:
             
             for key in existing_keys:
                 key_id = key[0]
-                scopes = key[2] or "read,write"
-                permission = "read_write" if "write" in scopes else "read"
+                if has_scopes_column:
+                    scopes = key[2] or "read,write"
+                    permission = "read_write" if "write" in scopes else "read"
+                else:
+                    permission = "read_write"
                 
                 conn.execute(
                     text("UPDATE api_keys SET collection_id = :cid, permission = :perm WHERE id = :kid"),
@@ -82,6 +103,7 @@ def upgrade() -> None:
                 )
     
     documents_columns = [c['name'] for c in inspector.get_columns('documents')] if 'documents' in existing_tables else []
+    documents_indexes = [idx['name'] for idx in inspector.get_indexes('documents')] if 'documents' in existing_tables else []
     if 'collection_id' not in documents_columns:
         op.add_column('documents', sa.Column('collection_id', sa.String(length=36), nullable=True))
         
@@ -99,7 +121,8 @@ def upgrade() -> None:
     
     if 'api_key_id' in documents_columns:
         with op.batch_alter_table('documents', schema=None) as batch_op:
-            batch_op.drop_index('ix_documents_api_key_id')
+            if 'ix_documents_api_key_id' in documents_indexes:
+                batch_op.drop_index('ix_documents_api_key_id')
             batch_op.drop_column('api_key_id')
     
     with op.batch_alter_table('collections', schema=None) as batch_op:

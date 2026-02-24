@@ -336,7 +336,10 @@ class AuthMiddleware(Middleware):
 def require_scope(required_scope: Scope) -> Callable:
     def decorator(func: Callable) -> Callable:
         async def wrapper(*args, **kwargs):
-            from .context import get_api_key_info, get_pat_info, get_user_info, has_write_permission
+            from .context import get_api_key_info, get_pat_info, get_user_info, has_write_permission, is_authenticated
+
+            if not is_authenticated():
+                raise ValueError("Not authenticated")
 
             user_info = get_user_info()
             if user_info:

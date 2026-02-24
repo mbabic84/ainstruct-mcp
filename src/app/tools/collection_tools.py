@@ -27,8 +27,20 @@ async def create_collection(input_data: CreateCollectionInput) -> CollectionResp
     if not user_id:
         raise ValueError("Not authenticated")
 
+    name = input_data.name.strip()
+    if not name:
+        raise ValueError("Collection name cannot be empty")
+    
+    if len(name) > 255:
+        raise ValueError("Collection name cannot exceed 255 characters")
+
     repo = get_collection_repository()
-    return repo.create(user_id=user_id, name=input_data.name)
+    
+    existing = repo.get_by_name_for_user(user_id, name)
+    if existing:
+        raise ValueError("Collection with this name already exists")
+    
+    return repo.create(user_id=user_id, name=name)
 
 
 async def list_collections() -> list[CollectionListResponse]:
@@ -115,6 +127,13 @@ async def rename_collection(input_data: RenameCollectionInput) -> CollectionResp
     if not user_info:
         raise ValueError("JWT authentication required")
 
+    name = input_data.name.strip()
+    if not name:
+        raise ValueError("Collection name cannot be empty")
+    
+    if len(name) > 255:
+        raise ValueError("Collection name cannot exceed 255 characters")
+
     repo = get_collection_repository()
     collection = repo.get_by_id(input_data.collection_id)
 
@@ -124,7 +143,11 @@ async def rename_collection(input_data: RenameCollectionInput) -> CollectionResp
     if collection["user_id"] != user_info.get("id") and not user_info.get("is_superuser"):
         raise ValueError("Collection not found")
 
-    result = repo.rename(input_data.collection_id, input_data.name)
+    existing = repo.get_by_name_for_user(collection["user_id"], name)
+    if existing and existing["id"] != input_data.collection_id:
+        raise ValueError("Collection with this name already exists")
+
+    result = repo.rename(input_data.collection_id, name)
     if not result:
         raise ValueError("Failed to rename collection")
 

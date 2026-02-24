@@ -1,3 +1,17 @@
+# [3.0.0](https://github.com/mbabic84/ainstruct-mcp/compare/v2.0.0...v3.0.0) (2026-02-24)
+
+
+### Features
+
+* remove promote_to_admin_tool and add service admin tool filtering ([bb37e2e](https://github.com/mbabic84/ainstruct-mcp/commit/bb37e2e52183a236bd0d81e8a74bfd5b0b705717))
+
+
+### BREAKING CHANGES
+
+* promote_to_admin_tool no longer exists. First admin must be
+created by using ADMIN_API_KEY as Bearer token and calling update_user_tool
+with is_superuser: true.
+
 # [2.0.0](https://github.com/mbabic84/ainstruct-mcp/compare/v1.6.5...v2.0.0) (2026-02-24)
 
 

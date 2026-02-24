@@ -1,3 +1,10 @@
+## [3.2.1](https://github.com/mbabic84/ainstruct-mcp/compare/v3.2.0...v3.2.1) (2026-02-24)
+
+
+### Bug Fixes
+
+* secure search_users_tool and fail closed for unknown tools ([967ee37](https://github.com/mbabic84/ainstruct-mcp/commit/967ee371a78432a26686bc1e1cce0479a586e132))
+
 # [3.2.0](https://github.com/mbabic84/ainstruct-mcp/compare/v3.1.1...v3.2.0) (2026-02-24)
 
 

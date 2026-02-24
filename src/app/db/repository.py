@@ -588,8 +588,29 @@ class CollectionRepository:
                 select(func.count(DocumentModel.id)).where(
                     DocumentModel.collection_id == collection_id
                 )
-            ).scalar()
-            return result or 0
+            ).scalar() or 0
+            return result
+        finally:
+            session.close()
+
+    def get_by_name_for_user(self, user_id: str, name: str) -> dict | None:
+        session = self._get_session()
+        try:
+            collection = session.execute(
+                select(CollectionModel).where(
+                    CollectionModel.user_id == user_id,
+                    CollectionModel.name == name,
+                )
+            ).scalar_one_or_none()
+            if not collection:
+                return None
+            return {
+                "id": collection.id,
+                "name": collection.name,
+                "qdrant_collection": collection.qdrant_collection,
+                "user_id": collection.user_id,
+                "created_at": collection.created_at,
+            }
         finally:
             session.close()
 

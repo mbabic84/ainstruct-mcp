@@ -12,6 +12,12 @@ class ListUsersInput(BaseModel):
     offset: int = 0
 
 
+class SearchUsersInput(BaseModel):
+    query: str
+    limit: int = 50
+    offset: int = 0
+
+
 class GetUserInput(BaseModel):
     user_id: str
 
@@ -33,6 +39,12 @@ class DeleteUserInput(BaseModel):
 async def list_users(input_data: ListUsersInput) -> list[UserResponse]:
     repo = get_user_repository()
     return repo.list_all(limit=input_data.limit, offset=input_data.offset)
+
+
+@require_scope(Scope.ADMIN)
+async def search_users(input_data: SearchUsersInput) -> list[UserResponse]:
+    repo = get_user_repository()
+    return repo.search(query=input_data.query, limit=input_data.limit, offset=input_data.offset)
 
 
 @require_scope(Scope.ADMIN)

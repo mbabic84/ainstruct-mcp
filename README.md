@@ -213,6 +213,16 @@ docker-compose up -d
 
 4. The MCP server is available at `http://localhost:8000/mcp`
 
+## Transport Protocol
+
+This server uses `streamable-http` transport (recommended over SSE-based `http`).
+
+### Endpoint
+- `http://host:port/mcp` - Streamable HTTP transport
+
+### Shutdown Behavior
+The server is configured with a 10-second graceful shutdown timeout to match Docker's stop timeout. Active connections will be given time to complete before the server terminates.
+
 ## Environment Variables
 
 | Variable | Default | Description |

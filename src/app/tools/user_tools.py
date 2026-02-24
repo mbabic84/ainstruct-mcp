@@ -1,6 +1,5 @@
 from pydantic import BaseModel
 
-from ..config import settings
 from ..db import get_collection_repository, get_user_repository
 from ..db.models import Scope, TokenResponse, UserResponse
 from ..services import get_auth_service
@@ -19,11 +18,6 @@ class LoginInput(BaseModel):
 
 class RefreshInput(BaseModel):
     refresh_token: str
-
-
-class PromoteAdminInput(BaseModel):
-    user_id: str
-    admin_api_key: str | None = None
 
 
 async def user_register(input_data: RegisterInput) -> UserResponse:
@@ -51,34 +45,6 @@ async def user_register(input_data: RegisterInput) -> UserResponse:
     collection_repo.create(user_id=user.id, name="default")
 
     return user
-
-
-async def promote_to_admin(input_data: PromoteAdminInput) -> UserResponse:
-    repo = get_user_repository()
-
-    all_users = repo.list_all(limit=1000)
-    admin_exists = any(u.is_superuser for u in all_users)
-
-    if admin_exists:
-        if not input_data.admin_api_key or input_data.admin_api_key != settings.admin_api_key:
-            raise ValueError("Admin API key required (admin already exists)")
-        if not settings.admin_api_key:
-            raise ValueError("Admin promotion disabled (no ADMIN_API_KEY configured)")
-
-    user = repo.get_by_id(input_data.user_id)
-    if not user:
-        raise ValueError("User not found")
-
-    if user.is_superuser:
-        raise ValueError("User is already an admin")
-
-    updated = repo.update(
-        user_id=input_data.user_id,
-        is_superuser=True,
-    )
-    if not updated:
-        raise ValueError("Failed to update user")
-    return updated
 
 
 async def user_login(input_data: LoginInput) -> TokenResponse:
@@ -120,7 +86,6 @@ async def user_login(input_data: LoginInput) -> TokenResponse:
 async def user_profile() -> dict:
     from .context import get_auth_context
 
-    # Check for any authentication (JWT, PAT, or API key)
     auth_context = get_auth_context()
 
     if not auth_context or not auth_context.get("user_id"):

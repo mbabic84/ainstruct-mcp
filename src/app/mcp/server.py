@@ -63,10 +63,8 @@ from ..tools.pat_tools import (
 )
 from ..tools.user_tools import (
     LoginInput,
-    PromoteAdminInput,
     RefreshInput,
     RegisterInput,
-    promote_to_admin,
     user_login,
     user_profile,
     user_refresh,
@@ -268,29 +266,6 @@ async def user_register_tool(
         email=email,
         username=username,
         password=password,
-    ))
-    return result.model_dump()
-
-
-@mcp.tool()
-async def promote_to_admin_tool(
-    user_id: str,
-    admin_api_key: str | None = None,
-) -> dict:
-    """
-    Promote an existing user to admin. The first promotion is automatic (no key needed).
-    Subsequent promotions require the ADMIN_API_KEY from environment.
-
-    Args:
-        user_id: UUID of the user to promote
-        admin_api_key: Required if an admin already exists (from ADMIN_API_KEY env var)
-
-    Returns:
-        Updated user information with admin rights
-    """
-    result = await promote_to_admin(PromoteAdminInput(
-        user_id=user_id,
-        admin_api_key=admin_api_key,
     ))
     return result.model_dump()
 

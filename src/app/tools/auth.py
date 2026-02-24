@@ -132,6 +132,7 @@ DOCUMENT_TOOLS: set[str] = {
 # Tools requiring admin scope (JWT or PAT with admin)
 ADMIN_TOOLS: set[str] = {
     "list_users_tool",
+    "search_users_tool",
     "get_user_tool",
     "update_user_tool",
     "delete_user_tool",
@@ -139,7 +140,11 @@ ADMIN_TOOLS: set[str] = {
 
 
 def get_tool_auth_level(tool_name: str) -> str:
-    """Get the required auth level for a tool."""
+    """Get the required auth level for a tool.
+
+    Unknown tools default to ADMIN level for security - this ensures
+    new tools are not accidentally exposed without explicit authorization.
+    """
     if tool_name in PUBLIC_TOOLS:
         return AuthLevel.NONE
     if tool_name in ADMIN_TOOLS:
@@ -152,7 +157,8 @@ def get_tool_auth_level(tool_name: str) -> str:
         return AuthLevel.JWT_OR_PAT
     if tool_name in USER_TOOLS:
         return AuthLevel.JWT_OR_PAT
-    return AuthLevel.NONE
+    # Default to ADMIN for unknown tools - fail closed for security
+    return AuthLevel.ADMIN
 
 # MCP protocol methods that don't require authentication
 PUBLIC_PROTOCOL_METHODS: set[str] = {

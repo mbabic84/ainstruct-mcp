@@ -15,6 +15,45 @@ from app.tools.auth import (
 from app.tools.context import clear_all_auth
 
 
+# All tools registered in server.py - this must be updated when adding new tools
+ALL_REGISTERED_TOOLS: set[str] = {
+    # Public tools (no auth required)
+    "user_register_tool",
+    "user_login_tool",
+    "user_refresh_tool",
+    # User tools (JWT/PAT required)
+    "user_profile_tool",
+    # Collection tools (JWT/PAT required)
+    "create_collection_tool",
+    "list_collections_tool",
+    "get_collection_tool",
+    "delete_collection_tool",
+    "rename_collection_tool",
+    # Key/PAT tools (JWT/PAT required)
+    "create_api_key_tool",
+    "list_api_keys_tool",
+    "revoke_api_key_tool",
+    "rotate_api_key_tool",
+    "create_pat_token_tool",
+    "list_pat_tokens_tool",
+    "revoke_pat_token_tool",
+    "rotate_pat_token_tool",
+    # Document tools (API key or JWT/PAT)
+    "store_document_tool",
+    "search_documents_tool",
+    "get_document_tool",
+    "list_documents_tool",
+    "delete_document_tool",
+    "update_document_tool",
+    # Admin tools (admin scope required)
+    "list_users_tool",
+    "search_users_tool",
+    "get_user_tool",
+    "update_user_tool",
+    "delete_user_tool",
+}
+
+
 class TestToolAuthLevels:
     """Test that tools are correctly categorized by auth level."""
 
@@ -48,10 +87,51 @@ class TestToolAuthLevels:
         for tool in ADMIN_TOOLS:
             assert get_tool_auth_level(tool) == AuthLevel.ADMIN
 
-    def test_unknown_tool_returns_none(self):
-        """Unknown tools should default to NONE."""
-        assert get_tool_auth_level("unknown_tool") == AuthLevel.NONE
-        assert get_tool_auth_level("") == AuthLevel.NONE
+    def test_unknown_tool_returns_admin(self):
+        """Unknown tools should default to ADMIN for security (fail closed)."""
+        assert get_tool_auth_level("unknown_tool") == AuthLevel.ADMIN
+        assert get_tool_auth_level("") == AuthLevel.ADMIN
+
+    def test_all_registered_tools_have_auth_level(self):
+        """All registered tools must be covered by an auth set.
+        
+        This test ensures no tool is accidentally left without proper
+        authorization configuration. If this test fails, the tool needs
+        to be added to the appropriate auth set in auth.py.
+        """
+        all_auth_set_tools = (
+            PUBLIC_TOOLS |
+            USER_TOOLS |
+            COLLECTION_TOOLS |
+            KEY_PAT_TOOLS |
+            DOCUMENT_TOOLS |
+            ADMIN_TOOLS
+        )
+        
+        missing_tools = ALL_REGISTERED_TOOLS - all_auth_set_tools
+        assert not missing_tools, (
+            f"Tools not in any auth set (security risk): {missing_tools}. "
+            f"Add them to the appropriate set in auth.py"
+        )
+
+    def test_auth_sets_match_registered_tools(self):
+        """Auth sets should not contain tools that aren't registered.
+        
+        This catches typos or removed tools that are still in auth sets.
+        """
+        all_auth_set_tools = (
+            PUBLIC_TOOLS |
+            USER_TOOLS |
+            COLLECTION_TOOLS |
+            KEY_PAT_TOOLS |
+            DOCUMENT_TOOLS |
+            ADMIN_TOOLS
+        )
+        
+        extra_tools = all_auth_set_tools - ALL_REGISTERED_TOOLS
+        assert not extra_tools, (
+            f"Tools in auth sets but not registered in server.py: {extra_tools}"
+        )
 
 
 class TestOnListToolsFiltering:

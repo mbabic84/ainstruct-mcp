@@ -32,14 +32,21 @@ async def create_collection(input_data: CreateCollectionInput) -> CollectionResp
 
 
 async def list_collections() -> list[CollectionListResponse]:
+    from .context import get_user_info
+
     user_info = get_user_info()
     pat_info = get_pat_info()
 
-    auth_info = user_info or pat_info
-    if not auth_info:
+    if not user_info and not pat_info:
         raise ValueError("JWT or PAT authentication required")
 
-    user_id = auth_info.get("id")
+    if user_info:
+        user_id = user_info.get("id")
+    elif pat_info:
+        user_id = pat_info.get("user_id")
+    else:
+        raise ValueError("JWT or PAT authentication required")
+
     if not user_id:
         raise ValueError("Invalid user info")
 

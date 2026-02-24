@@ -219,6 +219,61 @@ class DocumentRepository:
         finally:
             session.close()
 
+    def get_by_id_for_user(self, doc_id: str, user_id: str) -> DocumentResponse | None:
+        session = self._get_session()
+        try:
+            query = select(DocumentModel).where(
+                DocumentModel.id == doc_id
+            ).join(CollectionModel).where(
+                CollectionModel.user_id == user_id
+            )
+
+            db_doc = session.execute(query).scalar_one_or_none()
+            if not db_doc:
+                return None
+            return DocumentResponse(
+                id=db_doc.id,
+                collection_id=db_doc.collection_id,
+                title=db_doc.title,
+                content=db_doc.content,
+                document_type=db_doc.document_type,
+                created_at=db_doc.created_at,
+                updated_at=db_doc.updated_at,
+                doc_metadata=db_doc.doc_metadata or {},
+            )
+        finally:
+            session.close()
+
+    def list_all_for_user(self, user_id: str, limit: int = 50, offset: int = 0) -> list[DocumentResponse]:
+        session = self._get_session()
+        try:
+            query = (
+                select(DocumentModel)
+                .join(CollectionModel)
+                .where(CollectionModel.user_id == user_id)
+                .order_by(DocumentModel.created_at.desc())
+            )
+
+            docs = session.execute(
+                query.limit(limit).offset(offset)
+            ).scalars().all()
+
+            return [
+                DocumentResponse(
+                    id=d.id,
+                    collection_id=d.collection_id,
+                    title=d.title,
+                    content=d.content,
+                    document_type=d.document_type,
+                    created_at=d.created_at,
+                    updated_at=d.updated_at,
+                    doc_metadata=d.doc_metadata or {},
+                )
+                for d in docs
+            ]
+        finally:
+            session.close()
+
 
 class UserRepository:
     def __init__(self, engine):

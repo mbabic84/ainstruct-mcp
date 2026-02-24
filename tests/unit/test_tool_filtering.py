@@ -94,6 +94,7 @@ class TestOnListToolsFiltering:
             middleware = AuthMiddleware()
             call_next = AsyncMock(return_value=mock_tools)
             context = MagicMock(spec=MiddlewareContext)
+            context.fastmcp_context = None
 
             result = await middleware.on_list_tools(context, call_next)
 
@@ -118,6 +119,7 @@ class TestOnListToolsFiltering:
                         middleware = AuthMiddleware()
                         call_next = AsyncMock(return_value=mock_tools)
                         context = MagicMock(spec=MiddlewareContext)
+                        context.fastmcp_context = None
 
                         result = await middleware.on_list_tools(context, call_next)
 
@@ -148,6 +150,7 @@ class TestOnListToolsFiltering:
                         middleware = AuthMiddleware()
                         call_next = AsyncMock(return_value=mock_tools)
                         context = MagicMock(spec=MiddlewareContext)
+                        context.fastmcp_context = None
 
                         result = await middleware.on_list_tools(context, call_next)
 
@@ -179,6 +182,7 @@ class TestOnListToolsFiltering:
                         middleware = AuthMiddleware()
                         call_next = AsyncMock(return_value=mock_tools)
                         context = MagicMock(spec=MiddlewareContext)
+                        context.fastmcp_context = None
 
                         result = await middleware.on_list_tools(context, call_next)
 
@@ -213,6 +217,7 @@ class TestOnListToolsFiltering:
                     middleware = AuthMiddleware()
                     call_next = AsyncMock(return_value=mock_tools)
                     context = MagicMock(spec=MiddlewareContext)
+                    context.fastmcp_context = None
 
                     result = await middleware.on_list_tools(context, call_next)
 
@@ -244,6 +249,7 @@ class TestOnListToolsFiltering:
                     middleware = AuthMiddleware()
                     call_next = AsyncMock(return_value=mock_tools)
                     context = MagicMock(spec=MiddlewareContext)
+                    context.fastmcp_context = None
 
                     result = await middleware.on_list_tools(context, call_next)
 
@@ -279,11 +285,57 @@ class TestOnListToolsFiltering:
                         middleware = AuthMiddleware()
                         call_next = AsyncMock(return_value=mock_tools)
                         context = MagicMock(spec=MiddlewareContext)
+                        context.fastmcp_context = None
 
                         result = await middleware.on_list_tools(context, call_next)
 
                         result_names = {tool.name for tool in result}
                         expected = PUBLIC_TOOLS | DOCUMENT_TOOLS
+                        assert result_names == expected
+
+    @pytest.mark.asyncio
+    async def test_list_tools_streamable_http_fallback(self, mock_tools):
+        """Test auth header retrieval via context.fastmcp_context (Streamable HTTP fallback)."""
+        from fastmcp.server.middleware import MiddlewareContext
+
+        from app.tools.auth import AuthMiddleware
+
+        user_info = {
+            "id": "user-123",
+            "username": "testuser",
+            "email": "test@example.com",
+            "is_superuser": False,
+            "scopes": [],
+        }
+
+        # Create mock request with auth header
+        mock_request = MagicMock()
+        mock_request.headers = {"Authorization": "Bearer jwt_token_via_context"}
+
+        # Create mock request_context
+        mock_request_context = MagicMock()
+        mock_request_context.request = mock_request
+
+        # Create mock fastmcp_context
+        mock_fastmcp_context = MagicMock()
+        mock_fastmcp_context.request_context = mock_request_context
+
+        with patch("app.tools.auth.get_http_headers") as mock_headers:
+            # get_http_headers raises exception (simulating Streamable HTTP)
+            mock_headers.side_effect = Exception("Not available")
+
+            with patch("app.tools.auth.is_pat_token", return_value=False):
+                with patch("app.tools.auth.is_jwt_token", return_value=True):
+                    with patch("app.tools.auth.verify_jwt_token", return_value=user_info):
+                        middleware = AuthMiddleware()
+                        call_next = AsyncMock(return_value=mock_tools)
+                        context = MagicMock(spec=MiddlewareContext)
+                        context.fastmcp_context = mock_fastmcp_context
+
+                        result = await middleware.on_list_tools(context, call_next)
+
+                        result_names = {tool.name for tool in result}
+                        expected = PUBLIC_TOOLS | DOCUMENT_TOOLS | USER_TOOLS | COLLECTION_TOOLS | KEY_PAT_TOOLS
                         assert result_names == expected
 
     @pytest.mark.asyncio

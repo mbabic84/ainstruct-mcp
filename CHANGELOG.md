@@ -1,3 +1,10 @@
+## [1.6.5](https://github.com/mbabic84/ainstruct-mcp/compare/v1.6.4...v1.6.5) (2026-02-24)
+
+
+### Bug Fixes
+
+* add migration for missing expires_at column and pat_tokens table ([2e7bc0a](https://github.com/mbabic84/ainstruct-mcp/commit/2e7bc0a6a0efabcaf4a6bd05c0362c729baa1e1d))
+
 ## [1.6.4](https://github.com/mbabic84/ainstruct-mcp/compare/v1.6.3...v1.6.4) (2026-02-24)
 
 

@@ -15,6 +15,7 @@ class StoreDocumentInput(BaseModel):
     content: str
     document_type: str = "markdown"
     doc_metadata: dict = Field(default_factory=dict)
+    collection_id: str | None = None
 
 
 class StoreDocumentOutput(BaseModel):
@@ -35,8 +36,26 @@ async def store_document(input_data: StoreDocumentInput) -> StoreDocumentOutput:
     if not has_write_permission():
         raise ValueError("Insufficient permissions: read_write permission required to store documents")
 
-    collection = auth["qdrant_collection"]
-    collection_id = auth["collection_id"]
+    auth_type = auth.get("auth_type")
+
+    if auth_type == "pat":
+        collection_ids = auth.get("collection_ids", [])
+        qdrant_collections = auth.get("qdrant_collections", [])
+
+        if input_data.collection_id:
+            if input_data.collection_id not in collection_ids:
+                raise ValueError("Collection not found or access denied")
+            idx = collection_ids.index(input_data.collection_id)
+            collection_id = input_data.collection_id
+            collection = qdrant_collections[idx]
+        elif collection_ids:
+            collection_id = collection_ids[0]
+            collection = qdrant_collections[0]
+        else:
+            raise ValueError("No collections available. Create a collection first.")
+    else:
+        collection = auth["qdrant_collection"]
+        collection_id = auth["collection_id"]
 
     doc_repo = get_document_repository(collection_id)
     qdrant = get_qdrant_service(collection)
@@ -112,17 +131,29 @@ async def search_documents(input_data: SearchDocumentsInput) -> SearchDocumentsO
 
     is_admin = auth.get("is_admin", False) or auth.get("is_superuser", False)
     collection = auth.get("qdrant_collection")
-    qdrant = get_qdrant_service(
-        str(collection) if collection and not is_admin else None,
-        is_admin=is_admin
-    )
+    qdrant_collections = auth.get("qdrant_collections", [])
 
     query_embedding = await embedding_service.embed_query(input_data.query)
 
-    results = qdrant.search(
-        query_vector=query_embedding,
-        limit=input_data.max_results,
-    )
+    if is_admin:
+        qdrant = get_qdrant_service(None, is_admin=True)
+        results = qdrant.search(
+            query_vector=query_embedding,
+            limit=input_data.max_results,
+        )
+    elif qdrant_collections:
+        qdrant = get_qdrant_service(None, is_admin=False)
+        results = qdrant.search_multi(
+            collection_names=qdrant_collections,
+            query_vector=query_embedding,
+            limit=input_data.max_results,
+        )
+    else:
+        qdrant = get_qdrant_service(str(collection) if collection else None)
+        results = qdrant.search(
+            query_vector=query_embedding,
+            limit=input_data.max_results,
+        )
 
     search_results = []
     total_tokens = 0
@@ -186,12 +217,19 @@ async def get_document(input_data: GetDocumentInput) -> GetDocumentOutput | None
         raise ValueError("Not authenticated")
 
     is_admin = auth.get("is_admin", False) or auth.get("is_superuser", False)
-    collection_id = auth.get("collection_id")
-    doc_repo = get_document_repository(
-        str(collection_id) if collection_id and not is_admin else None
-    )
+    user_id = auth.get("user_id")
+    auth_type = auth.get("auth_type")
 
-    doc = doc_repo.get_by_id(input_data.document_id)
+    if is_admin:
+        doc_repo = get_document_repository(None)
+        doc = doc_repo.get_by_id(input_data.document_id)
+    elif auth_type in ("pat", "jwt") and user_id:
+        doc_repo = get_document_repository(None)
+        doc = doc_repo.get_by_id_for_user(input_data.document_id, user_id)
+    else:
+        collection_id = auth.get("collection_id")
+        doc_repo = get_document_repository(str(collection_id) if collection_id else None)
+        doc = doc_repo.get_by_id(input_data.document_id)
 
     if not doc:
         return None
@@ -226,21 +264,17 @@ async def list_documents(input_data: ListDocumentsInput) -> ListDocumentsOutput:
     is_admin = auth.get("is_admin", False) or auth.get("is_superuser", False)
     collection_id = auth.get("collection_id")
     auth_type = auth.get("auth_type")
+    user_id = auth.get("user_id")
 
-    if auth_type == "pat" and not collection_id and not is_admin:
-        from ..db import get_collection_repository
-        collection_repo = get_collection_repository()
-        user_id = auth.get("user_id")
-        if user_id:
-            collections = collection_repo.list_by_user(user_id)
-            if collections:
-                collection_id = collections[0]["id"]
-
-    doc_repo = get_document_repository(
-        str(collection_id) if collection_id and not is_admin else None
-    )
-
-    docs = doc_repo.list_all(limit=input_data.limit, offset=input_data.offset)
+    if is_admin:
+        doc_repo = get_document_repository(None)
+        docs = doc_repo.list_all(limit=input_data.limit, offset=input_data.offset)
+    elif auth_type in ("pat", "jwt") and user_id:
+        doc_repo = get_document_repository(None)
+        docs = doc_repo.list_all_for_user(user_id, limit=input_data.limit, offset=input_data.offset)
+    else:
+        doc_repo = get_document_repository(str(collection_id) if collection_id else None)
+        docs = doc_repo.list_all(limit=input_data.limit, offset=input_data.offset)
 
     documents = [
         GetDocumentOutput(
@@ -283,17 +317,19 @@ async def delete_document(input_data: DeleteDocumentInput) -> DeleteDocumentOutp
         raise ValueError("Insufficient permissions: read_write permission required to delete documents")
 
     is_admin = auth.get("is_admin", False) or auth.get("is_superuser", False)
-    collection_id = auth.get("collection_id")
-    collection = auth.get("qdrant_collection")
-    doc_repo = get_document_repository(
-        str(collection_id) if collection_id and not is_admin else None
-    )
-    qdrant = get_qdrant_service(
-        str(collection) if collection and not is_admin else None,
-        is_admin=is_admin
-    )
+    user_id = auth.get("user_id")
+    auth_type = auth.get("auth_type")
 
-    doc = doc_repo.get_by_id(input_data.document_id)
+    if is_admin:
+        doc_repo = get_document_repository(None)
+        doc = doc_repo.get_by_id(input_data.document_id)
+    elif auth_type in ("pat", "jwt") and user_id:
+        doc_repo = get_document_repository(None)
+        doc = doc_repo.get_by_id_for_user(input_data.document_id, user_id)
+    else:
+        collection_id = auth.get("collection_id")
+        doc_repo = get_document_repository(str(collection_id) if collection_id else None)
+        doc = doc_repo.get_by_id(input_data.document_id)
 
     if not doc:
         return DeleteDocumentOutput(
@@ -301,7 +337,21 @@ async def delete_document(input_data: DeleteDocumentInput) -> DeleteDocumentOutp
             message="Document not found",
         )
 
-    qdrant.delete_by_document_id(input_data.document_id)
+    qdrant_collection = auth.get("qdrant_collection")
+    qdrant_collections = auth.get("qdrant_collections", [])
+    if is_admin:
+        qdrant = get_qdrant_service(None, is_admin=True)
+    elif qdrant_collections:
+        qdrant = get_qdrant_service(None, is_admin=False)
+    else:
+        qdrant = get_qdrant_service(str(qdrant_collection) if qdrant_collection else None)
+
+    if qdrant_collections:
+        for coll in qdrant_collections:
+            q = get_qdrant_service(coll)
+            q.delete_by_document_id(input_data.document_id)
+    else:
+        qdrant.delete_by_document_id(input_data.document_id)
 
     doc_repo.delete(input_data.document_id)
 
@@ -337,19 +387,36 @@ async def update_document(input_data: UpdateDocumentInput) -> UpdateDocumentOutp
     if not has_write_permission():
         raise ValueError("Insufficient permissions: read_write permission required to update documents")
 
-    collection_id = auth["collection_id"]
-    collection = auth["qdrant_collection"]
-    doc_repo = get_document_repository(collection_id)
-    qdrant = get_qdrant_service(collection)
+    is_admin = auth.get("is_admin", False) or auth.get("is_superuser", False)
+    user_id = auth.get("user_id")
+    auth_type = auth.get("auth_type")
+    collection_id = auth.get("collection_id")
+    qdrant_collection = auth.get("qdrant_collection")
+    qdrant_collections = auth.get("qdrant_collections", [])
 
-    existing_doc = doc_repo.get_by_id(input_data.document_id)
+    if is_admin:
+        doc_repo = get_document_repository(None)
+        existing_doc = doc_repo.get_by_id(input_data.document_id)
+    elif auth_type in ("pat", "jwt") and user_id:
+        doc_repo = get_document_repository(None)
+        existing_doc = doc_repo.get_by_id_for_user(input_data.document_id, user_id)
+    else:
+        doc_repo = get_document_repository(str(collection_id) if collection_id else None)
+        existing_doc = doc_repo.get_by_id(input_data.document_id)
+
     if not existing_doc:
         raise ValueError("Document not found")
 
     embedding_service = get_embedding_service()
     chunking_service = get_chunking_service()
 
-    qdrant.delete_by_document_id(input_data.document_id)
+    if qdrant_collections:
+        for coll in qdrant_collections:
+            q = get_qdrant_service(coll)
+            q.delete_by_document_id(input_data.document_id)
+    else:
+        qdrant = get_qdrant_service(str(qdrant_collection) if qdrant_collection else None)
+        qdrant.delete_by_document_id(input_data.document_id)
 
     updated_doc = doc_repo.update(
         doc_id=input_data.document_id,
@@ -379,7 +446,12 @@ async def update_document(input_data: UpdateDocumentInput) -> UpdateDocumentOutp
             for c in chunks
         ]
 
-        point_ids = qdrant.upsert_chunks(chunks_with_meta, embeddings)
+        if qdrant_collections:
+            for coll in qdrant_collections:
+                q = get_qdrant_service(coll)
+                point_ids = q.upsert_chunks(chunks_with_meta, embeddings)
+        else:
+            point_ids = qdrant.upsert_chunks(chunks_with_meta, embeddings)
         doc_repo.update_qdrant_point_id(updated_doc.id, point_ids)
 
     total_tokens = sum(c["token_count"] for c in chunks)

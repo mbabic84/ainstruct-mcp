@@ -78,6 +78,14 @@ def is_jwt_token(token: str) -> bool:
     return len(parts) == 3
 
 
+# Auth type constants
+class AuthLevel:
+    NONE = "none"           # No auth required (public)
+    JWT_OR_PAT = "jwt_or_pat"  # JWT or PAT token required
+    API_KEY = "api_key"     # API key OR JWT/PAT (documents)
+    ADMIN = "admin"         # JWT or PAT + admin scope
+
+
 # Public tools that don't require authentication
 PUBLIC_TOOLS: set[str] = {
     "user_register_tool",
@@ -85,6 +93,67 @@ PUBLIC_TOOLS: set[str] = {
     "user_refresh_tool",
     "promote_to_admin_tool",
 }
+
+# Tools requiring JWT or PAT authentication (user-level access)
+USER_TOOLS: set[str] = {
+    "user_profile_tool",
+}
+
+# Tools requiring JWT or PAT authentication (collection management)
+COLLECTION_TOOLS: set[str] = {
+    "create_collection_tool",
+    "list_collections_tool",
+    "get_collection_tool",
+    "delete_collection_tool",
+    "rename_collection_tool",
+}
+
+# Tools requiring JWT or PAT authentication (keys and PATs)
+KEY_PAT_TOOLS: set[str] = {
+    "create_api_key_tool",
+    "list_api_keys_tool",
+    "revoke_api_key_tool",
+    "rotate_api_key_tool",
+    "create_pat_token_tool",
+    "list_pat_tokens_tool",
+    "revoke_pat_token_tool",
+    "rotate_pat_token_tool",
+}
+
+# Tools accepting API key or JWT/PAT (document operations)
+DOCUMENT_TOOLS: set[str] = {
+    "store_document_tool",
+    "search_documents_tool",
+    "get_document_tool",
+    "list_documents_tool",
+    "delete_document_tool",
+    "update_document_tool",
+}
+
+# Tools requiring admin scope (JWT or PAT with admin)
+ADMIN_TOOLS: set[str] = {
+    "list_users_tool",
+    "get_user_tool",
+    "update_user_tool",
+    "delete_user_tool",
+}
+
+
+def get_tool_auth_level(tool_name: str) -> str:
+    """Get the required auth level for a tool."""
+    if tool_name in PUBLIC_TOOLS:
+        return AuthLevel.NONE
+    if tool_name in ADMIN_TOOLS:
+        return AuthLevel.ADMIN
+    if tool_name in DOCUMENT_TOOLS:
+        return AuthLevel.API_KEY
+    if tool_name in KEY_PAT_TOOLS:
+        return AuthLevel.JWT_OR_PAT
+    if tool_name in COLLECTION_TOOLS:
+        return AuthLevel.JWT_OR_PAT
+    if tool_name in USER_TOOLS:
+        return AuthLevel.JWT_OR_PAT
+    return AuthLevel.NONE
 
 # MCP protocol methods that don't require authentication
 PUBLIC_PROTOCOL_METHODS: set[str] = {
@@ -152,9 +221,73 @@ class AuthMiddleware(Middleware):
             clear_all_auth()
 
     async def on_list_tools(self, context: MiddlewareContext, call_next):
-        """Allow listing tools without auth (for discovery)."""
-        # NOTE: Tools are listed without auth, but calling protected tools still requires auth
-        return await call_next(context)
+        """Filter tools based on authentication context."""
+        result = await call_next(context)
+
+        # If result is not a list of tools, return as-is
+        if not isinstance(result, list):
+            return result
+
+        # Extract auth from headers
+        headers = get_http_headers(include={"authorization"})
+        auth_header = headers.get("authorization", "")
+
+        # If no auth header, only return public tools
+        if not auth_header or not auth_header.startswith("Bearer "):
+            return [tool for tool in result if get_tool_auth_level(tool.name) == AuthLevel.NONE]
+
+        token = auth_header[7:].strip()
+        if not token:
+            return [tool for tool in result if get_tool_auth_level(tool.name) == AuthLevel.NONE]
+
+        auth_level = AuthLevel.NONE
+        user_info = None
+        pat_info = None
+        api_key_info = None
+
+        if is_pat_token(token):
+            pat_info = verify_pat_token(token)
+            if pat_info:
+                auth_level = AuthLevel.JWT_OR_PAT
+        elif is_jwt_token(token):
+            user_info = verify_jwt_token(token)
+            if user_info:
+                auth_level = AuthLevel.JWT_OR_PAT
+        else:
+            api_key_info = verify_api_key(token)
+            if api_key_info:
+                auth_level = AuthLevel.API_KEY
+
+        def can_access_tool(tool) -> bool:
+            required = get_tool_auth_level(tool.name)
+
+            # Public tools always accessible
+            if required == AuthLevel.NONE:
+                return True
+
+            # If no valid auth, can't access
+            if auth_level == AuthLevel.NONE:
+                return False
+
+            # Admin tools require admin scope
+            if required == AuthLevel.ADMIN:
+                if user_info and user_info.get("is_superuser"):
+                    return True
+                if pat_info and pat_info.get("is_superuser"):
+                    return True
+                return False
+
+            # Document tools: API key or JWT/PAT works
+            if required == AuthLevel.API_KEY:
+                return True
+
+            # JWT/PAT tools: require valid JWT or PAT
+            if required == AuthLevel.JWT_OR_PAT:
+                return bool(user_info or pat_info)
+
+            return False
+
+        return [tool for tool in result if can_access_tool(tool)]
 
 
 def require_scope(required_scope: Scope) -> Callable:

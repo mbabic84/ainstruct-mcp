@@ -1,6 +1,6 @@
 [project]
 name = "ainstruct-mcp"
-version = "3.0.0"
+version = "3.0.1"
 description = "AI Document Memory MCP Server - Store and search markdown documents with semantic search"
 readme = "README.md"
 requires-python = ">=3.14"

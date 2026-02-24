@@ -1,3 +1,10 @@
+## [3.0.1](https://github.com/mbabic84/ainstruct-mcp/compare/v3.0.0...v3.0.1) (2026-02-24)
+
+
+### Bug Fixes
+
+* migrate from SSE to streamable-http transport ([1c4622f](https://github.com/mbabic84/ainstruct-mcp/commit/1c4622f89f426bf54c7d98588d71629a49b57fbd))
+
 # [3.0.0](https://github.com/mbabic84/ainstruct-mcp/compare/v2.0.0...v3.0.0) (2026-02-24)
 
 

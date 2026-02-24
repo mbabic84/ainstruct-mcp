@@ -1,3 +1,10 @@
+## [3.1.1](https://github.com/mbabic84/ainstruct-mcp/compare/v3.1.0...v3.1.1) (2026-02-24)
+
+
+### Bug Fixes
+
+* add auth header fallback and tool filtering tests ([b2825dc](https://github.com/mbabic84/ainstruct-mcp/commit/b2825dc8350a43fc96e77b97e2427cfa1383e3f5))
+
 # [3.1.0](https://github.com/mbabic84/ainstruct-mcp/compare/v3.0.1...v3.1.0) (2026-02-24)
 
 

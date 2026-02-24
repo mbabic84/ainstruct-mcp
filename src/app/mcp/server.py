@@ -11,10 +11,12 @@ from ..tools.admin_tools import (
     DeleteUserInput,
     GetUserInput,
     ListUsersInput,
+    SearchUsersInput,
     UpdateUserInput,
     delete_user,
     get_user,
     list_users,
+    search_users,
     update_user,
 )
 from ..tools.auth import setup_auth
@@ -535,6 +537,23 @@ async def list_users_tool(limit: int = 50, offset: int = 0) -> dict:
         List of users
     """
     result = await list_users(ListUsersInput(limit=limit, offset=offset))
+    return {"users": [u.model_dump() for u in result]}
+
+
+@mcp.tool()
+async def search_users_tool(query: str, limit: int = 50, offset: int = 0) -> dict:
+    """
+    Search users by username or email. Requires admin scope.
+
+    Args:
+        query: Search query (case-insensitive partial match on username or email)
+        limit: Number of results to return (default: 50)
+        offset: Pagination offset (default: 0)
+
+    Returns:
+        List of matching users
+    """
+    result = await search_users(SearchUsersInput(query=query, limit=limit, offset=offset))
     return {"users": [u.model_dump() for u in result]}
 
 

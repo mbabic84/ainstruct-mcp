@@ -6,14 +6,12 @@ Run with: docker build -f Dockerfile.mcp-client -t mcp-client-test . && docker r
 """
 import os
 import pytest
-import uuid
 
 from tests.e2e.mcp_client_test import (
     MCPClient,
     generate_test_id,
     register_test_user,
     login_user,
-    create_api_key,
 )
 
 
@@ -34,54 +32,60 @@ class TestMCPServerHealth:
     
     @pytest.mark.asyncio
     async def test_list_tools_public(self):
-        """List tools should work without authentication (public tools exist)."""
+        """List tools without authentication returns only public tools."""
         async with MCPClient(SERVER_URL, transport=TRANSPORT) as client:
             tools = await client.list_tools()
-            
-            # Should have all the expected tools
+
             tool_names = {t["name"] for t in tools}
-            
-            # Document tools
-            assert "store_document_tool" in tool_names
-            assert "search_documents_tool" in tool_names
-            assert "get_document_tool" in tool_names
-            assert "list_documents_tool" in tool_names
-            assert "update_document_tool" in tool_names
-            assert "delete_document_tool" in tool_names
-            
-            # User authentication tools
-            assert "user_register_tool" in tool_names
-            assert "user_login_tool" in tool_names
-            assert "user_profile_tool" in tool_names
-            assert "user_refresh_tool" in tool_names
-            assert "promote_to_admin_tool" in tool_names
-            
-            # API key tools
-            assert "create_api_key_tool" in tool_names
-            assert "list_api_keys_tool" in tool_names
-            assert "revoke_api_key_tool" in tool_names
-            assert "rotate_api_key_tool" in tool_names
-            
-            # PAT token tools
-            assert "create_pat_token_tool" in tool_names
-            assert "list_pat_tokens_tool" in tool_names
-            assert "revoke_pat_token_tool" in tool_names
-            assert "rotate_pat_token_tool" in tool_names
-            
-            # Collection tools
-            assert "create_collection_tool" in tool_names
-            assert "list_collections_tool" in tool_names
-            assert "get_collection_tool" in tool_names
-            assert "delete_collection_tool" in tool_names
-            assert "rename_collection_tool" in tool_names
-            
-            # Admin tools
-            assert "list_users_tool" in tool_names
-            assert "get_user_tool" in tool_names
-            assert "update_user_tool" in tool_names
-            assert "delete_user_tool" in tool_names
-            
-            print(f"\nFound {len(tools)} tools")
+
+            # Without auth, only public tools should be visible
+            public_tools = {
+                "user_register_tool",
+                "user_login_tool",
+                "user_refresh_tool",
+                "promote_to_admin_tool",
+            }
+            assert tool_names == public_tools, f"Expected only public tools, got: {tool_names}"
+
+            print(f"\nFound {len(tools)} public tools (no auth)")
+
+    @pytest.mark.asyncio
+    async def test_list_tools_authenticated(self):
+        """List tools with JWT authentication returns all non-admin tools."""
+        test_id = generate_test_id()
+
+        async with MCPClient(SERVER_URL, transport=TRANSPORT) as client:
+            # Register and login to get JWT token
+            reg_result = await register_test_user(client, test_id)
+            login_result = await login_user(
+                client,
+                reg_result["username"],
+                reg_result["password"]
+            )
+
+            # List tools with JWT auth
+            async with MCPClient(SERVER_URL, auth_token=login_result["access_token"], transport=TRANSPORT) as auth_client:
+                tools = await auth_client.list_tools()
+                tool_names = {t["name"] for t in tools}
+
+                # With JWT, should see public + user + collections + keys/PATs + documents
+                assert "user_register_tool" in tool_names
+                assert "user_login_tool" in tool_names
+                assert "user_profile_tool" in tool_names
+
+                # Collection tools
+                assert "create_collection_tool" in tool_names
+                assert "list_collections_tool" in tool_names
+
+                # API key tools
+                assert "create_api_key_tool" in tool_names
+                assert "list_api_keys_tool" in tool_names
+
+                # Document tools
+                assert "store_document_tool" in tool_names
+                assert "search_documents_tool" in tool_names
+
+                print(f"\nFound {len(tools)} tools with JWT auth")
 
 
 class TestUserRegistration:
@@ -153,8 +157,8 @@ class TestUserLogin:
             
             assert "access_token" in refresh_result
             assert refresh_result["access_token"] != access_token
-            
-            print(f"\nRefreshed token successfully")
+
+            print("\nRefreshed token successfully")
 
 
 class TestCollections:
@@ -444,7 +448,7 @@ class TestCollectionManagement:
                 print(f"\nRenamed collection to: {rename_result.get('name')}")
                 
                 # Delete collection
-                delete_result = await auth_client.call_tool("delete_collection_tool", {
+                await auth_client.call_tool("delete_collection_tool", {
                     "collection_id": new_collection_id,
                 })
                 
@@ -551,9 +555,9 @@ class TestPATTokens:
                 
                 assert "token" in pat_result
                 assert pat_result["token"].startswith("pat_live_")
-                
-                print(f"\nCreated PAT with 30-day expiry")
-    
+
+                print("\nCreated PAT with 30-day expiry")
+
     @pytest.mark.asyncio
     async def test_pat_token_rotate(self):
         """Test rotating PAT token."""

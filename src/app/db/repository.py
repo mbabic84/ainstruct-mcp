@@ -1,7 +1,7 @@
 import hashlib
 from datetime import datetime, timedelta
 
-from sqlalchemy import func, select
+from sqlalchemy import func, or_, select
 from sqlalchemy.orm import Session, sessionmaker
 
 from ..config import settings
@@ -421,6 +421,32 @@ class UserRepository:
         try:
             users = session.execute(
                 select(UserModel).limit(limit).offset(offset)
+            ).scalars().all()
+            return [
+                UserResponse(
+                    id=u.id,
+                    email=u.email,
+                    username=u.username,
+                    is_active=u.is_active,
+                    is_superuser=u.is_superuser,
+                    created_at=u.created_at,
+                )
+                for u in users
+            ]
+        finally:
+            session.close()
+
+    def search(self, query: str, limit: int = 50, offset: int = 0) -> list[UserResponse]:
+        session = self._get_session()
+        try:
+            search_pattern = f"%{query}%"
+            users = session.execute(
+                select(UserModel).where(
+                    or_(
+                        UserModel.username.ilike(search_pattern),
+                        UserModel.email.ilike(search_pattern),
+                    )
+                ).limit(limit).offset(offset)
             ).scalars().all()
             return [
                 UserResponse(

@@ -183,11 +183,28 @@ class AuthMiddleware(Middleware):
         if tool_name and tool_name in PUBLIC_TOOLS:
             return await call_next(context)
 
-        # Check auth header for all other tools
-        headers = get_http_headers(include={"authorization"})
-        auth_header = headers.get("authorization", "")
+        # Check auth header for all other tools - try multiple approaches for compatibility
+        auth_header = None
 
-        if not auth_header.startswith("Bearer "):
+        # Approach 1: Try get_http_headers (works with SSE)
+        try:
+            headers = get_http_headers(include={"authorization"})
+            auth_header = headers.get("authorization")
+        except Exception:
+            pass
+
+        # Approach 2: Try context.fastmcp_context (works with Streamable HTTP)
+        if not auth_header:
+            try:
+                fastmcp_ctx = getattr(context, 'fastmcp_context', None)
+                if fastmcp_ctx and hasattr(fastmcp_ctx, 'request_context'):
+                    request_ctx = fastmcp_ctx.request_context
+                    if request_ctx and hasattr(request_ctx, 'request'):
+                        auth_header = request_ctx.request.headers.get("Authorization")
+            except Exception:
+                pass
+
+        if not auth_header or not auth_header.startswith("Bearer "):
             raise ValueError("Missing or invalid Authorization header")
 
         token = auth_header[7:].strip()
@@ -227,9 +244,26 @@ class AuthMiddleware(Middleware):
         if not isinstance(result, list):
             return result
 
-        # Extract auth from headers
-        headers = get_http_headers(include={"authorization"})
-        auth_header = headers.get("authorization", "")
+        # Extract auth from headers - try multiple approaches for compatibility
+        auth_header = None
+
+        # Approach 1: Try get_http_headers (works with SSE)
+        try:
+            headers = get_http_headers(include={"authorization"})
+            auth_header = headers.get("authorization") if headers else None
+        except Exception:
+            pass
+
+        # Approach 2: Try context.fastmcp_context (works with Streamable HTTP)
+        if not auth_header:
+            try:
+                fastmcp_ctx = getattr(context, 'fastmcp_context', None)
+                if fastmcp_ctx and hasattr(fastmcp_ctx, 'request_context'):
+                    request_ctx = fastmcp_ctx.request_context
+                    if request_ctx and hasattr(request_ctx, 'request'):
+                        auth_header = request_ctx.request.headers.get("Authorization")
+            except Exception:
+                pass
 
         # If no auth header, only return public tools
         if not auth_header or not auth_header.startswith("Bearer "):

@@ -383,3 +383,79 @@ class TestMigrationForeignKeys:
         api_key_fks = inspector.get_foreign_keys("api_keys")
         api_key_fk_cols = {fk["constrained_columns"][0] for fk in api_key_fks}
         assert "collection_id" in api_key_fk_cols
+
+
+class TestMigrationLegacySchemaNoUserId:
+    """Test migration handles api_keys without user_id column (pre-users schema)."""
+
+    def test_upgrade_api_keys_without_user_id_column(self, temp_db):
+        """
+        Test migration with api_keys table that lacks user_id column.
+        This simulates a legacy database where api_keys existed before users table
+        was linked to it. This is the bug scenario: 'no such column: user_id'.
+        """
+        engine = create_engine(f"sqlite:///{temp_db}")
+        
+        with engine.begin() as conn:
+            conn.execute(text("""
+                CREATE TABLE users (
+                    id TEXT PRIMARY KEY,
+                    email TEXT NOT NULL UNIQUE,
+                    username TEXT NOT NULL UNIQUE,
+                    password_hash TEXT NOT NULL,
+                    is_active INTEGER DEFAULT 1,
+                    is_superuser INTEGER DEFAULT 0,
+                    created_at TEXT NOT NULL,
+                    updated_at TEXT NOT NULL
+                )
+            """))
+            conn.execute(text("""
+                CREATE TABLE api_keys (
+                    id TEXT PRIMARY KEY,
+                    key_hash TEXT NOT NULL UNIQUE,
+                    label TEXT NOT NULL,
+                    qdrant_collection TEXT NOT NULL,
+                    created_at TEXT NOT NULL,
+                    last_used TEXT,
+                    is_active INTEGER DEFAULT 1,
+                    user_id TEXT,
+                    expires_at TEXT
+                )
+            """))
+            conn.execute(text("""
+                CREATE TABLE documents (
+                    id TEXT PRIMARY KEY,
+                    api_key_id TEXT NOT NULL,
+                    title TEXT NOT NULL,
+                    content TEXT NOT NULL,
+                    content_hash TEXT NOT NULL,
+                    document_type TEXT NOT NULL,
+                    created_at TEXT NOT NULL,
+                    updated_at TEXT NOT NULL,
+                    doc_metadata TEXT NOT NULL,
+                    qdrant_point_id TEXT
+                )
+            """))
+            conn.execute(text("CREATE INDEX ix_documents_api_key_id ON documents (api_key_id)"))
+            conn.execute(text("""
+                INSERT INTO users (id, email, username, password_hash, is_active, is_superuser, created_at, updated_at)
+                VALUES ('user-1', 'test@example.com', 'testuser', 'hash', 1, 0, datetime('now'), datetime('now'))
+            """))
+            conn.execute(text("""
+                INSERT INTO api_keys (id, key_hash, label, qdrant_collection, created_at, is_active, user_id)
+                VALUES ('key-1', 'hash123', 'Test Key', 'qdrant-uuid-1', datetime('now'), 1, 'user-1')
+            """))
+        
+        cfg = get_alembic_config(temp_db)
+        command.stamp(cfg, "339e4a4a595a")
+        command.upgrade(cfg, "head")
+        
+        engine = create_engine(f"sqlite:///{temp_db}")
+        inspector = inspect(engine)
+        
+        api_keys_columns = {c["name"] for c in inspector.get_columns("api_keys")}
+        assert "collection_id" in api_keys_columns
+        assert "permission" in api_keys_columns
+        
+        tables = inspector.get_table_names()
+        assert "collections" in tables

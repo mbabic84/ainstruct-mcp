@@ -1,3 +1,10 @@
+# [3.2.0](https://github.com/mbabic84/ainstruct-mcp/compare/v3.1.1...v3.2.0) (2026-02-24)
+
+
+### Features
+
+* add search_users admin tool ([86bfe27](https://github.com/mbabic84/ainstruct-mcp/commit/86bfe277fdd9ddc68ba2f3eec4a29d079aebd3bf))
+
 ## [3.1.1](https://github.com/mbabic84/ainstruct-mcp/compare/v3.1.0...v3.1.1) (2026-02-24)
 
 

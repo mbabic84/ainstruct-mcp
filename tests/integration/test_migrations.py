@@ -459,3 +459,111 @@ class TestMigrationLegacySchemaNoUserId:
         
         tables = inspector.get_table_names()
         assert "collections" in tables
+
+
+class TestFixMissingColumnsMigration:
+    """Test fix_missing_columns migration handles missing columns correctly."""
+
+    def test_add_expires_at_to_api_keys(self, temp_db):
+        """Test migration adds expires_at column to api_keys if missing."""
+        engine = create_engine(f"sqlite:///{temp_db}")
+        
+        with engine.begin() as conn:
+            conn.execute(text("""
+                CREATE TABLE users (
+                    id TEXT PRIMARY KEY,
+                    email TEXT NOT NULL UNIQUE,
+                    username TEXT NOT NULL UNIQUE,
+                    password_hash TEXT NOT NULL,
+                    is_active INTEGER DEFAULT 1,
+                    is_superuser INTEGER DEFAULT 0,
+                    created_at TEXT NOT NULL,
+                    updated_at TEXT NOT NULL
+                )
+            """))
+            conn.execute(text("""
+                CREATE TABLE api_keys (
+                    id TEXT PRIMARY KEY,
+                    key_hash TEXT NOT NULL UNIQUE,
+                    label TEXT NOT NULL,
+                    collection_id TEXT NOT NULL,
+                    permission TEXT NOT NULL,
+                    created_at TEXT NOT NULL,
+                    last_used TEXT,
+                    is_active INTEGER DEFAULT 1,
+                    user_id TEXT
+                )
+            """))
+            conn.execute(text("""
+                CREATE TABLE collections (
+                    id TEXT PRIMARY KEY,
+                    name TEXT NOT NULL,
+                    qdrant_collection TEXT NOT NULL,
+                    user_id TEXT NOT NULL,
+                    created_at TEXT NOT NULL,
+                    updated_at TEXT NOT NULL
+                )
+            """))
+            conn.execute(text("""
+                CREATE TABLE documents (
+                    id TEXT PRIMARY KEY,
+                    collection_id TEXT NOT NULL,
+                    title TEXT NOT NULL,
+                    content TEXT NOT NULL,
+                    content_hash TEXT NOT NULL,
+                    document_type TEXT NOT NULL,
+                    created_at TEXT NOT NULL,
+                    updated_at TEXT NOT NULL,
+                    doc_metadata TEXT NOT NULL,
+                    qdrant_point_id TEXT
+                )
+            """))
+        
+        cfg = get_alembic_config(temp_db)
+        command.stamp(cfg, "add_collections_refactor")
+        command.upgrade(cfg, "head")
+        
+        inspector = inspect(engine)
+        api_keys_columns = {c['name'] for c in inspector.get_columns("api_keys")}
+        assert "expires_at" in api_keys_columns
+
+    def test_add_pat_tokens_table(self, temp_db):
+        """Test migration creates pat_tokens table if missing."""
+        cfg = get_alembic_config(temp_db)
+        
+        command.upgrade(cfg, "add_collections_refactor")
+        
+        engine = create_engine(f"sqlite:///{temp_db}")
+        inspector = inspect(engine)
+        tables = inspector.get_table_names()
+        assert "pat_tokens" not in tables
+        
+        command.upgrade(cfg, "head")
+        
+        inspector = inspect(engine)
+        tables = inspector.get_table_names()
+        assert "pat_tokens" in tables
+        
+        pat_tokens_columns = {c['name'] for c in inspector.get_columns("pat_tokens")}
+        assert "id" in pat_tokens_columns
+        assert "token_hash" in pat_tokens_columns
+        assert "label" in pat_tokens_columns
+        assert "user_id" in pat_tokens_columns
+        assert "scopes" in pat_tokens_columns
+        assert "expires_at" in pat_tokens_columns
+        assert "is_active" in pat_tokens_columns
+
+    def test_migration_idempotent(self, temp_db):
+        """Running migration twice should not cause errors."""
+        cfg = get_alembic_config(temp_db)
+        
+        command.upgrade(cfg, "head")
+        command.upgrade(cfg, "head")
+        
+        engine = create_engine(f"sqlite:///{temp_db}")
+        inspector = inspect(engine)
+        api_keys_columns = {c['name'] for c in inspector.get_columns("api_keys")}
+        assert "expires_at" in api_keys_columns
+        
+        tables = inspector.get_table_names()
+        assert "pat_tokens" in tables

@@ -37,8 +37,8 @@ class CollectionModel(Base):
     updated_at: Mapped[datetime] = mapped_column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
 
     user: Mapped[UserModel] = relationship("UserModel", back_populates="collections")
-    api_keys: Mapped[list[ApiKeyModel]] = relationship("ApiKeyModel", back_populates="collection")
-    documents: Mapped[list[DocumentModel]] = relationship("DocumentModel", back_populates="collection")
+    api_keys: Mapped[list[ApiKeyModel]] = relationship("ApiKeyModel", back_populates="collection", cascade="all, delete-orphan")
+    documents: Mapped[list[DocumentModel]] = relationship("DocumentModel", back_populates="collection", cascade="all, delete-orphan")
 
 
 class DocumentModel(Base):
@@ -70,9 +70,9 @@ class UserModel(Base):
     created_at: Mapped[datetime] = mapped_column(DateTime, default=datetime.utcnow)
     updated_at: Mapped[datetime] = mapped_column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
 
-    collections: Mapped[list[CollectionModel]] = relationship("CollectionModel", back_populates="user")
-    api_keys: Mapped[list[ApiKeyModel]] = relationship("ApiKeyModel", back_populates="user")
-    pat_tokens: Mapped[list[PatTokenModel]] = relationship("PatTokenModel", back_populates="user")
+    collections: Mapped[list[CollectionModel]] = relationship("CollectionModel", back_populates="user", cascade="all, delete-orphan")
+    api_keys: Mapped[list[ApiKeyModel]] = relationship("ApiKeyModel", back_populates="user", cascade="all, delete-orphan")
+    pat_tokens: Mapped[list[PatTokenModel]] = relationship("PatTokenModel", back_populates="user", cascade="all, delete-orphan")
 
 
 class ApiKeyModel(Base):

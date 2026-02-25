@@ -20,6 +20,15 @@ from ..tools.admin_tools import (
     update_user,
 )
 from ..tools.auth import setup_auth
+from ..tools.cat_tools import (
+    CreateCatInput,
+    RevokeCatInput,
+    RotateCatInput,
+    create_cat,
+    list_cats,
+    revoke_cat,
+    rotate_cat,
+)
 from ..tools.collection_tools import (
     CreateCollectionInput,
     DeleteCollectionInput,
@@ -46,15 +55,6 @@ from ..tools.document_tools import (
     search_documents,
     store_document,
     update_document,
-)
-from ..tools.key_tools import (
-    CreateApiKeyInput,
-    RevokeApiKeyInput,
-    RotateApiKeyInput,
-    create_api_key,
-    list_api_keys,
-    revoke_api_key,
-    rotate_api_key,
 )
 from ..tools.pat_tools import (
     CreatePatTokenInput,
@@ -364,7 +364,7 @@ async def create_collection_access_token_tool(
     Returns:
         Created Collection Access Token (only shown once)
     """
-    result = await create_api_key(CreateApiKeyInput(
+    result = await create_cat(CreateCatInput(
         label=label,
         collection_id=collection_id,
         permission=permission,
@@ -381,7 +381,7 @@ async def list_collection_access_tokens_tool() -> dict:
     Returns:
         List of Collection Access Tokens (without the actual token values)
     """
-    result = await list_api_keys()
+    result = await list_cats()
     return {"keys": [k.model_dump() for k in result]}
 
 
@@ -396,7 +396,7 @@ async def revoke_collection_access_token_tool(key_id: str) -> dict:
     Returns:
         Success confirmation
     """
-    result = await revoke_api_key(RevokeApiKeyInput(key_id=key_id))
+    result = await revoke_cat(RevokeCatInput(key_id=key_id))
     return result
 
 
@@ -411,7 +411,7 @@ async def rotate_collection_access_token_tool(key_id: str) -> dict:
     Returns:
         New Collection Access Token (only shown once)
     """
-    result = await rotate_api_key(RotateApiKeyInput(key_id=key_id))
+    result = await rotate_cat(RotateCatInput(key_id=key_id))
     return result.model_dump()
 
 

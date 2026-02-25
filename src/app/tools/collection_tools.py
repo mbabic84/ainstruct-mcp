@@ -93,7 +93,7 @@ async def get_collection(input_data: GetCollectionInput) -> CollectionResponse:
         id=collection["id"],
         name=collection["name"],
         document_count=collection["document_count"],
-        api_key_count=collection["api_key_count"],
+        cat_count=collection["cat_count"],
         created_at=collection["created_at"],
     )
 
@@ -112,8 +112,8 @@ async def delete_collection(input_data: DeleteCollectionInput) -> dict:
     if collection["user_id"] != user_info.get("id") and not user_info.get("is_superuser"):
         raise ValueError("Collection not found")
 
-    if collection["api_key_count"] > 0:
-        raise ValueError("Cannot delete collection with active API keys. Revoke all API keys first.")
+    if collection["cat_count"] > 0:
+        raise ValueError("Cannot delete collection with active CAT tokens. Revoke all CAT tokens first.")
 
     success = repo.delete(input_data.collection_id)
     if not success:

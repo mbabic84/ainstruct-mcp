@@ -27,7 +27,7 @@ from app.tools.document_tools import (
     delete_document,
     update_document,
 )
-from app.tools.context import set_api_key_info, set_user_info, clear_all_auth
+from app.tools.context import set_cat_info, set_user_info, clear_all_auth
 from app.db.models import Permission
 
 
@@ -135,7 +135,7 @@ class TestStoreDocument:
     @pytest.mark.asyncio
     async def test_store_document_success(self, mock_read_write_key, mock_document, mock_chunks, mock_embeddings):
         """Successfully store a document with read_write key."""
-        set_api_key_info(mock_read_write_key)
+        set_cat_info(mock_read_write_key)
 
         with (
             patch("app.tools.document_tools.get_document_repository") as mock_repo_factory,
@@ -172,7 +172,7 @@ class TestStoreDocument:
     @pytest.mark.asyncio
     async def test_store_document_read_only_denied(self, mock_read_only_key):
         """Read-only key cannot store documents."""
-        set_api_key_info(mock_read_only_key)
+        set_cat_info(mock_read_only_key)
 
         with pytest.raises(ValueError, match="Insufficient permissions"):
             await store_document(StoreDocumentInput(
@@ -241,7 +241,7 @@ class TestSearchDocuments:
     @pytest.mark.asyncio
     async def test_search_documents_with_api_key(self, mock_read_write_key):
         """Search documents with API key."""
-        set_api_key_info(mock_read_write_key)
+        set_cat_info(mock_read_write_key)
 
         with (
             patch("app.tools.document_tools.get_embedding_service") as mock_embedding_factory,
@@ -276,7 +276,7 @@ class TestSearchDocuments:
     @pytest.mark.asyncio
     async def test_search_documents_with_read_only_key(self, mock_read_only_key):
         """Read-only key can search documents."""
-        set_api_key_info(mock_read_only_key)
+        set_cat_info(mock_read_only_key)
 
         with (
             patch("app.tools.document_tools.get_embedding_service") as mock_embedding_factory,
@@ -297,7 +297,7 @@ class TestSearchDocuments:
     @pytest.mark.asyncio
     async def test_search_documents_with_admin_key(self, mock_admin_key):
         """Admin key can search all collections."""
-        set_api_key_info(mock_admin_key)
+        set_cat_info(mock_admin_key)
 
         with (
             patch("app.tools.document_tools.get_embedding_service") as mock_embedding_factory,
@@ -328,7 +328,7 @@ class TestGetDocument:
     @pytest.mark.asyncio
     async def test_get_document_success(self, mock_read_write_key, mock_document):
         """Successfully get a document."""
-        set_api_key_info(mock_read_write_key)
+        set_cat_info(mock_read_write_key)
 
         with patch("app.tools.document_tools.get_document_repository") as mock_repo_factory:
             mock_repo = MagicMock()
@@ -344,7 +344,7 @@ class TestGetDocument:
     @pytest.mark.asyncio
     async def test_get_document_not_found(self, mock_read_write_key):
         """Document not found returns None."""
-        set_api_key_info(mock_read_write_key)
+        set_cat_info(mock_read_write_key)
 
         with patch("app.tools.document_tools.get_document_repository") as mock_repo_factory:
             mock_repo = MagicMock()
@@ -358,7 +358,7 @@ class TestGetDocument:
     @pytest.mark.asyncio
     async def test_get_document_different_collection_denied(self, mock_read_write_key, mock_document):
         """Cannot get document from different collection."""
-        set_api_key_info(mock_read_write_key)
+        set_cat_info(mock_read_write_key)
         mock_document.collection_id = "different-collection"
 
         with patch("app.tools.document_tools.get_document_repository") as mock_repo_factory:
@@ -383,7 +383,7 @@ class TestListDocuments:
     @pytest.mark.asyncio
     async def test_list_documents_success(self, mock_read_write_key, mock_document):
         """Successfully list documents."""
-        set_api_key_info(mock_read_write_key)
+        set_cat_info(mock_read_write_key)
 
         with patch("app.tools.document_tools.get_document_repository") as mock_repo_factory:
             mock_repo = MagicMock()
@@ -399,7 +399,7 @@ class TestListDocuments:
     @pytest.mark.asyncio
     async def test_list_documents_pagination(self, mock_read_write_key):
         """List documents with pagination."""
-        set_api_key_info(mock_read_write_key)
+        set_cat_info(mock_read_write_key)
 
         with patch("app.tools.document_tools.get_document_repository") as mock_repo_factory:
             mock_repo = MagicMock()
@@ -423,7 +423,7 @@ class TestUpdateDocument:
     @pytest.mark.asyncio
     async def test_update_document_success(self, mock_read_write_key, mock_document, mock_chunks, mock_embeddings):
         """Successfully update a document."""
-        set_api_key_info(mock_read_write_key)
+        set_cat_info(mock_read_write_key)
 
         updated_doc = MagicMock(
             id=mock_document.id,
@@ -468,7 +468,7 @@ class TestUpdateDocument:
     @pytest.mark.asyncio
     async def test_update_document_read_only_denied(self, mock_read_only_key):
         """Read-only key cannot update documents."""
-        set_api_key_info(mock_read_only_key)
+        set_cat_info(mock_read_only_key)
 
         with pytest.raises(ValueError, match="Insufficient permissions"):
             await update_document(UpdateDocumentInput(
@@ -518,7 +518,7 @@ class TestDeleteDocument:
     @pytest.mark.asyncio
     async def test_delete_document_success(self, mock_read_write_key, mock_document):
         """Successfully delete a document."""
-        set_api_key_info(mock_read_write_key)
+        set_cat_info(mock_read_write_key)
 
         with (
             patch("app.tools.document_tools.get_document_repository") as mock_repo_factory,
@@ -540,7 +540,7 @@ class TestDeleteDocument:
     @pytest.mark.asyncio
     async def test_delete_document_not_found(self, mock_read_write_key):
         """Document not found returns failure."""
-        set_api_key_info(mock_read_write_key)
+        set_cat_info(mock_read_write_key)
 
         with (
             patch("app.tools.document_tools.get_document_repository") as mock_repo_factory,
@@ -561,7 +561,7 @@ class TestDeleteDocument:
     @pytest.mark.asyncio
     async def test_delete_document_read_only_denied(self, mock_read_only_key):
         """Read-only key cannot delete documents."""
-        set_api_key_info(mock_read_only_key)
+        set_cat_info(mock_read_only_key)
 
         with pytest.raises(ValueError, match="Insufficient permissions"):
             await delete_document(DeleteDocumentInput(document_id="doc-1"))

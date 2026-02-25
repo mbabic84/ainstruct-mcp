@@ -317,7 +317,7 @@ class TestOnListToolsFiltering:
 
             with patch("app.tools.auth.is_pat_token", return_value=False):
                 with patch("app.tools.auth.is_jwt_token", return_value=False):
-                    with patch("app.tools.auth.verify_api_key", return_value=api_key_info):
+                    with patch("app.tools.auth.verify_cat_token", return_value=api_key_info):
                         middleware = AuthMiddleware()
                         call_next = AsyncMock(return_value=mock_tools)
                         context = MagicMock(spec=MiddlewareContext)

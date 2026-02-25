@@ -1,3 +1,4 @@
+from collections.abc import Generator
 from typing import Annotated
 
 from fastapi import Depends, HTTPException, status
@@ -10,7 +11,7 @@ from ..services import get_auth_service
 security = HTTPBearer(auto_error=False)
 
 
-def get_db() -> Session:
+def get_db() -> Generator[Session, None, None]:
     from ..config import settings
     from ..db.models import get_db_engine
 
@@ -52,10 +53,19 @@ async def get_current_user(
 
     scopes = [Scope(s) for s in payload.get("scopes", ["read"])]
 
+    user_id = payload.get("sub")
+    username = payload.get("username")
+    email = payload.get("email")
+    if user_id is None or username is None or email is None:
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail={"code": "INVALID_TOKEN", "message": "Token missing required claims"},
+        )
+
     return CurrentUser(
-        user_id=payload.get("sub"),
-        username=payload.get("username"),
-        email=payload.get("email"),
+        user_id=user_id,
+        username=username,
+        email=email,
         is_superuser=payload.get("is_superuser", False),
         scopes=scopes,
     )
@@ -76,10 +86,16 @@ async def get_current_user_optional(
 
     scopes = [Scope(s) for s in payload.get("scopes", ["read"])]
 
+    user_id = payload.get("sub")
+    username = payload.get("username")
+    email = payload.get("email")
+    if user_id is None or username is None or email is None:
+        return None
+
     return CurrentUser(
-        user_id=payload.get("sub"),
-        username=payload.get("username"),
-        email=payload.get("email"),
+        user_id=user_id,
+        username=username,
+        email=email,
         is_superuser=payload.get("is_superuser", False),
         scopes=scopes,
     )

@@ -34,6 +34,8 @@ def mock_jwt_user_info():
         "email": "test@example.com",
         "is_superuser": False,
         "auth_type": "jwt",
+        "collection_ids": ["coll-123"],
+        "qdrant_collections": ["docs_123"],
     }
 
 
@@ -187,6 +189,7 @@ class TestUpdateDocument:
 
     @pytest.mark.asyncio
     async def test_update_document_jwt_user_rejected(self, mock_jwt_user_info):
+        """JWT users CAN update documents (they have access to their collections)."""
         set_user_info(mock_jwt_user_info)
 
         input_data = UpdateDocumentInput(
@@ -195,8 +198,25 @@ class TestUpdateDocument:
             content="New content",
         )
 
-        with pytest.raises(ValueError, match="JWT users cannot update documents directly"):
-            await update_document(input_data)
+        with patch("app.tools.document_tools.get_document_repository") as mock_doc_repo, \
+             patch("app.tools.document_tools.get_qdrant_service") as mock_qdrant, \
+             patch("app.tools.document_tools.get_embedding_service") as mock_emb, \
+             patch("app.tools.document_tools.get_chunking_service") as mock_chunk:
+            mock_doc = MagicMock()
+            mock_doc.id = "some-id"
+            mock_doc.collection_id = "coll-123"
+            mock_doc.title = "Old Title"
+            mock_doc.content = "Old content"
+            mock_doc.document_type = "markdown"
+            mock_doc.doc_metadata = {}
+            mock_doc_repo.return_value.get_by_id_for_user.return_value = mock_doc
+            mock_doc_repo.return_value.update.return_value = mock_doc
+            mock_qdrant.return_value = MagicMock()
+            mock_emb.return_value = MagicMock(embed_texts=MagicMock(return_value=[[0.1]]))
+            mock_chunk.return_value = MagicMock(chunk_markdown=MagicMock(return_value=[]))
+
+            result = await update_document(input_data)
+            assert "Document updated successfully" in result.message
 
     @pytest.mark.asyncio
     async def test_update_document_read_only_key_rejected(self):

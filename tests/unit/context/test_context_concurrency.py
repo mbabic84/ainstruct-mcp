@@ -10,14 +10,14 @@ from app.tools.context import (
     set_user_info,
     get_user_info,
     clear_all_auth,
-    set_api_key_info,
-    get_api_key_info,
+    set_cat_info,
+    get_cat_info,
     set_pat_info,
     get_pat_info,
     get_current_user_id,
     is_authenticated,
     clear_user_info,
-    clear_api_key_info,
+    clear_cat_info,
     has_write_permission,
     has_scope,
 )
@@ -47,14 +47,14 @@ def mock_user_info_2():
 
 
 @pytest.fixture
-def mock_api_key_info():
+def mock_cat_info():
     return {
-        "id": "api-key-1",
-        "user_id": "user-api-1",
+        "id": "cat-1",
+        "user_id": "user-cat-1",
         "collection_id": "collection-1",
         "permission": Permission.READ_WRITE,
         "is_admin": False,
-        "auth_type": "api_key",
+        "auth_type": "cat",
     }
 
 
@@ -105,27 +105,27 @@ class TestContextIsolation:
         assert get_user_info() is None
 
     @pytest.mark.asyncio
-    async def test_concurrent_api_key_contexts(self, mock_api_key_info):
-        """Concurrent API key contexts should be isolated."""
-        api_key_info_2 = mock_api_key_info.copy()
-        api_key_info_2["user_id"] = "user-api-2"
+    async def test_concurrent_cat_contexts(self, mock_cat_info):
+        """Concurrent CAT (API key) contexts should be isolated."""
+        cat_info_2 = mock_cat_info.copy()
+        cat_info_2["user_id"] = "user-cat-2"
 
         async def task1():
-            set_api_key_info(mock_api_key_info)
+            set_cat_info(mock_cat_info)
             await asyncio.sleep(0.01)
-            return get_api_key_info()
+            return get_cat_info()
 
         async def task2():
-            set_api_key_info(api_key_info_2)
+            set_cat_info(cat_info_2)
             await asyncio.sleep(0.01)
-            return get_api_key_info()
+            return get_cat_info()
 
         results = await asyncio.gather(task1(), task2())
 
-        assert results[0]["user_id"] == "user-api-1"
-        assert results[1]["user_id"] == "user-api-2"
+        assert results[0]["user_id"] == "user-cat-1"
+        assert results[1]["user_id"] == "user-cat-2"
 
-        assert get_api_key_info() is None
+        assert get_cat_info() is None
 
     @pytest.mark.asyncio
     async def test_concurrent_pat_contexts(self, mock_pat_info):
@@ -151,36 +151,36 @@ class TestContextIsolation:
         assert get_pat_info() is None
 
     @pytest.mark.asyncio
-    async def test_concurrent_mixed_auth_types(self, mock_user_info_1, mock_api_key_info):
-        """Concurrent requests with different auth types (JWT vs API key) should not mix."""
+    async def test_concurrent_mixed_auth_types(self, mock_user_info_1, mock_cat_info):
+        """Concurrent requests with different auth types (JWT vs CAT) should not mix."""
         async def jwt_task():
             set_user_info(mock_user_info_1)
             await asyncio.sleep(0.01)
             return get_user_info()
 
-        async def api_key_task():
-            set_api_key_info(mock_api_key_info)
+        async def cat_task():
+            set_cat_info(mock_cat_info)
             await asyncio.sleep(0.01)
-            return get_api_key_info()
+            return get_cat_info()
 
-        results = await asyncio.gather(jwt_task(), api_key_task())
+        results = await asyncio.gather(jwt_task(), cat_task())
 
         assert results[0]["id"] == "user-1"
-        assert results[1]["user_id"] == "user-api-1"
+        assert results[1]["user_id"] == "user-cat-1"
 
         assert get_user_info() is None
-        assert get_api_key_info() is None
+        assert get_cat_info() is None
 
     @pytest.mark.asyncio
-    async def test_concurrent_get_current_user_id(self, mock_user_info_1, mock_api_key_info, mock_pat_info):
+    async def test_concurrent_get_current_user_id(self, mock_user_info_1, mock_cat_info, mock_pat_info):
         """get_current_user_id should return correct ID based on active auth context."""
         async def user_task():
             set_user_info(mock_user_info_1)
             await asyncio.sleep(0.01)
             return get_current_user_id()
 
-        async def api_key_task():
-            set_api_key_info(mock_api_key_info)
+        async def cat_task():
+            set_cat_info(mock_cat_info)
             await asyncio.sleep(0.01)
             return get_current_user_id()
 
@@ -189,10 +189,10 @@ class TestContextIsolation:
             await asyncio.sleep(0.01)
             return get_current_user_id()
 
-        results = await asyncio.gather(user_task(), api_key_task(), pat_task())
+        results = await asyncio.gather(user_task(), cat_task(), pat_task())
 
         assert results[0] == "user-1"
-        assert results[1] == "user-api-1"
+        assert results[1] == "user-cat-1"
         assert results[2] == "user-pat-1"
 
         assert get_current_user_id() is None
@@ -221,23 +221,23 @@ class TestContextIsolation:
         assert outer_result["id"] == "user-1"
 
     @pytest.mark.asyncio
-    async def test_clear_all_auth_isolation(self, mock_user_info_1, mock_api_key_info):
+    async def test_clear_all_auth_isolation(self, mock_user_info_1, mock_cat_info):
         """clear_all_auth should only clear current task's context."""
         async def task1():
             set_user_info(mock_user_info_1)
-            set_api_key_info(mock_api_key_info)
+            set_cat_info(mock_cat_info)
             clear_all_auth()
-            return get_user_info(), get_api_key_info()
+            return get_user_info(), get_cat_info()
 
         async def task2():
             await asyncio.sleep(0.01)
             # task2 should still have its context intact
-            return get_user_info(), get_api_key_info()
+            return get_user_info(), get_cat_info()
 
         # Set up task2's context before awaiting
         async def setup_task2():
             set_user_info(mock_user_info_1)
-            set_api_key_info(mock_api_key_info)
+            set_cat_info(mock_cat_info)
 
         # Run setup and then both tasks concurrently
         await setup_task2()
@@ -300,23 +300,23 @@ class TestAuthHelperFunctions:
     def teardown_method(self):
         clear_all_auth()
 
-    def test_has_write_permission_with_api_key_read(self):
+    def test_has_write_permission_with_cat_read(self):
         """READ permission returns False for has_write_permission."""
-        api_key_info = {
+        cat_info = {
             "permission": Permission.READ,
             "is_admin": False,
         }
-        set_api_key_info(api_key_info)
+        set_cat_info(cat_info)
         
-        assert not has_write_permission()  # Uses API because API key is set
+        assert not has_write_permission()  # Uses CAT context because CAT key is set
 
-    def test_has_write_permission_with_api_key_write(self):
+    def test_has_write_permission_with_cat_write(self):
         """WRITE permission returns True for has_write_permission."""
-        api_key_info = {
+        cat_info = {
             "permission": Permission.READ_WRITE,
             "is_admin": False,
         }
-        set_api_key_info(api_key_info)
+        set_cat_info(cat_info)
         
         assert has_write_permission()
 
@@ -381,12 +381,12 @@ class TestAuthHelperFunctions:
         
         assert has_scope(Scope.ADMIN)
 
-    def test_has_scope_with_api_key_is_admin(self):
-        """API key with is_admin flag bypasses scope checks."""
-        api_key_info = {
+    def test_has_scope_with_cat_is_admin(self):
+        """CAT (API key) with is_admin flag bypasses scope checks."""
+        cat_info = {
             "is_admin": True,
         }
-        set_api_key_info(api_key_info)
+        set_cat_info(cat_info)
         
         assert has_scope(Scope.ADMIN)
 
@@ -397,12 +397,12 @@ class TestAuthHelperFunctions:
         
         assert get_current_user_id() == "user-123"
 
-    def test_get_current_user_id_from_api_key(self):
-        """get_current_user_id extracts from API key context."""
-        api_key_info = {"user_id": "api-user-456"}
-        set_api_key_info(api_key_info)
+    def test_get_current_user_id_from_cat(self):
+        """get_current_user_id extracts from CAT (API key) context."""
+        cat_info = {"user_id": "cat-user-456"}
+        set_cat_info(cat_info)
         
-        assert get_current_user_id() == "api-user-456"
+        assert get_current_user_id() == "cat-user-456"
 
     def test_get_current_user_id_from_pat(self):
         """get_current_user_id extracts from PAT context."""
@@ -418,24 +418,24 @@ class TestAuthHelperFunctions:
         assert get_current_user_id() is None
 
     def test_get_current_user_id_priority(self):
-        """Test priority: user > api_key > pat when multiple contexts set."""
+        """Test priority: user > cat > pat when multiple contexts set."""
         # This is an unnatural scenario but tests the lookup order
         user_info = {"id": "user-main"}
-        api_key_info = {"user_id": "api-key-main"}
+        cat_info = {"user_id": "cat-main"}
         pat_info = {"user_id": "pat-main"}
         
         set_user_info(user_info)
-        set_api_key_info(api_key_info)
+        set_cat_info(cat_info)
         set_pat_info(pat_info)
         
         # Should prefer user_info
         assert get_current_user_id() == "user-main"
         
         clear_user_info()
-        # Now should use api_key
-        assert get_current_user_id() == "api-key-main"
+        # Now should use cat
+        assert get_current_user_id() == "cat-main"
         
-        clear_api_key_info()
+        clear_cat_info()
         # Now should use pat
         assert get_current_user_id() == "pat-main"
 
@@ -447,10 +447,10 @@ class TestAuthHelperFunctions:
         assert is_authenticated()
         
         clear_user_info()
-        set_api_key_info({"user_id": "api"})
+        set_cat_info({"user_id": "api"})
         assert is_authenticated()
         
-        clear_api_key_info()
+        clear_cat_info()
         set_pat_info({"user_id": "pat"})
         assert is_authenticated()
         

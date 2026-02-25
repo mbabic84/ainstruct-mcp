@@ -6,7 +6,7 @@ import pytest
 from unittest.mock import MagicMock, patch
 from datetime import datetime, timedelta
 
-from app.tools.auth import verify_api_key, verify_jwt_token, is_jwt_token
+from app.tools.auth import verify_cat_token, verify_jwt_token, is_jwt_token
 from app.services.auth_service import verify_pat_token
 from app.tools.context import set_user_info, clear_all_auth
 from app.db.models import Scope, Permission
@@ -200,31 +200,31 @@ class TestApiKeySecurity:
 
     @pytest.fixture
     def mock_api_key_repo(self):
-        with patch("app.tools.auth.get_api_key_repository") as mock:
+        with patch("app.tools.auth.get_cat_repository") as mock:
             yield mock
 
     @pytest.mark.asyncio
-    async def test_verify_api_key_revoked(self, mock_api_key_repo):
+    async def test_verify_cat_token_revoked(self, mock_api_key_repo):
         """Revoked API key is rejected."""
         mock_repo = MagicMock()
         mock_repo.validate.return_value = None  # Simulate revoked/not found
         mock_api_key_repo.return_value = mock_repo
 
-        result = verify_api_key("ak_live_revokedkey")
+        result = verify_cat_token("ak_live_revokedkey")
         assert result is None
 
     @pytest.mark.asyncio
-    async def test_verify_api_key_not_found(self, mock_api_key_repo):
+    async def test_verify_cat_token_not_found(self, mock_api_key_repo):
         """Non-existent API key is rejected."""
         mock_repo = MagicMock()
         mock_repo.validate.return_value = None
         mock_api_key_repo.return_value = mock_repo
 
-        result = verify_api_key("ak_live_nonexistent")
+        result = verify_cat_token("ak_live_nonexistent")
         assert result is None
 
     @pytest.mark.asyncio
-    async def test_verify_api_key_valid(self, mock_api_key_repo):
+    async def test_verify_cat_token_valid(self, mock_api_key_repo):
         """Valid API key returns key info."""
         mock_repo = MagicMock()
         api_key_info = {
@@ -239,7 +239,7 @@ class TestApiKeySecurity:
         mock_repo.validate.return_value = api_key_info
         mock_api_key_repo.return_value = mock_repo
 
-        result = verify_api_key("ak_live_validkey")
+        result = verify_cat_token("ak_live_validkey")
 
         assert result is not None
         assert result["id"] == "api-key-123"
@@ -248,7 +248,7 @@ class TestApiKeySecurity:
         assert result["is_admin"] is False
 
     @pytest.mark.asyncio
-    async def test_verify_api_key_admin(self, mock_api_key_repo):
+    async def test_verify_cat_token_admin(self, mock_api_key_repo):
         """Admin API key returns is_admin=True."""
         mock_repo = MagicMock()
         api_key_info = {
@@ -263,31 +263,31 @@ class TestApiKeySecurity:
         mock_repo.validate.return_value = api_key_info
         mock_api_key_repo.return_value = mock_repo
 
-        result = verify_api_key("admin_api_key_here")
+        result = verify_cat_token("admin_api_key_here")
 
         assert result is not None
         assert result["is_admin"] is True
 
     @pytest.mark.asyncio
-    async def test_verify_api_key_empty(self):
+    async def test_verify_cat_token_empty(self):
         """Empty API key is rejected."""
-        result = verify_api_key("")
+        result = verify_cat_token("")
         assert result is None
 
-        result = verify_api_key(None)
+        result = verify_cat_token(None)
         assert result is None
 
     @pytest.mark.asyncio
-    async def test_verify_api_key_invalid_format(self):
+    async def test_verify_cat_token_invalid_format(self):
         """API key with invalid format is rejected by repo.validate."""
         # Keys should follow pattern ak_live_<random>
         # Invalid format should be caught by validate method
-        with patch("app.tools.auth.get_api_key_repository") as mock_repo_factory:
+        with patch("app.tools.auth.get_cat_repository") as mock_repo_factory:
             mock_repo = MagicMock()
             mock_repo.validate.return_value = None
             mock_repo_factory.return_value = mock_repo
 
-            result = verify_api_key("invalid-format-key")
+            result = verify_cat_token("invalid-format-key")
             assert result is None
 
 
@@ -308,7 +308,7 @@ class TestAdminApiKeySpecial:
         with patch("app.tools.auth.settings") as mock_settings:
             mock_settings.admin_api_key = "secret_admin_key_123"
             
-            result = verify_api_key("secret_admin_key_123")
+            result = verify_cat_token("secret_admin_key_123")
             
             assert result is not None
             assert result["is_admin"] is True
@@ -320,7 +320,7 @@ class TestAdminApiKeySpecial:
         with patch("app.tools.auth.settings") as mock_settings:
             mock_settings.admin_api_key = "secret_admin_key_123"
             
-            result = verify_api_key("different_key")
+            result = verify_cat_token("different_key")
             
             # Should return None because it doesn't match admin_api_key
             # and mock repo will reject it
@@ -387,7 +387,7 @@ class TestTokenAuthMiddlewareIntegration:
         from app.tools.auth import AuthMiddleware
         from unittest.mock import AsyncMock
 
-        with patch("app.tools.auth.verify_api_key", return_value=None):
+        with patch("app.tools.auth.verify_cat_token", return_value=None):
             middleware = AuthMiddleware()
 
             mock_context = MagicMock()

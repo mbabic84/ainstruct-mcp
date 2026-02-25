@@ -17,7 +17,7 @@ from app.tools.collection_tools import (
     delete_collection,
     rename_collection,
 )
-from app.tools.context import set_user_info, set_api_key_info, clear_all_auth
+from app.tools.context import set_user_info, set_cat_info, clear_all_auth
 from app.db.models import CollectionResponse, CollectionListResponse, Permission
 
 
@@ -65,7 +65,7 @@ def mock_collection():
         "qdrant_collection": "qdrant-uuid-123",
         "user_id": "user-123",
         "document_count": 5,
-        "api_key_count": 2,
+        "cat_count": 2,
         "created_at": datetime.utcnow(),
         "updated_at": datetime.utcnow(),
     }
@@ -113,7 +113,7 @@ class TestCreateCollection:
                 id="new-collection-id",
                 name="personal",
                 document_count=0,
-                api_key_count=0,
+                cat_count=0,
                 created_at=datetime.utcnow(),
             )
             mock_repo_factory.return_value = mock_repo
@@ -130,7 +130,7 @@ class TestCreateCollection:
     @pytest.mark.asyncio
     async def test_create_collection_with_api_key(self, mock_api_key_info):
         """API key auth cannot create collections directly (uses user_id from key)."""
-        set_api_key_info(mock_api_key_info)
+        set_cat_info(mock_api_key_info)
 
         with patch("app.tools.collection_tools.get_collection_repository") as mock_repo_factory:
             mock_repo = MagicMock()
@@ -139,7 +139,7 @@ class TestCreateCollection:
                 id="new-collection-id",
                 name="new-collection",
                 document_count=0,
-                api_key_count=0,
+                cat_count=0,
                 created_at=datetime.utcnow(),
             )
             mock_repo_factory.return_value = mock_repo
@@ -183,7 +183,7 @@ class TestListCollections:
     @pytest.mark.asyncio
     async def test_list_collections_with_api_key_denied(self, mock_api_key_info):
         """API key auth cannot list collections (requires JWT or PAT)."""
-        set_api_key_info(mock_api_key_info)
+        set_cat_info(mock_api_key_info)
 
         with pytest.raises(ValueError, match="JWT or PAT authentication required"):
             await list_collections()
@@ -219,7 +219,7 @@ class TestGetCollection:
             assert result.id == "collection-123"
             assert result.name == "default"
             assert result.document_count == 5
-            assert result.api_key_count == 2
+            assert result.cat_count == 2
 
     @pytest.mark.asyncio
     async def test_get_collection_not_owner_denied(self, mock_user_info, mock_collection):
@@ -277,7 +277,7 @@ class TestDeleteCollection:
     async def test_delete_collection_no_api_keys(self, mock_user_info, mock_collection):
         """Can delete collection with no active API keys."""
         set_user_info(mock_user_info)
-        mock_collection["api_key_count"] = 0
+        mock_collection["cat_count"] = 0
 
         with patch("app.tools.collection_tools.get_collection_repository") as mock_repo_factory:
             mock_repo = MagicMock()
@@ -294,14 +294,14 @@ class TestDeleteCollection:
     async def test_delete_collection_with_api_keys_denied(self, mock_user_info, mock_collection):
         """Cannot delete collection with active API keys."""
         set_user_info(mock_user_info)
-        mock_collection["api_key_count"] = 3
+        mock_collection["cat_count"] = 3
 
         with patch("app.tools.collection_tools.get_collection_repository") as mock_repo_factory:
             mock_repo = MagicMock()
             mock_repo.get_by_id.return_value = mock_collection
             mock_repo_factory.return_value = mock_repo
 
-            with pytest.raises(ValueError, match="Cannot delete collection with active API keys"):
+            with pytest.raises(ValueError, match="Cannot delete collection with active CAT tokens"):
                 await delete_collection(DeleteCollectionInput(collection_id="collection-123"))
 
             mock_repo.delete.assert_not_called()
@@ -311,7 +311,7 @@ class TestDeleteCollection:
         """Non-owner cannot delete collection."""
         set_user_info(mock_user_info)
         mock_collection["user_id"] = "different-user-id"
-        mock_collection["api_key_count"] = 0
+        mock_collection["cat_count"] = 0
 
         with patch("app.tools.collection_tools.get_collection_repository") as mock_repo_factory:
             mock_repo = MagicMock()
@@ -326,7 +326,7 @@ class TestDeleteCollection:
         """Admin can delete any collection."""
         set_user_info(mock_admin_info)
         mock_collection["user_id"] = "different-user-id"
-        mock_collection["api_key_count"] = 0
+        mock_collection["cat_count"] = 0
 
         with patch("app.tools.collection_tools.get_collection_repository") as mock_repo_factory:
             mock_repo = MagicMock()
@@ -361,7 +361,7 @@ class TestRenameCollection:
                 id="collection-123",
                 name="renamed",
                 document_count=5,
-                api_key_count=2,
+                cat_count=2,
                 created_at=datetime.utcnow(),
             )
             mock_repo_factory.return_value = mock_repo

@@ -37,7 +37,7 @@ class CollectionModel(Base):
     updated_at: Mapped[datetime] = mapped_column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
 
     user: Mapped[UserModel] = relationship("UserModel", back_populates="collections")
-    api_keys: Mapped[list[ApiKeyModel]] = relationship("ApiKeyModel", back_populates="collection", cascade="all, delete-orphan")
+    cats: Mapped[list[CatModel]] = relationship("CatModel", back_populates="collection", cascade="all, delete-orphan")
     documents: Mapped[list[DocumentModel]] = relationship("DocumentModel", back_populates="collection", cascade="all, delete-orphan")
 
 
@@ -71,12 +71,12 @@ class UserModel(Base):
     updated_at: Mapped[datetime] = mapped_column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
 
     collections: Mapped[list[CollectionModel]] = relationship("CollectionModel", back_populates="user", cascade="all, delete-orphan")
-    api_keys: Mapped[list[ApiKeyModel]] = relationship("ApiKeyModel", back_populates="user", cascade="all, delete-orphan")
+    cats: Mapped[list[CatModel]] = relationship("CatModel", back_populates="user", cascade="all, delete-orphan")
     pat_tokens: Mapped[list[PatTokenModel]] = relationship("PatTokenModel", back_populates="user", cascade="all, delete-orphan")
 
 
-class ApiKeyModel(Base):
-    __tablename__ = "api_keys"
+class CatModel(Base):
+    __tablename__ = "cats"
 
     id: Mapped[str] = mapped_column(String(36), primary_key=True, default=lambda: str(uuid.uuid4()))
     key_hash: Mapped[str] = mapped_column(String(64), nullable=False, unique=True, index=True)
@@ -89,8 +89,8 @@ class ApiKeyModel(Base):
     user_id: Mapped[str | None] = mapped_column(String(36), ForeignKey("users.id"), nullable=True, index=True)
     expires_at: Mapped[datetime | None] = mapped_column(DateTime, nullable=True)
 
-    user: Mapped[UserModel | None] = relationship("UserModel", back_populates="api_keys")
-    collection: Mapped[CollectionModel] = relationship("CollectionModel", back_populates="api_keys")
+    user: Mapped[UserModel | None] = relationship("UserModel", back_populates="cats")
+    collection: Mapped[CollectionModel] = relationship("CollectionModel", back_populates="cats")
 
 
 class PatTokenModel(Base):
@@ -117,7 +117,7 @@ class CollectionResponse(BaseModel):
     id: str
     name: str
     document_count: int
-    api_key_count: int
+    cat_count: int
     created_at: datetime
 
 
@@ -189,14 +189,14 @@ class TokenResponse(BaseModel):
     expires_in: int
 
 
-class ApiKeyCreate(BaseModel):
+class CatCreate(BaseModel):
     label: str
     collection_id: str
     permission: Permission = Permission.READ_WRITE
     expires_in_days: int | None = None
 
 
-class ApiKeyResponse(BaseModel):
+class CatResponse(BaseModel):
     id: str
     label: str
     key: str | None = None
@@ -209,7 +209,7 @@ class ApiKeyResponse(BaseModel):
     last_used: datetime | None
 
 
-class ApiKeyListResponse(BaseModel):
+class CatListResponse(BaseModel):
     id: str
     label: str
     collection_id: str
@@ -263,11 +263,11 @@ def compute_content_hash(content: str) -> str:
     return hashlib.sha256(content.encode("utf-8")).hexdigest()
 
 
-def generate_api_key() -> str:
-    return f"ak_live_{secrets.token_urlsafe(32)}"
+def generate_cat_token() -> str:
+    return f"cat_live_{secrets.token_urlsafe(32)}"
 
 
-def hash_api_key(key: str) -> str:
+def hash_cat_token(key: str) -> str:
     return hashlib.sha256(key.encode("utf-8")).hexdigest()
 
 

@@ -2,7 +2,7 @@ from contextvars import ContextVar
 
 from ..db.models import Permission, Scope
 
-api_key_context: ContextVar[dict | None] = ContextVar("api_key_context", default=None)
+cat_context: ContextVar[dict | None] = ContextVar("cat_context", default=None)
 user_context: ContextVar[dict | None] = ContextVar("user_context", default=None)
 auth_type_context: ContextVar[str | None] = ContextVar("auth_type_context", default=None)
 pat_context: ContextVar[dict | None] = ContextVar("pat_context", default=None)
@@ -20,16 +20,16 @@ def clear_pat_info():
     pat_context.set(None)
 
 
-def set_api_key_info(info: dict):
-    api_key_context.set(info)
+def set_cat_info(info: dict):
+    cat_context.set(info)
 
 
-def get_api_key_info() -> dict | None:
-    return api_key_context.get()
+def get_cat_info() -> dict | None:
+    return cat_context.get()
 
 
-def clear_api_key_info():
-    api_key_context.set(None)
+def clear_cat_info():
+    cat_context.set(None)
 
 
 def set_user_info(info: dict):
@@ -60,9 +60,9 @@ def get_current_user_id() -> str | None:
     user_info = get_user_info()
     if user_info:
         return user_info.get("id")
-    api_key_info = get_api_key_info()
-    if api_key_info:
-        return api_key_info.get("user_id")
+    cat_info = get_cat_info()
+    if cat_info:
+        return cat_info.get("user_id")
     pat_info = get_pat_info()
     if pat_info:
         return pat_info.get("user_id")
@@ -74,8 +74,8 @@ def has_scope(required_scope: Scope) -> bool:
     if user_info and user_info.get("is_superuser"):
         return True
 
-    api_key_info = get_api_key_info()
-    if api_key_info and api_key_info.get("is_admin"):
+    cat_info = get_cat_info()
+    if cat_info and cat_info.get("is_admin"):
         return True
 
     pat_info = get_pat_info()
@@ -85,8 +85,8 @@ def has_scope(required_scope: Scope) -> bool:
     user_scopes = []
     if user_info:
         user_scopes = user_info.get("scopes", [])
-    elif api_key_info:
-        user_scopes = api_key_info.get("scopes", [])
+    elif cat_info:
+        user_scopes = cat_info.get("scopes", [])
     elif pat_info:
         user_scopes = pat_info.get("scopes", [])
 
@@ -100,11 +100,11 @@ def has_write_permission() -> bool:
             return True
         return True
 
-    api_key_info = get_api_key_info()
-    if api_key_info:
-        if api_key_info.get("is_admin"):
+    cat_info = get_cat_info()
+    if cat_info:
+        if cat_info.get("is_admin"):
             return True
-        permission = api_key_info.get("permission")
+        permission = cat_info.get("permission")
         return permission == Permission.READ_WRITE
 
     pat_info = get_pat_info()
@@ -124,7 +124,7 @@ def get_collection_repository():
 
 def get_auth_context() -> dict:
     user_info = get_user_info()
-    api_key_info = get_api_key_info()
+    cat_info = get_cat_info()
     pat_info = get_pat_info()
 
     if user_info:
@@ -163,28 +163,28 @@ def get_auth_context() -> dict:
             "qdrant_collections": [c["qdrant_collection"] for c in user_collections],
         }
 
-    if api_key_info:
+    if cat_info:
         return {
-            "id": api_key_info.get("id"),
-            "user_id": api_key_info.get("user_id"),
-            "collection_id": api_key_info.get("collection_id"),
-            "collection_name": api_key_info.get("collection_name"),
-            "qdrant_collection": api_key_info.get("qdrant_collection"),
-            "permission": api_key_info.get("permission"),
-            "is_admin": api_key_info.get("is_admin", False),
+            "id": cat_info.get("id"),
+            "user_id": cat_info.get("user_id"),
+            "collection_id": cat_info.get("collection_id"),
+            "collection_name": cat_info.get("collection_name"),
+            "qdrant_collection": cat_info.get("qdrant_collection"),
+            "permission": cat_info.get("permission"),
+            "is_admin": cat_info.get("is_admin", False),
             "is_superuser": False,
-            "auth_type": "api_key",
+            "auth_type": "cat",
         }
 
     return {}
 
 
 def is_authenticated() -> bool:
-    return bool(get_user_info() or get_api_key_info() or get_pat_info())
+    return bool(get_user_info() or get_cat_info() or get_pat_info())
 
 
 def clear_all_auth():
-    clear_api_key_info()
+    clear_cat_info()
     clear_user_info()
     clear_pat_info()
     clear_auth_type()

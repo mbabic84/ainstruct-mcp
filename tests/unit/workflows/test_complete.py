@@ -21,10 +21,10 @@ from app.tools.collection_tools import (
     get_collection,
     GetCollectionInput,
 )
-from app.tools.key_tools import (
-    CreateApiKeyInput,
-    create_api_key,
-    list_api_keys,
+from app.tools.cat_tools import (
+    CreateCatInput,
+    create_cat,
+    list_cats,
 )
 from app.tools.pat_tools import (
     CreatePatTokenInput,
@@ -41,7 +41,7 @@ from app.tools.document_tools import (
     store_document,
     search_documents,
 )
-from app.tools.context import set_user_info, set_api_key_info, set_pat_info, clear_all_auth
+from app.tools.context import set_user_info, set_cat_info, set_pat_info, clear_all_auth
 from app.db.models import Permission, CollectionResponse, Scope
 
 
@@ -86,7 +86,7 @@ class TestCompleteUserWorkflow:
                 id="default-collection-id",
                 name="default",
                 document_count=0,
-                api_key_count=0,
+                cat_count=0,
                 created_at=datetime.utcnow(),
             )
             mock_coll_factory.return_value = mock_coll_repo
@@ -162,8 +162,8 @@ class TestCompleteUserWorkflow:
 
         # Step 4: Create API key
         with (
-            patch("app.tools.key_tools.get_api_key_repository") as mock_key_repo_factory,
-            patch("app.tools.key_tools.get_collection_repository") as mock_coll_factory,
+            patch("app.tools.cat_tools.get_cat_repository") as mock_key_repo_factory,
+            patch("app.tools.cat_tools.get_collection_repository") as mock_coll_factory,
         ):
             mock_coll_repo = MagicMock()
             mock_coll_repo.get_by_id.return_value = {
@@ -172,7 +172,7 @@ class TestCompleteUserWorkflow:
                 "qdrant_collection": "qdrant-uuid",
                 "user_id": "user-123",
                 "document_count": 0,
-                "api_key_count": 0,
+                "cat_count": 0,
                 "created_at": datetime.utcnow(),
             }
             mock_coll_factory.return_value = mock_coll_repo
@@ -190,18 +190,18 @@ class TestCompleteUserWorkflow:
             }
             mock_key_repo_factory.return_value = mock_key_repo
 
-            api_key = await create_api_key(CreateApiKeyInput(
+            cat = await create_cat(CreateCatInput(
                 label="Main Key",
                 collection_id="default-collection-id",
                 permission="read_write",
             ))
 
-            assert api_key.key == "ak_live_testkey123"
-            assert api_key.collection_name == "default"
+            assert cat.key == "ak_live_testkey123"
+            assert cat.collection_name == "default"
 
         # Step 5: Use API key to store document
         clear_all_auth()
-        set_api_key_info({
+        set_cat_info({
             "id": "api-key-id",
             "user_id": "user-123",
             "collection_id": "default-collection-id",
@@ -209,7 +209,7 @@ class TestCompleteUserWorkflow:
             "qdrant_collection": "qdrant-uuid",
             "permission": Permission.READ_WRITE,
             "is_admin": False,
-            "auth_type": "api_key",
+            "auth_type": "cat",
         })
 
         with (
@@ -266,14 +266,14 @@ class TestPermissionEnforcement:
     @pytest.mark.asyncio
     async def test_read_only_key_cannot_write(self):
         """Read-only API key cannot perform write operations."""
-        set_api_key_info({
+        set_cat_info({
             "id": "readonly-key",
             "user_id": "user-123",
             "collection_id": "collection-123",
             "qdrant_collection": "qdrant-uuid",
             "permission": Permission.READ,
             "is_admin": False,
-            "auth_type": "api_key",
+            "auth_type": "cat",
         })
 
         # Cannot store
@@ -297,14 +297,14 @@ class TestPermissionEnforcement:
     @pytest.mark.asyncio
     async def test_read_only_key_can_read(self):
         """Read-only API key can perform read operations."""
-        set_api_key_info({
+        set_cat_info({
             "id": "readonly-key",
             "user_id": "user-123",
             "collection_id": "collection-123",
             "qdrant_collection": "qdrant-uuid",
             "permission": Permission.READ,
             "is_admin": False,
-            "auth_type": "api_key",
+            "auth_type": "cat",
         })
 
         # Can search
@@ -461,16 +461,16 @@ class TestCollectionIsolation:
         clear_all_auth()
 
     @pytest.mark.asyncio
-    async def test_api_key_limited_to_assigned_collection(self):
+    async def test_cat_limited_to_assigned_collection(self):
         """API key can only access its assigned collection."""
-        set_api_key_info({
+        set_cat_info({
             "id": "api-key-1",
             "user_id": "user-123",
             "collection_id": "collection-1",
             "qdrant_collection": "qdrant-1",
             "permission": Permission.READ_WRITE,
             "is_admin": False,
-            "auth_type": "api_key",
+            "auth_type": "cat",
         })
 
         # Document repo should be called with collection-1
@@ -526,7 +526,7 @@ class TestCollectionIsolation:
                 "name": "other-user-collection",
                 "user_id": "user-456",  # Different user
                 "document_count": 5,
-                "api_key_count": 1,
+                "cat_count": 1,
                 "created_at": datetime.utcnow(),
             }
             mock_repo_factory.return_value = mock_repo
@@ -554,9 +554,9 @@ class TestAPIKeyRotation:
             "is_superuser": False,
         })
 
-        from app.tools.key_tools import rotate_api_key, RotateApiKeyInput
+        from app.tools.cat_tools import rotate_cat, RotateCatInput
 
-        with patch("app.tools.key_tools.get_api_key_repository") as mock_repo_factory:
+        with patch("app.tools.cat_tools.get_cat_repository") as mock_repo_factory:
             mock_repo = MagicMock()
             mock_repo.get_by_id.return_value = {
                 "id": "old-key-id",
@@ -571,7 +571,7 @@ class TestAPIKeyRotation:
             mock_repo.rotate.return_value = ("new-key-id", "ak_live_newkey123")
             mock_repo_factory.return_value = mock_repo
 
-            result = await rotate_api_key(RotateApiKeyInput(key_id="old-key-id"))
+            result = await rotate_cat(RotateCatInput(key_id="old-key-id"))
 
             assert result.key == "ak_live_newkey123"
             # The rotate method should preserve collection_id
@@ -693,7 +693,7 @@ class TestPatTokenWorkflow:
     @pytest.mark.asyncio
     async def test_pat_token_cannot_be_created_without_jwt(self):
         """API key users cannot create PAT tokens."""
-        set_api_key_info({
+        set_cat_info({
             "id": "api-key-1",
             "user_id": "user-123",
             "collection_id": "collection-1",

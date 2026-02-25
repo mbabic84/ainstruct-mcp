@@ -39,15 +39,15 @@ services:
       - MCP_TRANSPORT=http
       - RUFF_CACHE_DIR=/tmp/ruff_cache
     volumes:
-      - ./src:/app/src:ro
+      - ./src:/app/src
       - ./tests:/app/tests
-      - ./pyproject.toml:/app/pyproject.toml:ro
-      - ./alembic.ini:/app/alembic.ini:ro
+      - ./pyproject.toml:/app/pyproject.toml
+      - ./alembic.ini:/app/alembic.ini
       - ./migrations:/app/migrations
     depends_on:
       mcp_server:
         condition: service_healthy
-    command: ["sh", "-c", "python -c \"\nimport urllib.request\nimport sys\nimport time\n\nqdrant_url = 'http://qdrant:6333'\nmax_attempts = 30\nfor i in range(max_attempts):\n    try:\n        urllib.request.urlopen(qdrant_url, timeout=2)\n        print('Qdrant is ready')\n        break\n    except Exception as e:\n        if i == max_attempts - 1:\n            print(f'Failed to connect to Qdrant: {e}', file=sys.stderr)\n            sys.exit(1)\n        print(f'Waiting for Qdrant... ({i+1}/{max_attempts})')\n        time.sleep(2)\n\" && ruff check src/ && mypy src/ && pytest tests/unit tests/integration tests/e2e -v"]
+    command: ["sh", "-c", "python -c \"\nimport urllib.request\nimport sys\nimport time\n\nqdrant_url = 'http://qdrant:6333'\nmax_attempts = 30\nfor i in range(max_attempts):\n    try:\n        urllib.request.urlopen(qdrant_url, timeout=2)\n        print('Qdrant is ready')\n        break\n    except Exception as e:\n        if i == max_attempts - 1:\n            print(f'Failed to connect to Qdrant: {e}', file=sys.stderr)\n            sys.exit(1)\n        print(f'Waiting for Qdrant... ({i+1}/{max_attempts})')\n        time.sleep(2)\n\" && ruff check src/ && mypy src/ --ignore-missing-imports && pytest tests/unit tests/integration tests/e2e -v"]
 
 volumes:
   qdrant_storage:

@@ -92,7 +92,6 @@ async def get_collection(input_data: GetCollectionInput) -> CollectionResponse:
     return CollectionResponse(
         id=collection["id"],
         name=collection["name"],
-        user_id=collection["user_id"],
         document_count=collection["document_count"],
         cat_count=collection["cat_count"],
         created_at=collection["created_at"],

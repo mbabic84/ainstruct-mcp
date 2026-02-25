@@ -1,5 +1,11 @@
 from fastapi import APIRouter, HTTPException, Query, status
 
+from app.db import (
+    get_cat_repository,
+    get_collection_repository,
+    get_pat_token_repository,
+    get_user_repository,
+)
 from app.rest.deps import AdminDep, DbDep
 from app.rest.schemas import (
     ErrorResponse,
@@ -9,12 +15,6 @@ from app.rest.schemas import (
     UserListResponse,
     UserResponse,
     UserUpdate,
-)
-from app.db import (
-    get_cat_repository,
-    get_collection_repository,
-    get_pat_token_repository,
-    get_user_repository,
 )
 from app.services import get_auth_service
 

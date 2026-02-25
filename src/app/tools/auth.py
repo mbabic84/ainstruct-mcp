@@ -6,14 +6,14 @@ from fastmcp.server.dependencies import get_http_headers
 from fastmcp.server.middleware import Middleware, MiddlewareContext
 
 from ..config import settings
-from ..db import get_api_key_repository
+from ..db import get_cat_repository
 from ..db.models import Permission, Scope
 from ..services import get_auth_service
 from ..services.auth_service import is_pat_token, verify_pat_token
 from .context import (
     clear_all_auth,
-    set_api_key_info,
     set_auth_type,
+    set_cat_info,
     set_pat_info,
     set_user_info,
 )
@@ -24,11 +24,11 @@ def _key_to_collection(key: str) -> str:
     return f"docs_{key_hash}"
 
 
-def verify_api_key(api_key: str) -> dict | None:
-    if not api_key:
+def verify_cat_token(cat_token: str) -> dict | None:
+    if not cat_token:
         return None
 
-    if api_key == settings.admin_api_key:
+    if cat_token == settings.admin_api_key:
         return {
             "id": "admin",
             "label": "admin",
@@ -38,20 +38,20 @@ def verify_api_key(api_key: str) -> dict | None:
             "permission": Permission.READ_WRITE,
         }
 
-    repo = get_api_key_repository()
+    repo = get_cat_repository()
 
     for valid_key in settings.api_keys_list:
-        if valid_key == api_key:
+        if valid_key == cat_token:
             return {
-                "id": f"env_{hashlib.sha256(api_key.encode()).hexdigest()[:8]}",
+                "id": f"env_{hashlib.sha256(cat_token.encode()).hexdigest()[:8]}",
                 "label": "env",
                 "collection_id": None,
-                "qdrant_collection": _key_to_collection(api_key),
+                "qdrant_collection": _key_to_collection(cat_token),
                 "is_admin": False,
                 "permission": Permission.READ_WRITE,
             }
 
-    return repo.validate(api_key)
+    return repo.validate(cat_token)
 
 
 def verify_jwt_token(token: str) -> dict | None:
@@ -232,10 +232,10 @@ class AuthMiddleware(Middleware):
             set_user_info(user_info)
             set_auth_type("jwt")
         else:
-            api_key_info = verify_api_key(token)
-            if not api_key_info:
+            cat_info = verify_cat_token(token)
+            if not cat_info:
                 raise ValueError("Invalid API key")
-            set_api_key_info(api_key_info)
+            set_cat_info(cat_info)
             set_auth_type("api_key")
 
         try:
@@ -283,7 +283,7 @@ class AuthMiddleware(Middleware):
         auth_level = AuthLevel.NONE
         user_info = None
         pat_info = None
-        api_key_info = None
+        cat_info = None
 
         if is_pat_token(token):
             pat_info = verify_pat_token(token)
@@ -294,12 +294,12 @@ class AuthMiddleware(Middleware):
             if user_info:
                 auth_level = AuthLevel.JWT_OR_PAT
         else:
-            api_key_info = verify_api_key(token)
-            if api_key_info:
+            cat_info = verify_cat_token(token)
+            if cat_info:
                 auth_level = AuthLevel.API_KEY
 
         # Service admin (admin_api_key): only allow update_user_tool
-        if api_key_info and api_key_info.get("is_admin"):
+        if cat_info and cat_info.get("is_admin"):
             return [tool for tool in result if tool.name == "update_user_tool"]
 
         def can_access_tool(tool) -> bool:
@@ -338,7 +338,7 @@ def require_scope(required_scope: Scope) -> Callable:
     def decorator(func: Callable) -> Callable:
         async def wrapper(*args, **kwargs):
             from .context import (
-                get_api_key_info,
+                get_cat_info,
                 get_pat_info,
                 get_user_info,
                 has_write_permission,
@@ -364,9 +364,9 @@ def require_scope(required_scope: Scope) -> Callable:
                 if required_scope in scopes:
                     return await func(*args, **kwargs)
 
-            api_key_info = get_api_key_info()
-            if api_key_info:
-                if api_key_info.get("is_admin"):
+            cat_info = get_cat_info()
+            if cat_info:
+                if cat_info.get("is_admin"):
                     return await func(*args, **kwargs)
                 if required_scope == Scope.WRITE:
                     if has_write_permission():

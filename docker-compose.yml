@@ -19,12 +19,26 @@ services:
     depends_on:
       qdrant:
         condition: service_started
-    healthcheck:
-      test: ["CMD", "sh", "-c", "curl -s -o /dev/null http://localhost:8000/mcp || exit 0"]
-      interval: 2s
-      timeout: 5s
-      retries: 30
-      start_period: 10s
+
+  test_runner:
+    build:
+      context: .
+      dockerfile: Dockerfile.test-base
+    environment:
+      - PYTHONPATH=/app
+      - USE_MOCK_EMBEDDINGS=true
+      - DATABASE_URL=sqlite:///./data/mcp_server.db
+      - QDRANT_URL=http://qdrant:6333
+      - RUFF_CACHE_DIR=/tmp/ruff_cache
+    volumes:
+      - ./src:/app/src:ro
+      - ./tests:/app/tests
+      - ./pyproject.toml:/app/pyproject.toml:ro
+      - ./alembic.ini:/app/alembic.ini:ro
+    depends_on:
+      qdrant:
+        condition: service_started
+    command: ["pytest", "tests/", "-v"]
 
 volumes:
   qdrant_storage:

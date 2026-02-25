@@ -6,7 +6,8 @@ WORKDIR /app
 
 RUN addgroup -g 1000 appgroup && \
     adduser -u 1000 -G appgroup -D appuser && \
-    mkdir -p /app/data
+    mkdir -p /app/data && \
+    chown -R appuser:appgroup /app/data
 
 ENV PYTHONPATH=/app/src
 

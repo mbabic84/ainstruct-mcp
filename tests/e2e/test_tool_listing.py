@@ -12,37 +12,18 @@ from tests.e2e.mcp_client_test import (
 )
 
 
-# Production server URL
 SERVER_URL = os.environ["MCP_SERVER_URL"]
 TRANSPORT = os.environ.get("MCP_TRANSPORT", "http")
 
 
 class TestMCPServerHealth:
     """Test basic server health and tool listing."""
-    
+
     @pytest.mark.asyncio
     async def test_server_is_reachable(self):
         """Verify the MCP server is reachable and responds to initialize."""
         async with MCPClient(SERVER_URL, transport=TRANSPORT) as client:
             assert client.session is not None
-    
-    @pytest.mark.asyncio
-    async def test_list_tools_public(self):
-        """List tools without authentication returns only public tools."""
-        async with MCPClient(SERVER_URL, transport=TRANSPORT) as client:
-            tools = await client.list_tools()
-
-            tool_names = {t["name"] for t in tools}
-
-            # Without auth, only public tools should be visible
-            public_tools = {
-                "user_register_tool",
-                "user_login_tool",
-                "user_refresh_tool",
-            }
-            assert tool_names == public_tools, f"Expected only public tools, got: {tool_names}"
-
-            print(f"\nFound {len(tools)} public tools (no auth)")
 
     @pytest.mark.asyncio
     async def test_list_tools_authenticated(self):

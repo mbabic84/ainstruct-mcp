@@ -15,6 +15,11 @@ from app.tools.context import (
     set_pat_info,
     get_pat_info,
     get_current_user_id,
+    is_authenticated,
+    clear_user_info,
+    clear_api_key_info,
+    has_write_permission,
+    has_scope,
 )
 from app.db.models import Scope, Permission
 

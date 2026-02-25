@@ -4,7 +4,7 @@ Tests create, list, get, delete, rename operations with various auth contexts.
 """
 import pytest
 from unittest.mock import MagicMock, patch
-from datetime import datetime
+from datetime import datetime, timezone
 
 from app.tools.collection_tools import (
     CreateCollectionInput,
@@ -66,8 +66,8 @@ def mock_collection():
         "user_id": "user-123",
         "document_count": 5,
         "cat_count": 2,
-        "created_at": datetime.utcnow(),
-        "updated_at": datetime.utcnow(),
+        "created_at": datetime.now(timezone.utc),
+        "updated_at": datetime.now(timezone.utc),
     }
 
 
@@ -80,14 +80,14 @@ def mock_collection_list():
             "name": "default",
             "qdrant_collection": "qdrant-1",
             "user_id": "user-123",
-            "created_at": datetime.utcnow(),
+            "created_at": datetime.now(timezone.utc),
         },
         {
             "id": "collection-2",
             "name": "work",
             "qdrant_collection": "qdrant-2",
             "user_id": "user-123",
-            "created_at": datetime.utcnow(),
+            "created_at": datetime.now(timezone.utc),
         },
     ]
 
@@ -114,7 +114,7 @@ class TestCreateCollection:
                 name="personal",
                 document_count=0,
                 cat_count=0,
-                created_at=datetime.utcnow(),
+                created_at=datetime.now(timezone.utc),
             )
             mock_repo_factory.return_value = mock_repo
 
@@ -140,7 +140,7 @@ class TestCreateCollection:
                 name="new-collection",
                 document_count=0,
                 cat_count=0,
-                created_at=datetime.utcnow(),
+                created_at=datetime.now(timezone.utc),
             )
             mock_repo_factory.return_value = mock_repo
 
@@ -362,7 +362,7 @@ class TestRenameCollection:
                 name="renamed",
                 document_count=5,
                 cat_count=2,
-                created_at=datetime.utcnow(),
+                created_at=datetime.now(timezone.utc),
             )
             mock_repo_factory.return_value = mock_repo
 

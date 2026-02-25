@@ -1,33 +1,57 @@
 # Testing
 
-## Run All Tests
+## Static Testing Environment
+
+The test environment uses a persistent container with all runtime and dev dependencies pre-installed. Source code is mounted as volumes for fast iteration without rebuilding.
+
+### Start Environment
 
 ```bash
-docker compose --profile test up test_runner
+# Start all test services (runs once)
+docker compose -f docker-compose.test.yml up -d
 ```
 
 This starts:
 - `qdrant` - Vector database
-- `mcp_server` - MCP server
-- `test_runner` - Runs linting, type checking, and all tests (unit + integration + e2e)
+- `mcp_server` - MCP server with test dependencies (persistent container)
 
-## Run Specific Tests
+## Run Tests
 
 ```bash
-# Unit tests only
-docker compose run --rm test_runner pytest tests/unit -v
+# Run all tests
+docker compose -f docker-compose.test.yml exec mcp_server pytest tests/ -v
 
-# Specific test file
-docker compose run --rm test_runner pytest tests/unit/test_auth.py -v
+# Run specific test directory
+docker compose -f docker-compose.test.yml exec mcp_server pytest tests/unit -v
 
-# Specific test
-docker compose run --rm test_runner pytest tests/unit/test_auth.py::test_function -v
+# Run specific test file
+docker compose -f docker-compose.test.yml exec mcp_server pytest tests/unit/test_auth.py -v
+
+# Run specific test function
+docker compose -f docker-compose.test.yml exec mcp_server pytest tests/unit/test_auth.py::test_function -v
+
+# Run tests matching a pattern
+docker compose -f docker-compose.test.yml exec mcp_server pytest -k "test_auth" -v
 ```
 
-## Lint and Type Check
+### Lint and Type Check
 
 ```bash
-docker compose run --rm test_runner sh -c "ruff check src/ && mypy src/"
+# Run linting
+docker compose -f docker-compose.test.yml exec mcp_server ruff check src/
+
+# Run type checking
+docker compose -f docker-compose.test.yml exec mcp_server mypy src/
+
+# Run both
+docker compose -f docker-compose.test.yml exec mcp_server sh -c "ruff check src/ && mypy src/"
+```
+
+### Stop Environment
+
+```bash
+# Stop all test services
+docker compose -f docker-compose.test.yml down
 ```
 
 ## Test Structure
@@ -41,5 +65,5 @@ docker compose run --rm test_runner sh -c "ruff check src/ && mypy src/"
 ## Cleanup
 
 ```bash
-docker compose --profile test down -v
+docker compose -f docker-compose.test.yml down -v
 ```

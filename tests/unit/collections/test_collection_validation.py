@@ -4,7 +4,7 @@ Tests duplicate names, input validation, length limits, and special characters.
 """
 import pytest
 from unittest.mock import MagicMock, patch
-from datetime import datetime
+from datetime import datetime, timezone
 
 from app.tools.collection_tools import (
     CreateCollectionInput,
@@ -52,8 +52,8 @@ def mock_collection():
         "user_id": "user-123",
         "document_count": 0,
         "cat_count": 0,
-        "created_at": datetime.utcnow(),
-        "updated_at": datetime.utcnow(),
+        "created_at": datetime.now(timezone.utc),
+        "updated_at": datetime.now(timezone.utc),
     }
 
 
@@ -114,7 +114,7 @@ class TestCreateCollectionValidation:
                 name="   ",  # Might be stripped to empty
                 document_count=0,
                 cat_count=0,
-                created_at=datetime.utcnow(),
+                created_at=datetime.now(timezone.utc),
             )
             mock_repo_factory.return_value = mock_repo
 
@@ -150,7 +150,7 @@ class TestCreateCollectionValidation:
                 name="test",
                 document_count=0,
                 cat_count=0,
-                created_at=datetime.utcnow(),
+                created_at=datetime.now(timezone.utc),
             )
             mock_repo_factory.return_value = mock_repo
 
@@ -194,7 +194,7 @@ class TestCreateCollectionValidation:
                 name="new-collection",
                 document_count=0,
                 cat_count=0,
-                created_at=datetime.utcnow(),
+                created_at=datetime.now(timezone.utc),
             )
             mock_repo_factory.return_value = mock_repo
 
@@ -226,8 +226,8 @@ class TestRenameCollectionValidation:
             "user_id": "user-123",
             "document_count": 0,
             "cat_count": 0,
-            "created_at": datetime.utcnow(),
-            "updated_at": datetime.utcnow(),
+            "created_at": datetime.now(timezone.utc),
+            "updated_at": datetime.now(timezone.utc),
         }
 
     @pytest.mark.asyncio
@@ -295,7 +295,7 @@ class TestRenameCollectionValidation:
                 name="old-name",
                 document_count=0,
                 cat_count=0,
-                created_at=datetime.utcnow(),
+                created_at=datetime.now(timezone.utc),
             )
             mock_repo_factory.return_value = mock_repo
 
@@ -320,7 +320,7 @@ class TestRenameCollectionValidation:
                 name="new-special-name_123",  # Return the actual new name
                 document_count=0,
                 cat_count=0,
-                created_at=datetime.utcnow(),
+                created_at=datetime.now(timezone.utc),
             )
             mock_repo_factory.return_value = mock_repo
 

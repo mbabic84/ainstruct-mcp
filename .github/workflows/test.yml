@@ -22,4 +22,4 @@ jobs:
           EOF
 
       - name: Run all tests
-        run: docker compose --profile test up --abort-on-container-exit
+        run: docker compose up --abort-on-container-exit --exit-code-from test_runner

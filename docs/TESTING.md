@@ -1,69 +1,61 @@
 # Testing
 
-## Static Testing Environment
-
-The test environment uses a persistent container with all runtime and dev dependencies pre-installed. Source code is mounted as volumes for fast iteration without rebuilding.
-
-### Start Environment
+## Quick Start
 
 ```bash
-# Start all test services (runs once)
-docker compose -f docker-compose.test.yml up -d
+# Run all tests and cleanup (always runs cleanup)
+docker compose up --abort-on-container-exit --exit-code-from test_runner; docker compose down
+
+# Or detached (manual cleanup)
+docker compose up -d test_runner
+docker compose logs -f test_runner
+docker compose down
 ```
 
-This starts:
-- `qdrant` - Vector database
-- `mcp_server` - MCP server with test dependencies (persistent container)
-
-## Run Tests
+## Run Specific Tests
 
 ```bash
-# Run all tests
-docker compose -f docker-compose.test.yml exec mcp_server pytest tests/ -v
+# Unit tests only
+docker compose run --rm test_runner pytest tests/unit -v
 
-# Run specific test directory
-docker compose -f docker-compose.test.yml exec mcp_server pytest tests/unit -v
+# Specific test file
+docker compose run --rm test_runner pytest tests/unit/test_auth.py -v
 
-# Run specific test file
-docker compose -f docker-compose.test.yml exec mcp_server pytest tests/unit/test_auth.py -v
+# Specific function
+docker compose run --rm test_runner pytest tests/unit/test_auth.py::test_function -v
 
-# Run specific test function
-docker compose -f docker-compose.test.yml exec mcp_server pytest tests/unit/test_auth.py::test_function -v
-
-# Run tests matching a pattern
-docker compose -f docker-compose.test.yml exec mcp_server pytest -k "test_auth" -v
+# Pattern match
+docker compose run --rm test_runner pytest -k "test_auth" -v
 ```
 
-### Lint and Type Check
+## Lint and Type Check
 
 ```bash
-# Run linting
-docker compose -f docker-compose.test.yml exec mcp_server ruff check src/
-
-# Run type checking
-docker compose -f docker-compose.test.yml exec mcp_server mypy src/
-
-# Run both
-docker compose -f docker-compose.test.yml exec mcp_server sh -c "ruff check src/ && mypy src/"
-```
-
-### Stop Environment
-
-```bash
-# Stop all test services
-docker compose -f docker-compose.test.yml down
+docker compose run --rm test_runner sh -c "ruff check src/ && mypy src/"
 ```
 
 ## Test Structure
 
-| Directory | Type | Description |
-|-----------|------|-------------|
-| `tests/unit/` | Unit | Mock-based tests |
-| `tests/integration/` | Integration | Migration tests (SQLite) |
-| `tests/e2e/` | E2E | Live MCP protocol tests (requires Qdrant) |
+| Directory | Type | Description | External Services |
+|-----------|------|-------------|-------------------|
+| `tests/unit/` | Unit | Mock-based tests | None |
+| `tests/integration/` | Integration | Migration tests (SQLite) | None |
+| `tests/e2e/` | E2E | Live MCP protocol tests | Qdrant |
 
 ## Cleanup
 
 ```bash
-docker compose -f docker-compose.test.yml down -v
+# Remove everything
+docker compose down -v
+
+# Remove including test data
+docker compose down -v --rmi local
 ```
+
+## Why This Approach?
+
+1. **One command**: `docker compose up --abort-on-container-exit`
+2. **No profiles**: Simple service list, no flags needed
+3. **Auto-cleanup**: `--abort-on-container-exit` stops qdrant when tests finish
+4. **Fast iteration**: Source mounted as volumes, no rebuild
+5. **CI-friendly**: `docker compose up --abort-on-container-exit --exit-code-from test_runner`

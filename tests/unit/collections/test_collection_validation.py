@@ -16,7 +16,7 @@ from app.tools.collection_tools import (
     delete_collection,
     rename_collection,
 )
-from app.tools.context import set_user_info, set_api_key_info, clear_all_auth
+from app.tools.context import set_user_info, set_cat_info, clear_all_auth
 from app.db.models import CollectionResponse, Permission
 
 
@@ -31,14 +31,14 @@ def mock_user_info():
 
 
 @pytest.fixture
-def mock_api_key_info():
+def mock_cat_info():
     return {
-        "id": "api-key-123",
+        "id": "cat-123",
         "user_id": "user-123",
         "collection_id": "collection-123",
         "permission": Permission.READ_WRITE,
         "is_admin": False,
-        "auth_type": "api_key",
+        "auth_type": "cat",
         "qdrant_collection": "qdrant-collection-123",
     }
 
@@ -51,7 +51,7 @@ def mock_collection():
         "qdrant_collection": "qdrant-existing",
         "user_id": "user-123",
         "document_count": 0,
-        "api_key_count": 0,
+        "cat_count": 0,
         "created_at": datetime.utcnow(),
         "updated_at": datetime.utcnow(),
     }
@@ -113,7 +113,7 @@ class TestCreateCollectionValidation:
                 id="new-id",
                 name="   ",  # Might be stripped to empty
                 document_count=0,
-                api_key_count=0,
+                cat_count=0,
                 created_at=datetime.utcnow(),
             )
             mock_repo_factory.return_value = mock_repo
@@ -149,7 +149,7 @@ class TestCreateCollectionValidation:
                 id="new-id",
                 name="test",
                 document_count=0,
-                api_key_count=0,
+                cat_count=0,
                 created_at=datetime.utcnow(),
             )
             mock_repo_factory.return_value = mock_repo
@@ -182,9 +182,9 @@ class TestCreateCollectionValidation:
                 await create_collection(CreateCollectionInput(name="Existing"))
 
     @pytest.mark.asyncio
-    async def test_create_collection_api_key_auth(self, mock_api_key_info):
-        """API key auth can create collections (uses user_id from key)."""
-        set_api_key_info(mock_api_key_info)
+    async def test_create_collection_api_key_auth(self, mock_cat_info):
+        """CAT auth can create collections (uses user_id from key)."""
+        set_cat_info(mock_cat_info)
 
         with patch("app.tools.collection_tools.get_collection_repository") as mock_repo_factory:
             mock_repo = MagicMock()
@@ -193,7 +193,7 @@ class TestCreateCollectionValidation:
                 id="new-collection-id",
                 name="new-collection",
                 document_count=0,
-                api_key_count=0,
+                cat_count=0,
                 created_at=datetime.utcnow(),
             )
             mock_repo_factory.return_value = mock_repo
@@ -201,9 +201,9 @@ class TestCreateCollectionValidation:
             result = await create_collection(CreateCollectionInput(name="new-collection"))
 
             assert result.id == "new-collection-id"
-            # Should use user_id from API key context
+            # Should use user_id from CAT context
             mock_repo.create.assert_called_once_with(
-                user_id=mock_api_key_info["user_id"],
+                user_id=mock_cat_info["user_id"],
                 name="new-collection",
             )
 
@@ -225,7 +225,7 @@ class TestRenameCollectionValidation:
             "qdrant_collection": "qdrant-123",
             "user_id": "user-123",
             "document_count": 0,
-            "api_key_count": 0,
+            "cat_count": 0,
             "created_at": datetime.utcnow(),
             "updated_at": datetime.utcnow(),
         }
@@ -294,7 +294,7 @@ class TestRenameCollectionValidation:
                 id="collection-123",
                 name="old-name",
                 document_count=0,
-                api_key_count=0,
+                cat_count=0,
                 created_at=datetime.utcnow(),
             )
             mock_repo_factory.return_value = mock_repo
@@ -319,7 +319,7 @@ class TestRenameCollectionValidation:
                 id="collection-123",
                 name="new-special-name_123",  # Return the actual new name
                 document_count=0,
-                api_key_count=0,
+                cat_count=0,
                 created_at=datetime.utcnow(),
             )
             mock_repo_factory.return_value = mock_repo
@@ -332,10 +332,10 @@ class TestRenameCollectionValidation:
             assert result.name == "new-special-name_123"
 
     @pytest.mark.asyncio
-    async def test_rename_collection_api_key_auth(self, mock_api_key_info, mock_owned_collection):
-        """API key auth cannot rename collections (requires JWT or PAT)."""
-        set_api_key_info(mock_api_key_info)
-        mock_owned_collection["user_id"] = mock_api_key_info["user_id"]
+    async def test_rename_collection_api_key_auth(self, mock_cat_info, mock_owned_collection):
+        """CAT auth cannot rename collections (requires JWT or PAT)."""
+        set_cat_info(mock_cat_info)
+        mock_owned_collection["user_id"] = mock_cat_info["user_id"]
 
         with patch("app.tools.collection_tools.get_collection_repository") as mock_repo_factory:
             mock_repo = MagicMock()

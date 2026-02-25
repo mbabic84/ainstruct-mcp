@@ -16,7 +16,7 @@ from app.tools.document_tools import (
     GetDocumentInput,
     get_document,
 )
-from app.tools.context import set_api_key_info, clear_all_auth
+from app.tools.context import set_cat_info, clear_all_auth
 from app.db.models import Permission
 
 
@@ -83,7 +83,7 @@ class TestStoreDocumentErrors:
         Test rollback when Qdrant fails after document is created in SQL.
         The document should be deleted from SQL if Qdrant fails.
         """
-        set_api_key_info(mock_api_key_write)
+        set_cat_info(mock_api_key_write)
 
         with patch("app.tools.document_tools.get_document_repository") as mock_doc_repo_factory, \
              patch("app.tools.document_tools.get_qdrant_service") as mock_qdrant_factory, \
@@ -123,7 +123,7 @@ class TestStoreDocumentErrors:
     @pytest.mark.asyncio
     async def test_store_document_embedding_service_fails(self, mock_api_key_write, mock_chunks):
         """Test failure when embedding service is unavailable."""
-        set_api_key_info(mock_api_key_write)
+        set_cat_info(mock_api_key_write)
 
         with patch("app.tools.document_tools.get_document_repository") as mock_doc_repo_factory, \
              patch("app.tools.document_tools.get_qdrant_service") as mock_qdrant_factory, \
@@ -162,7 +162,7 @@ class TestStoreDocumentErrors:
     @pytest.mark.asyncio
     async def test_store_document_chunking_service_fails(self, mock_api_key_write):
         """Test failure when chunking service raises an error."""
-        set_api_key_info(mock_api_key_write)
+        set_cat_info(mock_api_key_write)
 
         with patch("app.tools.document_tools.get_document_repository") as mock_doc_repo_factory, \
              patch("app.tools.document_tools.get_qdrant_service") as mock_qdrant_factory, \
@@ -194,7 +194,7 @@ class TestStoreDocumentErrors:
     @pytest.mark.asyncio
     async def test_store_document_qdrant_update_qdrant_point_id_fails(self, mock_api_key_write, mock_chunks):
         """Test failure when updating qdrant_point_id after successful upsert."""
-        set_api_key_info(mock_api_key_write)
+        set_cat_info(mock_api_key_write)
 
         with patch("app.tools.document_tools.get_document_repository") as mock_doc_repo_factory, \
              patch("app.tools.document_tools.get_qdrant_service") as mock_qdrant_factory, \
@@ -238,7 +238,7 @@ class TestStoreDocumentErrors:
     @pytest.mark.asyncio
     async def test_store_document_empty_chunks(self, mock_api_key_write):
         """Store document with empty content returns no chunks but document is stored."""
-        set_api_key_info(mock_api_key_write)
+        set_cat_info(mock_api_key_write)
 
         with patch("app.tools.document_tools.get_document_repository") as mock_doc_repo_factory, \
              patch("app.tools.document_tools.get_qdrant_service") as mock_qdrant_factory, \
@@ -275,7 +275,7 @@ class TestStoreDocumentErrors:
     @pytest.mark.asyncio
     async def test_store_document_invalid_collection_id(self, mock_api_key_write):
         """API key uses its own collection_id (input collection_id is ignored)."""
-        set_api_key_info(mock_api_key_write)
+        set_cat_info(mock_api_key_write)
 
         with patch("app.tools.document_tools.get_document_repository") as mock_doc_repo_factory, \
              patch("app.tools.document_tools.get_qdrant_service") as mock_qdrant_factory, \
@@ -324,7 +324,7 @@ class TestUpdateDocumentErrors:
         Test rollback when Qdrant delete fails during update.
         The old chunks cannot be deleted but the document update may proceed or rollback.
         """
-        set_api_key_info(mock_api_key_write)
+        set_cat_info(mock_api_key_write)
 
         with patch("app.tools.document_tools.get_document_repository") as mock_doc_repo_factory, \
              patch("app.tools.document_tools.get_qdrant_service") as mock_qdrant_factory, \
@@ -375,7 +375,7 @@ class TestUpdateDocumentErrors:
         Test rollback when embedding fails after document is updated in SQL.
         Should delete new chunks and possibly revert document? (depends on strategy)
         """
-        set_api_key_info(mock_api_key_write)
+        set_cat_info(mock_api_key_write)
 
         with patch("app.tools.document_tools.get_document_repository") as mock_doc_repo_factory, \
              patch("app.tools.document_tools.get_qdrant_service") as mock_qdrant_factory, \
@@ -423,7 +423,7 @@ class TestUpdateDocumentErrors:
     @pytest.mark.asyncio
     async def test_update_document_document_not_found(self, mock_api_key_write):
         """Update with non-existent document fails."""
-        set_api_key_info(mock_api_key_write)
+        set_cat_info(mock_api_key_write)
 
         with patch("app.tools.document_tools.get_document_repository") as mock_doc_repo_factory:
             mock_doc_repo = MagicMock()
@@ -442,7 +442,7 @@ class TestUpdateDocumentErrors:
     @pytest.mark.asyncio
     async def test_update_document_empty_content(self, mock_api_key_write, mock_document):
         """Update document to empty content works (no chunks)."""
-        set_api_key_info(mock_api_key_write)
+        set_cat_info(mock_api_key_write)
 
         with patch("app.tools.document_tools.get_document_repository") as mock_doc_repo_factory, \
              patch("app.tools.document_tools.get_qdrant_service") as mock_qdrant_factory, \
@@ -490,7 +490,7 @@ class TestDeleteDocumentErrors:
         Test when Qdrant delete fails.
         SQL delete may still proceed or be rolled back depending on strategy.
         """
-        set_api_key_info(mock_api_key_write)
+        set_cat_info(mock_api_key_write)
 
         with patch("app.tools.document_tools.get_document_repository") as mock_doc_repo_factory, \
              patch("app.tools.document_tools.get_qdrant_service") as mock_qdrant_factory:
@@ -519,7 +519,7 @@ class TestDeleteDocumentErrors:
         Test when Qdrant delete succeeds but SQL delete fails.
         This is a partial success scenario - data is out of sync.
         """
-        set_api_key_info(mock_api_key_write)
+        set_cat_info(mock_api_key_write)
 
         with patch("app.tools.document_tools.get_document_repository") as mock_doc_repo_factory, \
              patch("app.tools.document_tools.get_qdrant_service") as mock_qdrant_factory:
@@ -547,7 +547,7 @@ class TestDeleteDocumentErrors:
     @pytest.mark.asyncio
     async def test_delete_document_not_found(self, mock_api_key_write):
         """Delete non-existent document returns success=False."""
-        set_api_key_info(mock_api_key_write)
+        set_cat_info(mock_api_key_write)
 
         with patch("app.tools.document_tools.get_document_repository") as mock_doc_repo_factory:
             mock_doc_repo = MagicMock()
@@ -576,7 +576,7 @@ class TestGetDocumentErrors:
     @pytest.mark.asyncio
     async def test_get_document_not_found(self, mock_api_key_write):
         """get_document returns None for non-existent document."""
-        set_api_key_info(mock_api_key_write)
+        set_cat_info(mock_api_key_write)
 
         with patch("app.tools.document_tools.get_document_repository") as mock_doc_repo_factory:
             mock_doc_repo = MagicMock()
@@ -592,7 +592,7 @@ class TestGetDocumentErrors:
     @pytest.mark.asyncio
     async def test_get_document_repository_error(self, mock_api_key_write):
         """Database/repository errors propagate."""
-        set_api_key_info(mock_api_key_write)
+        set_cat_info(mock_api_key_write)
 
         with patch("app.tools.document_tools.get_document_repository") as mock_doc_repo_factory:
             mock_doc_repo = MagicMock()
@@ -620,7 +620,7 @@ class TestTransactionAtomicity:
         Test that when all services succeed, everything is committed.
         Document created, chunks stored, point IDs updated.
         """
-        set_api_key_info(mock_api_key_write)
+        set_cat_info(mock_api_key_write)
 
         with patch("app.tools.document_tools.get_document_repository") as mock_doc_repo_factory, \
              patch("app.tools.document_tools.get_qdrant_service") as mock_qdrant_factory, \
@@ -663,7 +663,7 @@ class TestTransactionAtomicity:
         Test that if Qdrant fails, an exception is raised.
         Note: Current implementation does not rollback SQL document.
         """
-        set_api_key_info(mock_api_key_write)
+        set_cat_info(mock_api_key_write)
 
         with patch("app.tools.document_tools.get_document_repository") as mock_doc_repo_factory, \
              patch("app.tools.document_tools.get_qdrant_service") as mock_qdrant_factory, \
@@ -700,7 +700,7 @@ class TestTransactionAtomicity:
         Test that if Qdrant fails during update, changes are rolled back.
         This is complex because we need to decide: rollback SQL update? delete new chunks? restore old chunks?
         """
-        set_api_key_info(mock_api_key_write)
+        set_cat_info(mock_api_key_write)
 
         with patch("app.tools.document_tools.get_document_repository") as mock_doc_repo_factory, \
              patch("app.tools.document_tools.get_qdrant_service") as mock_qdrant_factory, \

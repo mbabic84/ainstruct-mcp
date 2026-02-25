@@ -188,6 +188,7 @@ class TestCreateCollectionValidation:
 
         with patch("app.tools.collection_tools.get_collection_repository") as mock_repo_factory:
             mock_repo = MagicMock()
+            mock_repo.get_by_name_for_user.return_value = None  # No existing collection
             mock_repo.create.return_value = CollectionResponse(
                 id="new-collection-id",
                 name="new-collection",
@@ -281,20 +282,29 @@ class TestRenameCollectionValidation:
 
     @pytest.mark.asyncio
     async def test_rename_collection_to_same_name(self, mock_user_info, mock_owned_collection):
-        """Renaming to the same name raises error (collection with this name already exists)."""
+        """Renaming to the same name succeeds (it's the same collection)."""
         set_user_info(mock_user_info)
 
         with patch("app.tools.collection_tools.get_collection_repository") as mock_repo_factory:
             mock_repo = MagicMock()
             mock_repo.get_by_id.return_value = mock_owned_collection
-            mock_repo.get_by_name_for_user.return_value = mock_owned_collection  # Same collection exists
+            # Return same collection - should succeed since it's the same ID
+            mock_repo.get_by_name_for_user.return_value = mock_owned_collection
+            mock_repo.rename.return_value = CollectionResponse(
+                id="collection-123",
+                name="old-name",
+                document_count=0,
+                api_key_count=0,
+                created_at=datetime.utcnow(),
+            )
             mock_repo_factory.return_value = mock_repo
 
-            with pytest.raises(ValueError, match="Collection with this name already exists"):
-                await rename_collection(RenameCollectionInput(
-                    collection_id="collection-123",
-                    name="old-name",
-                ))
+            result = await rename_collection(RenameCollectionInput(
+                collection_id="collection-123",
+                name="old-name",
+            ))
+
+            assert result.name == "old-name"
 
     @pytest.mark.asyncio
     async def test_rename_collection_special_characters(self, mock_user_info, mock_owned_collection):
@@ -332,8 +342,8 @@ class TestRenameCollectionValidation:
             mock_repo.get_by_id.return_value = mock_owned_collection
             mock_repo_factory.return_value = mock_repo
 
-            # API key auth should be denied (list_collections already denies)
-            with pytest.raises(ValueError, match="JWT or PAT authentication required"):
+            # API key auth should be denied
+            with pytest.raises(ValueError, match="JWT authentication required"):
                 await rename_collection(RenameCollectionInput(
                     collection_id="collection-123",
                     name="renamed",

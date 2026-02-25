@@ -651,7 +651,7 @@ class TestDeleteUser:
 
         with patch("app.tools.admin_tools.get_user_repository") as mock_repo_factory:
             mock_repo = MagicMock()
-            mock_repo.get_by_id.return_value = None  # User not found
+            mock_repo.delete.return_value = False  # User not found / not deleted
             mock_repo_factory.return_value = mock_repo
 
             # Invalid UUID is accepted, but user won't be found

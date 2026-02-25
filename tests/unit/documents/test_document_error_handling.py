@@ -263,45 +263,39 @@ class TestStoreDocumentErrors:
 
     @pytest.mark.asyncio
     async def test_store_document_invalid_collection_id(self, mock_api_key_write):
-        """Store document with collection_id not in user's collections should fail."""
+        """API key uses its own collection_id (input collection_id is ignored)."""
         set_api_key_info(mock_api_key_write)
-        # Override mock to have different collection_id
-        mock_api_key_write["collection_id"] = "collection-123"
-        mock_api_key_write["qdrant_collection"] = "qdrant-collection-123"
 
         with patch("app.tools.document_tools.get_document_repository") as mock_doc_repo_factory, \
              patch("app.tools.document_tools.get_qdrant_service") as mock_qdrant_factory, \
              patch("app.tools.document_tools.get_chunking_service") as mock_chunking_factory, \
              patch("app.tools.document_tools.get_embedding_service") as mock_embedding_factory:
-            
+
             mock_doc_repo = MagicMock()
             mock_doc = MagicMock(id="doc-123")
             mock_doc_repo.create.return_value = mock_doc
-            mock_doc_repo.delete = MagicMock()
             mock_doc_repo_factory.return_value = mock_doc_repo
-            
+
             mock_qdrant = MagicMock()
             mock_qdrant_factory.return_value = mock_qdrant
-            
+
             mock_chunking = MagicMock()
             mock_chunking.chunk_markdown.return_value = []
             mock_chunking_factory.return_value = mock_chunking
-            
+
             mock_embedding = MagicMock()
             mock_embedding_factory.return_value = mock_embedding
-            
-            # Provide a different collection_id than the one in auth context
+
+            # API key auth uses collection_id from auth context, not input
             input_data = StoreDocumentInput(
                 title="Test Doc",
                 content="# Test",
-                collection_id="different-collection-id",
+                collection_id="different-collection-id",  # This is ignored for API key auth
             )
-            
-            with pytest.raises(ValueError, match="Collection not found or access denied"):
-                await store_document(input_data)
-            
-            # Should not create document
-            mock_doc_repo.create.assert_not_called()
+
+            # Should succeed using API key's collection
+            result = await store_document(input_data)
+            assert "Document stored successfully" in result.message
 
 
 class TestUpdateDocumentErrors:

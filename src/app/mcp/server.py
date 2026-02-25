@@ -35,12 +35,14 @@ from ..tools.document_tools import (
     DeleteDocumentInput,
     GetDocumentInput,
     ListDocumentsInput,
+    MoveDocumentInput,
     SearchDocumentsInput,
     StoreDocumentInput,
     UpdateDocumentInput,
     delete_document,
     get_document,
     list_documents,
+    move_document,
     search_documents,
     store_document,
     update_document,
@@ -103,6 +105,7 @@ async def store_document_tool(
     content: str,
     document_type: str = "markdown",
     doc_metadata: dict | None = None,
+    collection_id: str | None = None,
 ) -> dict:
     """
     Store a markdown document with automatic chunking and embedding generation.
@@ -112,6 +115,7 @@ async def store_document_tool(
         content: Markdown content
         document_type: Type of document (markdown, pdf, docx, html, text, json)
         doc_metadata: Optional custom metadata
+        collection_id: Optional UUID of the collection to store the document in
 
     Returns:
         Document ID, chunk count, and total token count
@@ -121,6 +125,7 @@ async def store_document_tool(
         content=content,
         document_type=document_type,
         doc_metadata=doc_metadata or {},
+        collection_id=collection_id,
     ))
     return {
         "document_id": result.document_id,
@@ -248,6 +253,32 @@ async def update_document_tool(
 
 
 @mcp.tool()
+async def move_document_tool(
+    document_id: str,
+    target_collection_id: str,
+) -> dict:
+    """
+    Move a document to a different collection.
+
+    Args:
+        document_id: UUID of the document to move
+        target_collection_id: UUID of the target collection
+
+    Returns:
+        Document ID, new collection ID, and success message
+    """
+    result = await move_document(MoveDocumentInput(
+        document_id=document_id,
+        target_collection_id=target_collection_id,
+    ))
+    return {
+        "document_id": result.document_id,
+        "new_collection_id": result.new_collection_id,
+        "message": result.message,
+    }
+
+
+@mcp.tool()
 async def user_register_tool(
     email: str,
     username: str,
@@ -315,23 +346,23 @@ async def user_refresh_tool(refresh_token: str) -> dict:
 
 
 @mcp.tool()
-async def create_api_key_tool(
+async def create_collection_access_token_tool(
     label: str,
     collection_id: str,
     permission: str = "read_write",
     expires_in_days: int | None = None,
 ) -> dict:
     """
-    Create a new API key for a specific collection.
+    Create a new Collection Access Token for a specific collection.
 
     Args:
-        label: Descriptive label for the API key
+        label: Descriptive label for the Collection Access Token
         collection_id: UUID of the collection to grant access to
         permission: Permission level ("read" or "read_write"). Default: "read_write"
         expires_in_days: Optional expiry in days
 
     Returns:
-        Created API key (only shown once)
+        Created Collection Access Token (only shown once)
     """
     result = await create_api_key(CreateApiKeyInput(
         label=label,
@@ -343,24 +374,24 @@ async def create_api_key_tool(
 
 
 @mcp.tool()
-async def list_api_keys_tool() -> dict:
+async def list_collection_access_tokens_tool() -> dict:
     """
-    List all API keys for the current user. Admins see all keys.
+    List all Collection Access Tokens for the current user. Admins see all tokens.
 
     Returns:
-        List of API keys (without the actual key values)
+        List of Collection Access Tokens (without the actual token values)
     """
     result = await list_api_keys()
     return {"keys": [k.model_dump() for k in result]}
 
 
 @mcp.tool()
-async def revoke_api_key_tool(key_id: str) -> dict:
+async def revoke_collection_access_token_tool(key_id: str) -> dict:
     """
-    Revoke (deactivate) an API key.
+    Revoke (deactivate) a Collection Access Token.
 
     Args:
-        key_id: ID of the API key to revoke
+        key_id: ID of the Collection Access Token to revoke
 
     Returns:
         Success confirmation
@@ -370,15 +401,15 @@ async def revoke_api_key_tool(key_id: str) -> dict:
 
 
 @mcp.tool()
-async def rotate_api_key_tool(key_id: str) -> dict:
+async def rotate_collection_access_token_tool(key_id: str) -> dict:
     """
-    Rotate an API key. The old key is revoked and a new one is created.
+    Rotate a Collection Access Token. The old token is revoked and a new one is created.
 
     Args:
-        key_id: ID of the API key to rotate
+        key_id: ID of the Collection Access Token to rotate
 
     Returns:
-        New API key (only shown once)
+        New Collection Access Token (only shown once)
     """
     result = await rotate_api_key(RotateApiKeyInput(key_id=key_id))
     return result.model_dump()

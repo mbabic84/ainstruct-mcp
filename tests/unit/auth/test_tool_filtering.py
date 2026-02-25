@@ -4,10 +4,10 @@ import pytest
 
 from app.tools.auth import (
     ADMIN_TOOLS,
-    COLLECTION_TOOLS,
     DOCUMENT_TOOLS,
     KEY_PAT_TOOLS,
     PUBLIC_TOOLS,
+    USER_COLLECTION_TOOLS,
     USER_TOOLS,
     AuthLevel,
     get_tool_auth_level,
@@ -23,22 +23,23 @@ ALL_REGISTERED_TOOLS: set[str] = {
     "user_refresh_tool",
     # User tools (JWT/PAT required)
     "user_profile_tool",
-    # Collection tools (JWT/PAT required)
+    # User collection tools (JWT/PAT required - user owns collections)
     "create_collection_tool",
     "list_collections_tool",
     "get_collection_tool",
     "delete_collection_tool",
     "rename_collection_tool",
+    "move_document_tool",
     # Key/PAT tools (JWT/PAT required)
-    "create_api_key_tool",
-    "list_api_keys_tool",
-    "revoke_api_key_tool",
-    "rotate_api_key_tool",
+    "create_collection_access_token_tool",
+    "list_collection_access_tokens_tool",
+    "revoke_collection_access_token_tool",
+    "rotate_collection_access_token_tool",
     "create_pat_token_tool",
     "list_pat_tokens_tool",
     "revoke_pat_token_tool",
     "rotate_pat_token_tool",
-    # Document tools (API key or JWT/PAT)
+    # Document tools (API key or JWT/PAT - bound to single collection)
     "store_document_tool",
     "search_documents_tool",
     "get_document_tool",
@@ -69,7 +70,7 @@ class TestToolAuthLevels:
 
     def test_collection_tools(self):
         """Collection tools should have JWT_OR_PAT auth level."""
-        for tool in COLLECTION_TOOLS:
+        for tool in USER_COLLECTION_TOOLS:
             assert get_tool_auth_level(tool) == AuthLevel.JWT_OR_PAT
 
     def test_key_pat_tools(self):
@@ -102,7 +103,7 @@ class TestToolAuthLevels:
         all_auth_set_tools = (
             PUBLIC_TOOLS |
             USER_TOOLS |
-            COLLECTION_TOOLS |
+            USER_COLLECTION_TOOLS |
             KEY_PAT_TOOLS |
             DOCUMENT_TOOLS |
             ADMIN_TOOLS
@@ -122,7 +123,7 @@ class TestToolAuthLevels:
         all_auth_set_tools = (
             PUBLIC_TOOLS |
             USER_TOOLS |
-            COLLECTION_TOOLS |
+            USER_COLLECTION_TOOLS |
             KEY_PAT_TOOLS |
             DOCUMENT_TOOLS |
             ADMIN_TOOLS
@@ -150,7 +151,7 @@ class TestOnListToolsFiltering:
         all_tool_names = (
             list(PUBLIC_TOOLS) +
             list(USER_TOOLS) +
-            list(COLLECTION_TOOLS) +
+            list(USER_COLLECTION_TOOLS) +
             list(KEY_PAT_TOOLS) +
             list(DOCUMENT_TOOLS) +
             list(ADMIN_TOOLS)
@@ -235,7 +236,7 @@ class TestOnListToolsFiltering:
                         result = await middleware.on_list_tools(context, call_next)
 
                         result_names = {tool.name for tool in result}
-                        expected = PUBLIC_TOOLS | DOCUMENT_TOOLS | USER_TOOLS | COLLECTION_TOOLS | KEY_PAT_TOOLS
+                        expected = PUBLIC_TOOLS | DOCUMENT_TOOLS | USER_TOOLS | USER_COLLECTION_TOOLS | KEY_PAT_TOOLS
                         assert result_names == expected
 
     @pytest.mark.asyncio
@@ -269,7 +270,7 @@ class TestOnListToolsFiltering:
                         result_names = {tool.name for tool in result}
                         expected = (
                             PUBLIC_TOOLS | DOCUMENT_TOOLS | USER_TOOLS |
-                            COLLECTION_TOOLS | KEY_PAT_TOOLS | ADMIN_TOOLS
+                            USER_COLLECTION_TOOLS | KEY_PAT_TOOLS | ADMIN_TOOLS
                         )
                         assert result_names == expected
 
@@ -302,7 +303,7 @@ class TestOnListToolsFiltering:
                     result = await middleware.on_list_tools(context, call_next)
 
                     result_names = {tool.name for tool in result}
-                    expected = PUBLIC_TOOLS | DOCUMENT_TOOLS | USER_TOOLS | COLLECTION_TOOLS | KEY_PAT_TOOLS
+                    expected = PUBLIC_TOOLS | DOCUMENT_TOOLS | USER_TOOLS | USER_COLLECTION_TOOLS | KEY_PAT_TOOLS
                     assert result_names == expected
 
     @pytest.mark.asyncio
@@ -336,7 +337,7 @@ class TestOnListToolsFiltering:
                     result_names = {tool.name for tool in result}
                     expected = (
                         PUBLIC_TOOLS | DOCUMENT_TOOLS | USER_TOOLS |
-                        COLLECTION_TOOLS | KEY_PAT_TOOLS | ADMIN_TOOLS
+                        USER_COLLECTION_TOOLS | KEY_PAT_TOOLS | ADMIN_TOOLS
                     )
                     assert result_names == expected
 
@@ -415,7 +416,7 @@ class TestOnListToolsFiltering:
                         result = await middleware.on_list_tools(context, call_next)
 
                         result_names = {tool.name for tool in result}
-                        expected = PUBLIC_TOOLS | DOCUMENT_TOOLS | USER_TOOLS | COLLECTION_TOOLS | KEY_PAT_TOOLS
+                        expected = PUBLIC_TOOLS | DOCUMENT_TOOLS | USER_TOOLS | USER_COLLECTION_TOOLS | KEY_PAT_TOOLS
                         assert result_names == expected
 
     @pytest.mark.asyncio

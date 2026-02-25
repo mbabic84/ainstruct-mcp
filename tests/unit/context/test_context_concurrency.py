@@ -15,6 +15,11 @@ from app.tools.context import (
     set_pat_info,
     get_pat_info,
     get_current_user_id,
+    is_authenticated,
+    clear_user_info,
+    clear_api_key_info,
+    has_write_permission,
+    has_scope,
 )
 from app.db.models import Scope, Permission
 
@@ -194,7 +199,7 @@ class TestContextIsolation:
 
     @pytest.mark.asyncio
     async def test_context_isolation_across_nested_calls(self, mock_user_info_1):
-        """Nested async calls with context changes should not leak."""
+        """Nested async calls share context - inner changes affect outer."""
         async def inner_task():
             set_user_info(mock_user_info_1)
             await asyncio.sleep(0.01)
@@ -203,14 +208,17 @@ class TestContextIsolation:
         async def outer_task():
             set_user_info({"id": "outer-user", "username": "outer"})
             result = await inner_task()
-            # After inner task returns, outer context should still be active
+            # After inner task returns, context reflects inner's changes
+            # (contextvars are task-local, not call-local)
             outer_info = get_user_info()
             return result, outer_info
 
         inner_result, outer_result = await outer_task()
 
+        # Inner task modified the shared context
         assert inner_result["id"] == "user-1"
-        assert outer_result["id"] == "outer-user"
+        # Outer context also sees the change (same task context)
+        assert outer_result["id"] == "user-1"
 
     @pytest.mark.asyncio
     async def test_clear_all_auth_isolation(self, mock_user_info_1, mock_api_key_info):

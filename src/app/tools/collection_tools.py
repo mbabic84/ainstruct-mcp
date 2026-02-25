@@ -30,16 +30,16 @@ async def create_collection(input_data: CreateCollectionInput) -> CollectionResp
     name = input_data.name.strip()
     if not name:
         raise ValueError("Collection name cannot be empty")
-    
+
     if len(name) > 255:
         raise ValueError("Collection name cannot exceed 255 characters")
 
     repo = get_collection_repository()
-    
+
     existing = repo.get_by_name_for_user(user_id, name)
     if existing:
         raise ValueError("Collection with this name already exists")
-    
+
     return repo.create(user_id=user_id, name=name)
 
 
@@ -130,7 +130,7 @@ async def rename_collection(input_data: RenameCollectionInput) -> CollectionResp
     name = input_data.name.strip()
     if not name:
         raise ValueError("Collection name cannot be empty")
-    
+
     if len(name) > 255:
         raise ValueError("Collection name cannot exceed 255 characters")
 

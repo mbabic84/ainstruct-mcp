@@ -3,6 +3,7 @@ from pydantic import BaseModel, Field
 
 from ..db import (
     DocumentCreate,
+    get_collection_repository,
     get_document_repository,
     get_qdrant_service,
 )
@@ -30,15 +31,12 @@ async def store_document(input_data: StoreDocumentInput) -> StoreDocumentOutput:
     if not auth:
         raise ValueError("Not authenticated")
 
-    if auth.get("auth_type") == "jwt":
-        raise ValueError("JWT users cannot store documents directly. Create an API key with read_write permission.")
-
     if not has_write_permission():
         raise ValueError("Insufficient permissions: read_write permission required to store documents")
 
     auth_type = auth.get("auth_type")
 
-    if auth_type == "pat":
+    if auth_type in ("pat", "jwt"):
         collection_ids = auth.get("collection_ids", [])
         qdrant_collections = auth.get("qdrant_collections", [])
 
@@ -310,9 +308,6 @@ async def delete_document(input_data: DeleteDocumentInput) -> DeleteDocumentOutp
     if not auth:
         raise ValueError("Not authenticated")
 
-    if auth.get("auth_type") == "jwt":
-        raise ValueError("JWT users cannot delete documents directly. Create an API key with read_write permission.")
-
     if not has_write_permission():
         raise ValueError("Insufficient permissions: read_write permission required to delete documents")
 
@@ -376,13 +371,21 @@ class UpdateDocumentOutput(BaseModel):
     message: str
 
 
+class MoveDocumentInput(BaseModel):
+    document_id: str
+    target_collection_id: str
+
+
+class MoveDocumentOutput(BaseModel):
+    document_id: str
+    new_collection_id: str
+    message: str
+
+
 async def update_document(input_data: UpdateDocumentInput) -> UpdateDocumentOutput:
     auth = get_auth_context()
     if not auth:
         raise ValueError("Not authenticated")
-
-    if auth.get("auth_type") == "jwt":
-        raise ValueError("JWT users cannot update documents directly. Create an API key with read_write permission.")
 
     if not has_write_permission():
         raise ValueError("Insufficient permissions: read_write permission required to update documents")
@@ -461,4 +464,84 @@ async def update_document(input_data: UpdateDocumentInput) -> UpdateDocumentOutp
         chunk_count=len(chunks),
         token_count=total_tokens,
         message=f"Document updated successfully with {len(chunks)} chunks",
+    )
+
+
+async def move_document(input_data: MoveDocumentInput) -> MoveDocumentOutput:
+    auth = get_auth_context()
+    if not auth:
+        raise ValueError("Not authenticated")
+
+    if not has_write_permission():
+        raise ValueError("Insufficient permissions: read_write permission required to move documents")
+
+    is_admin = auth.get("is_admin", False) or auth.get("is_superuser", False)
+    user_id = auth.get("user_id")
+    auth_type = auth.get("auth_type")
+    collection_id = auth.get("collection_id")
+    qdrant_collections = auth.get("qdrant_collections", [])
+
+    if is_admin:
+        doc_repo = get_document_repository(None)
+        existing_doc = doc_repo.get_by_id(input_data.document_id)
+    elif auth_type in ("pat", "jwt") and user_id:
+        doc_repo = get_document_repository(None)
+        existing_doc = doc_repo.get_by_id_for_user(input_data.document_id, user_id)
+    else:
+        doc_repo = get_document_repository(str(collection_id) if collection_id else None)
+        existing_doc = doc_repo.get_by_id(input_data.document_id)
+
+    if not existing_doc:
+        raise ValueError("Document not found")
+
+    source_collection_id = existing_doc.collection_id
+
+    collection_repo = get_collection_repository()
+    target_collection = collection_repo.get_by_id(input_data.target_collection_id)
+
+    if not target_collection:
+        raise ValueError("Target collection not found")
+
+    if is_admin:
+        pass
+    elif auth_type in ("pat", "jwt"):
+        if auth_type == "pat" and input_data.target_collection_id not in qdrant_collections:
+            raise ValueError("Target collection not found or access denied")
+        if auth_type == "jwt" and target_collection["user_id"] != user_id:
+            raise ValueError("Target collection not found")
+
+    source_qdrant = get_qdrant_service(source_collection_id)
+    source_qdrant.delete_by_document_id(input_data.document_id)
+
+    embedding_service = get_embedding_service()
+    chunking_service = get_chunking_service()
+
+    chunks = chunking_service.chunk_markdown(existing_doc.content, existing_doc.title)
+
+    if chunks:
+        texts = [c["content"] for c in chunks]
+        embeddings = await embedding_service.embed_texts(texts)
+
+        target_qdrant = get_qdrant_service(input_data.target_collection_id)
+
+        chunks_with_meta = [
+            {
+                "document_id": input_data.document_id,
+                "chunk_index": c["chunk_index"],
+                "content": c["content"],
+                "token_count": c["token_count"],
+                "title": c["title"],
+            }
+            for c in chunks
+        ]
+
+        point_ids = target_qdrant.upsert_chunks(chunks_with_meta, embeddings)
+        doc_repo.update_qdrant_point_id(input_data.document_id, point_ids)
+
+    doc_repo.update_collection_id(input_data.document_id, input_data.target_collection_id)
+
+    return MoveDocumentOutput(
+        document_id=input_data.document_id,
+        new_collection_id=input_data.target_collection_id,
+        message=f"Document moved from collection {source_collection_id} to {input_data.target_collection_id}",
     )

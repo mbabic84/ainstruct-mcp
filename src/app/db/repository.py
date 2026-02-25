@@ -500,7 +500,6 @@ class CollectionRepository:
             return CollectionResponse(
                 id=collection.id,
                 name=collection.name,
-                user_id=collection.user_id,
                 document_count=0,
                 cat_count=0,
                 created_at=collection.created_at,
@@ -592,7 +591,6 @@ class CollectionRepository:
             return CollectionResponse(
                 id=collection.id,
                 name=collection.name,
-                user_id=collection.user_id,
                 document_count=doc_count,
                 cat_count=key_count,
                 created_at=collection.created_at,

@@ -198,7 +198,7 @@ class TestUnauthorizedUserMiddleware:
 
             with patch("app.tools.auth.is_pat_token", return_value=False):
                 with patch("app.tools.auth.is_jwt_token", return_value=False):
-                    with patch("app.tools.auth.verify_api_key", return_value=None):
+                    with patch("app.tools.auth.verify_cat_token", return_value=None):
                         with pytest.raises(ValueError, match="Invalid API key"):
                             await middleware.on_call_tool(context, call_next)
 
@@ -304,10 +304,10 @@ class TestUnauthorizedUserContext:
         from app.tools.context import get_user_info
         assert get_user_info() is None
 
-    def test_get_api_key_info_returns_none(self):
-        """get_api_key_info should return None when not authenticated."""
-        from app.tools.context import get_api_key_info
-        assert get_api_key_info() is None
+    def test_get_cat_info_returns_none(self):
+        """get_cat_info should return None when not authenticated."""
+        from app.tools.context import get_cat_info
+        assert get_cat_info() is None
 
     def test_get_pat_info_returns_none(self):
         """get_pat_info should return None when not authenticated."""

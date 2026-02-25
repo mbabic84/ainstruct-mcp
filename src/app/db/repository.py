@@ -6,7 +6,7 @@ from sqlalchemy.orm import Session, sessionmaker
 
 from ..config import settings
 from .models import (
-    ApiKeyModel,
+    CatModel,
     CollectionModel,
     CollectionResponse,
     DocumentCreate,
@@ -18,9 +18,9 @@ from .models import (
     UserModel,
     UserResponse,
     compute_content_hash,
-    generate_api_key,
+    generate_cat_token,
     generate_pat_token,
-    hash_api_key,
+    hash_cat_token,
     hash_pat_token,
     init_db,
     parse_scopes,
@@ -501,7 +501,7 @@ class CollectionRepository:
                 id=collection.id,
                 name=collection.name,
                 document_count=0,
-                api_key_count=0,
+                cat_count=0,
                 created_at=collection.created_at,
             )
         finally:
@@ -519,9 +519,9 @@ class CollectionRepository:
                 )
             ).scalar() or 0
             key_count = session.execute(
-                select(func.count(ApiKeyModel.id)).where(
-                    ApiKeyModel.collection_id == collection_id,
-                    ApiKeyModel.is_active.is_(True),
+                select(func.count(CatModel.id)).where(
+                    CatModel.collection_id == collection_id,
+                    CatModel.is_active.is_(True),
                 )
             ).scalar() or 0
             return {
@@ -530,7 +530,7 @@ class CollectionRepository:
                 "qdrant_collection": collection.qdrant_collection,
                 "user_id": collection.user_id,
                 "document_count": doc_count,
-                "api_key_count": key_count,
+                "cat_count": key_count,
                 "created_at": collection.created_at,
                 "updated_at": collection.updated_at,
             }
@@ -583,16 +583,16 @@ class CollectionRepository:
                 )
             ).scalar() or 0
             key_count = session.execute(
-                select(func.count(ApiKeyModel.id)).where(
-                    ApiKeyModel.collection_id == collection_id,
-                    ApiKeyModel.is_active.is_(True),
+                select(func.count(CatModel.id)).where(
+                    CatModel.collection_id == collection_id,
+                    CatModel.is_active.is_(True),
                 )
             ).scalar() or 0
             return CollectionResponse(
                 id=collection.id,
                 name=collection.name,
                 document_count=doc_count,
-                api_key_count=key_count,
+                cat_count=key_count,
                 created_at=collection.created_at,
             )
         finally:
@@ -631,13 +631,13 @@ class CollectionRepository:
         finally:
             session.close()
 
-    def get_api_key_count(self, collection_id: str) -> int:
+    def get_cat_count(self, collection_id: str) -> int:
         session = self._get_session()
         try:
             result = session.execute(
-                select(func.count(ApiKeyModel.id)).where(
-                    ApiKeyModel.collection_id == collection_id,
-                    ApiKeyModel.is_active.is_(True),
+                select(func.count(CatModel.id)).where(
+                    CatModel.collection_id == collection_id,
+                    CatModel.is_active.is_(True),
                 )
             ).scalar()
             return result or 0
@@ -645,7 +645,7 @@ class CollectionRepository:
             session.close()
 
 
-class ApiKeyRepository:
+class CatRepository:
     def __init__(self, engine):
         self.SessionLocal = sessionmaker(bind=engine)
 
@@ -661,9 +661,9 @@ class ApiKeyRepository:
         try:
             key_hash = self.hash_key(key)
             api_key = session.execute(
-                select(ApiKeyModel).where(
-                    ApiKeyModel.key_hash == key_hash,
-                    ApiKeyModel.is_active,
+                select(CatModel).where(
+                    CatModel.key_hash == key_hash,
+                    CatModel.is_active,
                 )
             ).scalar_one_or_none()
 
@@ -692,7 +692,7 @@ class ApiKeyRepository:
     def get_by_id(self, key_id: str) -> dict | None:
         session = self._get_session()
         try:
-            api_key = session.get(ApiKeyModel, key_id)
+            api_key = session.get(CatModel, key_id)
             if not api_key:
                 return None
             collection = session.get(CollectionModel, api_key.collection_id)
@@ -722,8 +722,8 @@ class ApiKeyRepository:
     ) -> tuple[str, str]:
         session = self._get_session()
         try:
-            key = generate_api_key()
-            key_hash = hash_api_key(key)
+            key = generate_cat_token()
+            key_hash = hash_cat_token(key)
 
             expires_at = None
             if expires_in_days is not None:
@@ -731,7 +731,7 @@ class ApiKeyRepository:
             elif settings.api_key_default_expiry_days is not None:
                 expires_at = datetime.utcnow() + timedelta(days=settings.api_key_default_expiry_days)
 
-            api_key = ApiKeyModel(
+            api_key = CatModel(
                 key_hash=key_hash,
                 label=label,
                 collection_id=collection_id,
@@ -748,9 +748,9 @@ class ApiKeyRepository:
     def list_all(self, user_id: str | None = None) -> list[dict]:
         session = self._get_session()
         try:
-            query = select(ApiKeyModel)
+            query = select(CatModel)
             if user_id:
-                query = query.where(ApiKeyModel.user_id == user_id)
+                query = query.where(CatModel.user_id == user_id)
             keys = session.execute(query).scalars().all()
             result = []
             for k in keys:
@@ -774,7 +774,7 @@ class ApiKeyRepository:
     def delete(self, key_id: str) -> bool:
         session = self._get_session()
         try:
-            key = session.get(ApiKeyModel, key_id)
+            key = session.get(CatModel, key_id)
             if not key:
                 return False
             session.delete(key)
@@ -786,7 +786,7 @@ class ApiKeyRepository:
     def revoke(self, key_id: str) -> bool:
         session = self._get_session()
         try:
-            key = session.get(ApiKeyModel, key_id)
+            key = session.get(CatModel, key_id)
             if not key:
                 return False
             key.is_active = False
@@ -798,16 +798,16 @@ class ApiKeyRepository:
     def rotate(self, key_id: str) -> tuple[str, str] | None:
         session = self._get_session()
         try:
-            old_key = session.get(ApiKeyModel, key_id)
+            old_key = session.get(CatModel, key_id)
             if not old_key:
                 return None
 
             old_key.is_active = False
 
-            new_key = generate_api_key()
-            key_hash = hash_api_key(new_key)
+            new_key = generate_cat_token()
+            key_hash = hash_cat_token(new_key)
 
-            new_api_key = ApiKeyModel(
+            new_api_key = CatModel(
                 key_hash=key_hash,
                 label=old_key.label,
                 collection_id=old_key.collection_id,
@@ -1008,11 +1008,11 @@ def get_document_repository(collection_id: str | None = None) -> DocumentReposit
     return DocumentRepository(_engine, collection_id)
 
 
-def get_api_key_repository() -> ApiKeyRepository:
+def get_cat_repository() -> CatRepository:
     global _engine
     if _engine is None:
         _engine = init_db(settings.db_path)
-    return ApiKeyRepository(_engine)
+    return CatRepository(_engine)
 
 
 def get_user_repository() -> UserRepository:

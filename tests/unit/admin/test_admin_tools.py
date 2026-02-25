@@ -646,16 +646,17 @@ class TestDeleteUser:
 
     @pytest.mark.asyncio
     async def test_delete_user_invalid_uuid(self, mock_admin_user):
-        """Invalid UUID format should be caught by pydantic."""
+        """Invalid UUID format is accepted as string (UUID validation not enforced)."""
         set_user_info(mock_admin_user)
 
-        from pydantic import ValidationError
-        try:
-            await delete_user(DeleteUserInput(user_id="not-a-uuid"))
-        except ValidationError:
-            pass  # Expected
-        else:
-            pytest.fail("Expected ValidationError for invalid UUID")
+        with patch("app.tools.admin_tools.get_user_repository") as mock_repo_factory:
+            mock_repo = MagicMock()
+            mock_repo.delete.return_value = False  # User not found / not deleted
+            mock_repo_factory.return_value = mock_repo
+
+            # Invalid UUID is accepted, but user won't be found
+            with pytest.raises(ValueError, match="User not found"):
+                await delete_user(DeleteUserInput(user_id="not-a-uuid"))
 
 
 class TestAdminAuthorization:

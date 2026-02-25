@@ -13,7 +13,7 @@ from tests.e2e.mcp_client_test import (
 
 
 # Production server URL
-SERVER_URL = os.environ.get("MCP_SERVER_URL", "https://ainstruct.kralicinora.cz/mcp")
+SERVER_URL = os.environ["MCP_SERVER_URL"]
 TRANSPORT = os.environ.get("MCP_TRANSPORT", "http")
 
 
@@ -72,9 +72,9 @@ class TestMCPServerHealth:
                 assert "create_collection_tool" in tool_names
                 assert "list_collections_tool" in tool_names
 
-                # API key tools
-                assert "create_api_key_tool" in tool_names
-                assert "list_api_keys_tool" in tool_names
+                # Collection access token tools
+                assert "create_collection_access_token_tool" in tool_names
+                assert "list_collection_access_tokens_tool" in tool_names
 
                 # Document tools
                 assert "store_document_tool" in tool_names
@@ -155,10 +155,10 @@ class TestMCPServerHealth:
                 "get_collection_tool",
                 "delete_collection_tool",
                 "rename_collection_tool",
-                "create_api_key_tool",
-                "list_api_keys_tool",
-                "revoke_api_key_tool",
-                "rotate_api_key_tool",
+                "create_collection_access_token_tool",
+                "list_collection_access_tokens_tool",
+                "revoke_collection_access_token_tool",
+                "rotate_collection_access_token_tool",
                 "create_pat_token_tool",
                 "list_pat_tokens_tool",
                 "revoke_pat_token_tool",

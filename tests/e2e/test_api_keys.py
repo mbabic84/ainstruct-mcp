@@ -13,7 +13,7 @@ from tests.e2e.mcp_client_test import (
 
 
 # Production server URL
-SERVER_URL = os.environ.get("MCP_SERVER_URL", "https://ainstruct.kralicinora.cz/mcp")
+SERVER_URL = os.environ["MCP_SERVER_URL"]
 TRANSPORT = os.environ.get("MCP_TRANSPORT", "http")
 
 
@@ -40,7 +40,7 @@ class TestAPIKeys:
                 collection_id = collections_result["collections"][0]["id"]
                 
                 # Create API key
-                key_result = await auth_client.call_tool("create_api_key_tool", {
+                key_result = await auth_client.call_tool("create_collection_access_token_tool", {
                     "label": "Test Key",
                     "collection_id": collection_id,
                     "permission": "read_write",
@@ -53,7 +53,7 @@ class TestAPIKeys:
                 print(f"\nCreated API key: {api_key[:30]}...")
                 
                 # List API keys
-                keys_result = await auth_client.call_tool("list_api_keys_tool", {})
+                keys_result = await auth_client.call_tool("list_collection_access_tokens_tool", {})
                 
                 keys = keys_result.get("keys", [])
                 assert len(keys) >= 1

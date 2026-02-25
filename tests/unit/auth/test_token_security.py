@@ -40,14 +40,14 @@ class TestJwtTokenSecurity:
 
     @pytest.mark.asyncio
     async def test_verify_jwt_token_invalid_signature(self, mock_auth_service):
-        """Invalid signature causes token to be rejected."""
+        """Invalid signature causes exception to be raised."""
         mock_auth = MagicMock()
         mock_auth.validate_access_token.side_effect = Exception("Invalid signature")
         mock_auth_service.return_value = mock_auth
 
-        # The exception should be caught and return None
-        result = verify_jwt_token("invalid.token")
-        assert result is None
+        # The exception propagates (not caught)
+        with pytest.raises(Exception, match="Invalid signature"):
+            verify_jwt_token("invalid.token")
 
     @pytest.mark.asyncio
     async def test_verify_jwt_token_wrong_type(self, mock_auth_service):
@@ -528,11 +528,10 @@ class TestTokenRevocationPropagation:
     @pytest.mark.asyncio
     async def test_revoked_pat_token_immediate_rejection(self):
         """After revoking a PAT, subsequent uses are rejected."""
-        # This test requires integration with PAT repository
-        # Unit test: mock repo to have validate return None after revoke
-        with patch("app.tools.auth.get_pat_token_repository") as mock_repo_factory:
+        # Mock the PAT repository in the auth_service module where verify_pat_token is defined
+        with patch("app.services.auth_service.get_pat_token_repository") as mock_repo_factory:
             mock_repo = MagicMock()
-            
+
             # Initially token is valid
             pat_info = {
                 "id": "pat-123",

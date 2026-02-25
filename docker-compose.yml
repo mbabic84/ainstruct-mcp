@@ -44,6 +44,7 @@ services:
       - PYTHONPATH=/app
       - USE_MOCK_EMBEDDINGS=true
       - MCP_SERVER_URL=http://mcp_server:8000/mcp
+      - MCP_TRANSPORT=http
     working_dir: /app
     profiles:
       - test

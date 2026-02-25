@@ -1,3 +1,24 @@
+# [3.3.0](https://github.com/mbabic84/ainstruct-mcp/compare/v3.2.2...v3.3.0) (2026-02-25)
+
+
+### Bug Fixes
+
+* admin delete test - mock delete not get_by_id ([93134aa](https://github.com/mbabic84/ainstruct-mcp/commit/93134aa1373f6f3287ee55527bb1d33ebce165ad))
+* remaining test failures ([c680e9f](https://github.com/mbabic84/ainstruct-mcp/commit/c680e9fe80d458d70bd9ff403a85e8948f6f30ab))
+* remove production URL fallback from e2e tests ([5568a8a](https://github.com/mbabic84/ainstruct-mcp/commit/5568a8a46b56502177798dd5a924b199017a1103))
+* remove rollback assertions from error handling tests ([b8aae5e](https://github.com/mbabic84/ainstruct-mcp/commit/b8aae5e066e85f603477b5cf6a0c525b0a529622))
+* restore TRANSPORT default, keep SERVER_URL required ([b9bf2b2](https://github.com/mbabic84/ainstruct-mcp/commit/b9bf2b2496b13bb8a7183487d241bc7e7720bfaf))
+* update collection validation and document error handling tests ([d4dc985](https://github.com/mbabic84/ainstruct-mcp/commit/d4dc985c055ee452bc6489c8aef30f99f6efef8c))
+* update document error handling tests for async mocks ([da84196](https://github.com/mbabic84/ainstruct-mcp/commit/da841968955090c28ee30ca4cbc6e15ec71c6d3e))
+* update document error handling tests for rollback behavior ([168675e](https://github.com/mbabic84/ainstruct-mcp/commit/168675e14784a51b05133a6b59e8973a1bbc1b84))
+* update e2e admin tests and collection validation tests ([4dccbcf](https://github.com/mbabic84/ainstruct-mcp/commit/4dccbcf12adc5ca9fb3106fc1f5f08d959ad6a06))
+* update unit tests for JWT auth changes and mock improvements ([e2fe6bd](https://github.com/mbabic84/ainstruct-mcp/commit/e2fe6bd42cf555960a44689553a0a973c6a31cef))
+
+
+### Features
+
+* add move_document tool and fix JWT auth for document tools ([652d328](https://github.com/mbabic84/ainstruct-mcp/commit/652d3280ae161c9dece0d9bdfa0138f4697e9c01))
+
 ## [3.2.2](https://github.com/mbabic84/ainstruct-mcp/compare/v3.2.1...v3.2.2) (2026-02-24)
 
 

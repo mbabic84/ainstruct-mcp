@@ -1,6 +1,7 @@
 
 from fastapi import APIRouter, HTTPException, status
 
+from app.db import get_collection_repository
 from app.rest.deps import DbDep, UserDep
 from app.rest.schemas import (
     CollectionCreate,
@@ -11,7 +12,6 @@ from app.rest.schemas import (
     ErrorResponse,
     MessageResponse,
 )
-from app.db import get_collection_repository
 
 router = APIRouter(prefix="/collections", tags=["Collections"])
 

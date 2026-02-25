@@ -11,7 +11,7 @@ from ..services import get_auth_service
 security = HTTPBearer(auto_error=False)
 
 
-def get_db() -> Generator[Session, None, None]:
+def get_db() -> Generator[Session]:
     from ..config import settings
     from ..db.models import get_db_engine
 

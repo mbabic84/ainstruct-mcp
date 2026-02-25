@@ -1,3 +1,10 @@
+# [3.4.0](https://github.com/mbabic84/ainstruct-mcp/compare/v3.3.0...v3.4.0) (2026-02-25)
+
+
+### Features
+
+* implement REST API with JWT authentication ([9eb98d7](https://github.com/mbabic84/ainstruct-mcp/commit/9eb98d72f784d8414909660c769ac3ab9ce42bc4))
+
 # [3.3.0](https://github.com/mbabic84/ainstruct-mcp/compare/v3.2.2...v3.3.0) (2026-02-25)
 
 

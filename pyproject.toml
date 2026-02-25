@@ -1,6 +1,6 @@
 [project]
 name = "ainstruct-mcp"
-version = "3.3.0"
+version = "3.4.0"
 description = "AI Document Memory MCP Server - Store and search markdown documents with semantic search"
 readme = "README.md"
 requires-python = ">=3.14"
@@ -70,3 +70,7 @@ asyncio_mode = "auto"
 asyncio_default_fixture_loop_scope = "function"
 testpaths = ["tests"]
 pythonpath = ["src"]
+filterwarnings = [
+    "error",
+    "ignore:datetime.datetime.utcnow:DeprecationWarning",
+]

@@ -4,7 +4,7 @@ Tests failures in external services (Qdrant, embedding, chunking) and transactio
 """
 import pytest
 from unittest.mock import MagicMock, patch, AsyncMock
-from datetime import datetime
+from datetime import datetime, timezone
 
 from app.tools.document_tools import (
     StoreDocumentInput,
@@ -44,8 +44,8 @@ def mock_document():
         content="# Test\n\nContent here",
         document_type="markdown",
         doc_metadata={},
-        created_at=datetime.utcnow(),
-        updated_at=datetime.utcnow(),
+        created_at=datetime.now(timezone.utc),
+        updated_at=datetime.now(timezone.utc),
     )
 
 

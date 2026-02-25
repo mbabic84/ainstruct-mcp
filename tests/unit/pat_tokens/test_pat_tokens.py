@@ -1,6 +1,6 @@
 import pytest
 from unittest.mock import MagicMock, patch
-from datetime import datetime
+from datetime import datetime, timezone
 
 from app.tools.pat_tools import (
     CreatePatTokenInput,
@@ -44,7 +44,7 @@ def mock_pat_token():
         "label": "Test PAT",
         "user_id": "test-user-id",
         "scopes": [Scope.READ, Scope.WRITE],
-        "created_at": datetime.utcnow(),
+        "created_at": datetime.now(timezone.utc),
         "expires_at": None,
         "is_active": True,
         "last_used": None,

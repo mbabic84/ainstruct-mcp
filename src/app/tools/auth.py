@@ -98,28 +98,29 @@ USER_TOOLS: set[str] = {
     "user_profile_tool",
 }
 
-# Tools requiring JWT or PAT authentication (collection management)
-COLLECTION_TOOLS: set[str] = {
+# Tools requiring JWT or PAT authentication (collection management - user owns collections)
+USER_COLLECTION_TOOLS: set[str] = {
     "create_collection_tool",
     "list_collections_tool",
     "get_collection_tool",
     "delete_collection_tool",
     "rename_collection_tool",
+    "move_document_tool",
 }
 
 # Tools requiring JWT or PAT authentication (keys and PATs)
 KEY_PAT_TOOLS: set[str] = {
-    "create_api_key_tool",
-    "list_api_keys_tool",
-    "revoke_api_key_tool",
-    "rotate_api_key_tool",
+    "create_collection_access_token_tool",
+    "list_collection_access_tokens_tool",
+    "revoke_collection_access_token_tool",
+    "rotate_collection_access_token_tool",
     "create_pat_token_tool",
     "list_pat_tokens_tool",
     "revoke_pat_token_tool",
     "rotate_pat_token_tool",
 }
 
-# Tools accepting API key or JWT/PAT (document operations)
+# Tools accepting API key or JWT/PAT (document operations bound to a single collection)
 DOCUMENT_TOOLS: set[str] = {
     "store_document_tool",
     "search_documents_tool",
@@ -153,7 +154,7 @@ def get_tool_auth_level(tool_name: str) -> str:
         return AuthLevel.API_KEY
     if tool_name in KEY_PAT_TOOLS:
         return AuthLevel.JWT_OR_PAT
-    if tool_name in COLLECTION_TOOLS:
+    if tool_name in USER_COLLECTION_TOOLS:
         return AuthLevel.JWT_OR_PAT
     if tool_name in USER_TOOLS:
         return AuthLevel.JWT_OR_PAT
@@ -336,7 +337,13 @@ class AuthMiddleware(Middleware):
 def require_scope(required_scope: Scope) -> Callable:
     def decorator(func: Callable) -> Callable:
         async def wrapper(*args, **kwargs):
-            from .context import get_api_key_info, get_pat_info, get_user_info, has_write_permission, is_authenticated
+            from .context import (
+                get_api_key_info,
+                get_pat_info,
+                get_user_info,
+                has_write_permission,
+                is_authenticated,
+            )
 
             if not is_authenticated():
                 raise ValueError("Not authenticated")

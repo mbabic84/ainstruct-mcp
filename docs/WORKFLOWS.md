@@ -4,18 +4,43 @@ This document provides a comprehensive explanation of all user workflows in the 
 
 ## Architecture Summary
 
-The system is a **Remote MCP Server** for storing and searching markdown documents with semantic embeddings. It uses a **dual authentication model** (JWT + API Keys) with **collection-based data isolation**.
+The system is a **Remote MCP Server** for storing and searching markdown documents with semantic embeddings. It uses a **dual authentication model** (JWT/PAT + Collection Access Tokens) with **collection-based data isolation**.
 
 ```
 ┌─────────────────────────────────────────────────────────────────────┐
 │                        Authentication Layer                          │
 ├────────────────────────────┬────────────────────────────────────────┤
-│       JWT Token Auth       │           API Key Auth                 │
+│       JWT/PAT Token Auth       │      Collection Access Token Auth    │
 │  ┌──────────────────────┐  │  ┌──────────────────────────────────┐  │
 │  │ • User Registration  │  │  │ • Document Storage               │  │
 │  │ • User Login         │  │  │ • Document Search                │  │
 │  │ • Collection Mgmt    │  │  │ • Document CRUD Operations       │  │
-│  │ • API Key Mgmt       │  │  │ • Semantic Search                │  │
+│  │ • Access Token Mgmt  │  │  │ • Semantic Search                │  │
+│  └──────────────────────┘  │  └──────────────────────────────────┘  │
+└────────────────────────────┴────────────────────────────────────────┘
+                                    │
+                                    ▼
+┌─────────────────────────────────────────────────────────────────────┐
+│                          Data Layer                                  │
+├────────────────────────────┬────────────────────────────────────────┤
+│      SQLite Database       │           Qdrant Vector DB             │
+│  ┌──────────────────────┐ │  ┌──────────────────────────────────┐  │
+│  │ • Users              │ │  │ • Document embeddings            │  │
+│  │ • Collections        │ │  │ • Semantic search index          │  │
+│  │ • Access Tokens      │ │  │ • Collection-isolated data       │  │
+│  │ • Document metadata  │ │  │                                  │  │
+│  └──────────────────────┘ │  └──────────────────────────────────┘  │
+└────────────────────────────┴────────────────────────────────────────┘
+```
+┌─────────────────────────────────────────────────────────────────────┐
+│                        Authentication Layer                          │
+├────────────────────────────┬────────────────────────────────────────┤
+│       JWT Token Auth       │           Collection Access Token Auth                 │
+│  ┌──────────────────────┐  │  ┌──────────────────────────────────┐  │
+│  │ • User Registration  │  │  │ • Document Storage               │  │
+│  │ • User Login         │  │  │ • Document Search                │  │
+│  │ • Collection Mgmt    │  │  │ • Document CRUD Operations       │  │
+│  │ • Collection Access Token Mgmt       │  │  │ • Semantic Search                │  │
 │  └──────────────────────┘  │  └──────────────────────────────────┘  │
 └────────────────────────────┴────────────────────────────────────────┘
                                     │
@@ -27,7 +52,7 @@ The system is a **Remote MCP Server** for storing and searching markdown documen
 │  ┌──────────────────────┐  │  ┌──────────────────────────────────┐  │
 │  │ • Users              │  │  │ • Document embeddings            │  │
 │  │ • Collections        │  │  │ • Semantic search index          │  │
-│  │ • API Keys (hashed)  │  │  │ • Collection-isolated data       │  │
+│  │ • Collection Access Tokens (hashed)  │  │  │ • Collection-isolated data       │  │
 │  │ • Document metadata  │  │  │                                  │  │
 │  └──────────────────────┘  │  └──────────────────────────────────┘  │
 └────────────────────────────┴────────────────────────────────────────┘
@@ -230,12 +255,12 @@ User                MCP Server              SQLite DB
 ```
 User "alice" (user_id: abc123):
 ├── Collection "default" → Qdrant: docs_xxxx1234
-│   ├── API Key "work-laptop" → read_write
-│   └── API Key "mobile" → read
+│   ├── Collection Access Token "work-laptop" → read_write
+│   └── Collection Access Token "mobile" → read
 ├── Collection "personal" → Qdrant: docs_yyyy5678
-│   └── API Key "personal-key" → read_write
+│   └── Collection Access Token "personal-key" → read_write
 └── Collection "work" → Qdrant: docs_zzzz9012
-    └── API Key "readonly-colleague" → read
+    └── Collection Access Token "readonly-colleague" → read
 ```
 
 ### Create Collection
@@ -307,14 +332,14 @@ User (JWT)          MCP Server              SQLite DB
 
 ---
 
-## 5. API Key Management Workflow
+## 5. Collection Access Token Management Workflow
 
-### Create API Key
+### Create Collection Access Token
 
 ```
 User (JWT)          MCP Server              SQLite DB
  │                      │                       │
- │──create_api_key_tool─>│                       │
+ │──create_collection_access_token_tool─>│                       │
  │  {label,             │                       │
  │   collection_id,     │                       │
  │   permission,        │                       │
@@ -327,21 +352,21 @@ User (JWT)          MCP Server              SQLite DB
  │                      │  ownership            │
  │                      │<──Collection data─────│
  │                      │                       │
- │                      │──Generate API key     │
+ │                      │──Generate token       │
  │                      │  ak_live_{random}     │
  │                      │                       │
- │                      │──Hash key (SHA256)    │
+ │                      │──Hash token (SHA256) │
  │                      │                       │
  │                      │──Store hash only──────>│
- │                      │<──Key ID──────────────│
+ │                      │<──Token ID────────────│
  │                      │                       │
- │<──ApiKeyResponse─────│                       │
+ │<──CollectionAccessTokenResponse─────│
  │  {id, label,         │                       │
- │   key: "ak_live_..." │  ⚠️ SHOWN ONLY ONCE!  │
- │   collection_id, ...}│                       │
+ │   key: "ak_live_..."  │  ⚠️ SHOWN ONLY ONCE!│
+ │   collection_id, ...}  │
 ```
 
-### API Key Format
+### Token Format
 
 ```
 ak_live_{32_urlsafe_characters}
@@ -350,20 +375,20 @@ Example:
 ak_live_a1b2c3d4e5f6g7h8i9j0k1l2m3n4o5p6
 ```
 
-### Key Storage Security
+### Token Storage Security
 
-- Only the **SHA256 hash** of the API key is stored in the database
-- The plain key is shown **only once** during creation
-- Similar to password storage - keys cannot be recovered, only rotated
+- Only the **SHA256 hash** of the token is stored in the database
+- The plain token is shown **only once** during creation
+- Similar to password storage - tokens cannot be recovered, only rotated
 
 ### API Reference
 
 | Tool | Parameters | Auth | Description |
 |------|------------|------|-------------|
-| `create_api_key_tool` | `label`, `collection_id`, `permission`, `expires_in_days?` | JWT | Create new API key |
-| `list_api_keys_tool` | - | JWT | List user's API keys (without actual keys) |
-| `revoke_api_key_tool` | `key_id` | JWT | Deactivate an API key |
-| `rotate_api_key_tool` | `key_id` | JWT | Generate new key, revoke old one |
+| `create_collection_access_token_tool` | `label`, `collection_id`, `permission`, `expires_in_days?` | JWT | Create new Collection Access Token |
+| `list_collection_access_tokens_tool` | - | JWT | List user's tokens (without actual tokens) |
+| `revoke_collection_access_token_tool` | `key_id` | JWT | Deactivate a token |
+| `rotate_collection_access_token_tool` | `key_id` | JWT | Generate new token, revoke old one |
 
 **Permission Values:**
 - `"read"` - Search, get, list documents only
@@ -376,7 +401,7 @@ ak_live_a1b2c3d4e5f6g7h8i9j0k1l2m3n4o5p6
 ### Sequence Diagram
 
 ```
-Client (API Key)    MCP Server         SQLite DB    Chunking    Embedding    Qdrant
+Client (Collection Access Token)    MCP Server         SQLite DB    Chunking    Embedding    Qdrant
  │                     │                   │           │           │          │
  │──store_document─────>│                   │           │           │          │
  │  {title, content,   │                   │           │           │          │
@@ -453,7 +478,7 @@ Client (API Key)    MCP Server         SQLite DB    Chunking    Embedding    Qdr
 ### Sequence Diagram
 
 ```
-Client (API Key)    MCP Server         Embedding Service    Qdrant
+Client (Collection Access Token)    MCP Server         Embedding Service    Qdrant
  │                     │                      │               │
  │──search_documents───>│                      │               │
  │  {query,            │                      │               │
@@ -548,7 +573,7 @@ More matching content...
 ### Get Document
 
 ```
-Client (API Key)    MCP Server              SQLite DB
+Client (Collection Access Token)    MCP Server              SQLite DB
  │                      │                       │
  │──get_document_tool───>│                       │
  │  {document_id}       │                       │
@@ -564,7 +589,7 @@ Client (API Key)    MCP Server              SQLite DB
 ### Update Document
 
 ```
-Client (API Key)    MCP Server              SQLite DB      Qdrant
+Client (Collection Access Token)    MCP Server              SQLite DB      Qdrant
  │                      │                       │           │
  │──update_document──────>│                       │           │
  │  {document_id,       │                       │           │
@@ -588,7 +613,7 @@ Client (API Key)    MCP Server              SQLite DB      Qdrant
 ### Delete Document
 
 ```
-Client (API Key)    MCP Server              SQLite DB      Qdrant
+Client (Collection Access Token)    MCP Server              SQLite DB      Qdrant
  │                      │                       │           │
  │──delete_document─────>│                       │           │
  │  {document_id}       │                       │           │
@@ -608,8 +633,8 @@ Client (API Key)    MCP Server              SQLite DB      Qdrant
 |------|------------|---------------|------------------|
 | `get_document_tool` | `document_id` | Yes (any) | No |
 | `list_documents_tool` | `limit`, `offset` | Yes (any) | No |
-| `update_document_tool` | `document_id`, `title`, `content`, `document_type`, `doc_metadata` | Yes (API Key) | Yes |
-| `delete_document_tool` | `document_id` | Yes (API Key) | Yes |
+| `update_document_tool` | `document_id`, `title`, `content`, `document_type`, `doc_metadata` | Yes (Collection Access Token) | Yes |
+| `delete_document_tool` | `document_id` | Yes (Collection Access Token) | Yes |
 
 ---
 
@@ -631,23 +656,23 @@ Client (API Key)    MCP Server              SQLite DB      Qdrant
               │                       │
               ▼                       ▼
      ┌─────────────────┐     ┌─────────────────┐
-     │ Is Public Tool? │     │ JWT or API Key? │
+     │ Is Public Tool? │     │ JWT or Collection Access Token? │
      └─────────────────┘     └─────────────────┘
               │                       │
        ┌──────┴──────┐         ┌──────┴──────┐
        │             │         │             │
-      Yes           No       JWT (3 parts)  API Key
+      Yes           No       JWT (3 parts)  Collection Access Token
        │             │         │             │
        ▼             ▼         ▼             ▼
    Allow        Reject     Validate      Validate
-   Request      Request    JWT Token     API Key
+   Request      Request    JWT Token     Collection Access Token
                            │             │
                     ┌──────┴──────┐      │
                     │             │      │
                 Valid         Invalid  Valid
                     │             │      │
                     ▼             ▼      ▼
-              Set User      Reject   Set API Key
+              Set User      Reject   Set Collection Access Token
               Context       Request  Context
                     │                      │
                     └──────────┬───────────┘
@@ -682,21 +707,21 @@ Client (API Key)    MCP Server              SQLite DB      Qdrant
 | Auth Type | Identifier | Storage | Use Case |
 |-----------|------------|---------|----------|
 | JWT Token | User ID | SQLite (users table) | User management, collection/key management |
-| API Key | Key hash | SQLite (api_keys table) | Document operations |
-| Admin API Key | Env variable | Environment variable | Full system access |
+| Collection Access Token | Key hash | SQLite (api_keys table) | Document operations |
+| Admin Collection Access Token | Env variable | Environment variable | Full system access |
 
 ### Permission Matrix
 
-| Operation | JWT User | API Key (read) | API Key (read_write) | Admin |
+| Operation | JWT User | Collection Access Token (read) | Collection Access Token (read_write) | Admin |
 |-----------|----------|----------------|----------------------|-------|
 | Register/Login | ✅ | ❌ | ❌ | ❌ |
 | View Profile | ✅ | ❌ | ❌ | ✅ |
 | Create Collection | ✅ | ❌ | ❌ | ✅ |
 | List Collections | ✅ | ❌ | ❌ | ✅ |
 | Delete Collection | ✅ | ❌ | ❌ | ✅ |
-| Create API Key | ✅ | ❌ | ❌ | ✅ |
-| List API Keys | ✅ | ❌ | ❌ | ✅ |
-| Revoke API Key | ✅ | ❌ | ❌ | ✅ |
+| Create Collection Access Token | ✅ | ❌ | ❌ | ✅ |
+| List Collection Access Tokens | ✅ | ❌ | ❌ | ✅ |
+| Revoke Collection Access Token | ✅ | ❌ | ❌ | ✅ |
 | Store Document | ❌ | ❌ | ✅ | ✅ |
 | Search Documents | ❌ | ✅ | ✅ | ✅ |
 | Get Document | ❌ | ✅ | ✅ | ✅ |
@@ -779,9 +804,9 @@ class Permission(str, Enum):
                               │
                               ▼
 ┌─────────────────────────────────────────────────────────────────┐
-│ Step 5: Create API Key                                           │
+│ Step 5: Create Collection Access Token                                           │
 │ ─────────────────────────────────────────────────────────────── │
-│ Call: create_api_key_tool                                        │
+│ Call: create_collection_access_token_tool                                        │
 │ Auth: Bearer {access_token}                                      │
 │ Parameters: {                                                    │
 │   label: "My Client",                                            │
@@ -896,7 +921,7 @@ class Permission(str, Enum):
 │  │ ...             │       │ name: "default" │                  │
 │  └─────────────────┘       └─────────────────┘                  │
 │                                    │                             │
-│  API Keys                          │                             │
+│  Collection Access Tokens                          │                             │
 │  ┌─────────────────┐               │                             │
 │  │ id: key-1       │               │                             │
 │  │ collection_id: ─┼───────────────┘                             │
@@ -955,7 +980,7 @@ JWT_ALGORITHM=HS256
 JWT_ACCESS_TOKEN_EXPIRE_MINUTES=30
 JWT_REFRESH_TOKEN_EXPIRE_DAYS=7
 
-# API Keys (Optional)
+# Collection Access Tokens (Optional)
 API_KEYS=                          # Legacy: comma-separated keys
 ADMIN_API_KEY=                     # Admin key for full access
 API_KEY_DEFAULT_EXPIRY_DAYS=       # Default expiry for new keys
@@ -986,8 +1011,8 @@ SEARCH_MAX_TOKENS=2000             # Default token budget
 | **User Auth** | `user_register_tool`, `user_login_tool`, `user_profile_tool`, `user_refresh_tool` | Public/JWT |
 | **Admin** | `promote_to_admin_tool`, `list_users_tool`, `get_user_tool`, `update_user_tool`, `delete_user_tool` | Admin |
 | **Collections** | `create_collection_tool`, `list_collections_tool`, `get_collection_tool`, `delete_collection_tool`, `rename_collection_tool` | JWT |
-| **API Keys** | `create_api_key_tool`, `list_api_keys_tool`, `revoke_api_key_tool`, `rotate_api_key_tool` | JWT |
-| **Documents** | `store_document_tool`, `search_documents_tool`, `get_document_tool`, `list_documents_tool`, `update_document_tool`, `delete_document_tool` | API Key |
+| **Collection Access Tokens** | `create_collection_access_token_tool`, `list_collection_access_tokens_tool`, `revoke_collection_access_token_tool`, `rotate_collection_access_token_tool` | JWT |
+| **Documents** | `store_document_tool`, `search_documents_tool`, `get_document_tool`, `list_documents_tool`, `update_document_tool`, `delete_document_tool` | Collection Access Token |
 
 ### Authentication Quick Reference
 
@@ -996,7 +1021,7 @@ JWT Token Format: eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOi...
                   └─────────────────────────────────────────────┘
                             3 parts separated by dots
 
-API Key Format:   ak_live_a1b2c3d4e5f6g7h8i9j0k1l2m3n4o5p6
+Collection Access Token Format:   ak_live_a1b2c3d4e5f6g7h8i9j0k1l2m3n4o5p6
                   └──────┘ └────────────────────────────────────┘
                   prefix   32 urlsafe characters
 ```
@@ -1004,5 +1029,5 @@ API Key Format:   ak_live_a1b2c3d4e5f6g7h8i9j0k1l2m3n4o5p6
 ### HTTP Header Format
 
 ```
-Authorization: Bearer <jwt_token_or_api_key>
+Authorization: Bearer <jwt_token_or_collection_access_token>
 ```

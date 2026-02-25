@@ -13,7 +13,7 @@ from tests.e2e.mcp_client_test import (
 
 
 # Production server URL
-SERVER_URL = os.environ.get("MCP_SERVER_URL", "https://ainstruct.kralicinora.cz/mcp")
+SERVER_URL = os.environ["MCP_SERVER_URL"]
 TRANSPORT = os.environ.get("MCP_TRANSPORT", "http")
 
 
@@ -42,7 +42,7 @@ class TestReadonlyPermissions:
                 collection_id = collections_result["collections"][0]["id"]
                 
                 # Create read-only key
-                key_result = await auth_client.call_tool("create_api_key_tool", {
+                key_result = await auth_client.call_tool("create_collection_access_token_tool", {
                     "label": "Readonly Key",
                     "collection_id": collection_id,
                     "permission": "read",  # Read-only!

@@ -73,6 +73,8 @@ def mock_jwt_user():
         "email": "test@example.com",
         "is_superuser": False,
         "auth_type": "jwt",
+        "collection_ids": ["coll-123"],
+        "qdrant_collections": ["docs_123"],
     }
 
 

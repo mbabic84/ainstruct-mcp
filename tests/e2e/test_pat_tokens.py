@@ -298,12 +298,12 @@ class TestPATDocumentAccess:
                 collection_ids.append(new_coll["id"])
                 
                 # Create API key for each collection to store documents
-                key1_result = await auth_client.call_tool("create_api_key_tool", {
+                key1_result = await auth_client.call_tool("create_collection_access_token_tool", {
                     "label": "Key1",
                     "collection_id": collection_ids[0],
                     "permission": "read_write",
                 })
-                key2_result = await auth_client.call_tool("create_api_key_tool", {
+                key2_result = await auth_client.call_tool("create_collection_access_token_tool", {
                     "label": "Key2",
                     "collection_id": collection_ids[1],
                     "permission": "read_write",
@@ -364,12 +364,12 @@ class TestPATDocumentAccess:
                 collection_ids.append(new_coll["id"])
                 
                 # Create API keys for each collection
-                key1_result = await auth_client.call_tool("create_api_key_tool", {
+                key1_result = await auth_client.call_tool("create_collection_access_token_tool", {
                     "label": "SearchKey1",
                     "collection_id": collection_ids[0],
                     "permission": "read_write",
                 })
-                key2_result = await auth_client.call_tool("create_api_key_tool", {
+                key2_result = await auth_client.call_tool("create_collection_access_token_tool", {
                     "label": "SearchKey2",
                     "collection_id": collection_ids[1],
                     "permission": "read_write",

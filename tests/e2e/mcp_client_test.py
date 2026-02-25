@@ -156,8 +156,8 @@ async def login_user(client: MCPClient, username: str, password: str) -> dict:
 
 
 async def create_api_key(client: MCPClient, collection_id: str, label: str = "Test Key") -> str:
-    """Create an API key for a collection."""
-    result = await client.call_tool("create_api_key_tool", {
+    """Create a Collection Access Token for a collection."""
+    result = await client.call_tool("create_collection_access_token_tool", {
         "label": label,
         "collection_id": collection_id,
         "permission": "read_write",

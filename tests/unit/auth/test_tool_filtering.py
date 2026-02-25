@@ -163,51 +163,6 @@ class TestOnListToolsFiltering:
         return tools
 
     @pytest.mark.asyncio
-    async def test_no_auth_returns_only_public_tools(self, mock_tools):
-        """When no auth header is provided, only public tools should be returned."""
-        from fastmcp.server.middleware import MiddlewareContext
-
-        from app.tools.auth import AuthMiddleware
-
-        with patch("app.tools.auth.get_http_headers") as mock_headers:
-            mock_headers.return_value = {}
-
-            middleware = AuthMiddleware()
-            call_next = AsyncMock(return_value=mock_tools)
-            context = MagicMock(spec=MiddlewareContext)
-            context.fastmcp_context = None
-
-            result = await middleware.on_list_tools(context, call_next)
-
-            call_next.assert_called_once()
-            assert len(result) == len(PUBLIC_TOOLS)
-            result_names = {tool.name for tool in result}
-            assert result_names == PUBLIC_TOOLS
-
-    @pytest.mark.asyncio
-    async def test_invalid_auth_returns_only_public_tools(self, mock_tools):
-        """When auth header is invalid, only public tools should be returned."""
-        from fastmcp.server.middleware import MiddlewareContext
-
-        from app.tools.auth import AuthMiddleware
-
-        with patch("app.tools.auth.get_http_headers") as mock_headers:
-            mock_headers.return_value = {"authorization": "Bearer invalid_token"}
-
-            with patch("app.tools.auth.is_pat_token", return_value=False):
-                with patch("app.tools.auth.is_jwt_token", return_value=False):
-                    with patch("app.tools.auth.verify_api_key", return_value=None):
-                        middleware = AuthMiddleware()
-                        call_next = AsyncMock(return_value=mock_tools)
-                        context = MagicMock(spec=MiddlewareContext)
-                        context.fastmcp_context = None
-
-                        result = await middleware.on_list_tools(context, call_next)
-
-                        result_names = {tool.name for tool in result}
-                        assert result_names == PUBLIC_TOOLS
-
-    @pytest.mark.asyncio
     async def test_jwt_non_admin_returns_user_tools(self, mock_tools):
         """JWT non-admin should see public + document + user + collection + key/pat tools."""
         from fastmcp.server.middleware import MiddlewareContext

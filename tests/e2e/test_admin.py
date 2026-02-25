@@ -14,7 +14,7 @@ from tests.e2e.mcp_client_test import (
 )
 
 
-SERVER_URL = os.environ.get("MCP_SERVER_URL", "http://mcp_server:8000/mcp")
+SERVER_URL = os.environ["MCP_SERVER_URL"]
 TRANSPORT = os.environ.get("MCP_TRANSPORT", "http")
 
 

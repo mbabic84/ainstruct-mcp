@@ -13,7 +13,7 @@ from tests.e2e.mcp_client_test import (
 
 
 # Production server URL
-SERVER_URL = os.environ.get("MCP_SERVER_URL", "https://ainstruct.kralicinora.cz/mcp")
+SERVER_URL = os.environ["MCP_SERVER_URL"]
 TRANSPORT = os.environ.get("MCP_TRANSPORT", "http")
 
 

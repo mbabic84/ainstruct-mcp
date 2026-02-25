@@ -345,31 +345,110 @@ class TestPermissionEnforcement:
 
     @pytest.mark.asyncio
     async def test_jwt_cannot_manage_documents(self):
-        """JWT users cannot perform document operations directly."""
+        """JWT users CAN perform document operations (they have access to their collections)."""
+        from unittest.mock import MagicMock, patch
+
         set_user_info({
             "id": "user-123",
             "username": "testuser",
             "email": "test@example.com",
             "is_superuser": False,
+            "auth_type": "jwt",
+            "collection_ids": ["coll-123"],
+            "qdrant_collections": ["docs_123"],
         })
 
-        # Cannot store
-        with pytest.raises(ValueError, match="JWT users cannot store documents"):
-            await store_document(StoreDocumentInput(title="Test", content="Content"))
+        # Can store
+        with patch("app.tools.context.get_collection_repository") as mock_coll_repo, \
+             patch("app.tools.document_tools.get_document_repository") as mock_doc_repo_factory, \
+             patch("app.tools.document_tools.get_qdrant_service") as mock_qdrant_factory, \
+             patch("app.tools.document_tools.get_embedding_service") as mock_emb_factory, \
+             patch("app.tools.document_tools.get_chunking_service") as mock_chunk_factory:
+            mock_coll_repo.return_value.list_by_user.return_value = [
+                {"id": "coll-123", "qdrant_collection": "docs_123"}
+            ]
+            
+            mock_doc = MagicMock()
+            mock_doc.id = "doc-new"
+            mock_doc.collection_id = "coll-123"
+            mock_doc_repo = MagicMock()
+            mock_doc_repo.create.return_value = mock_doc
+            mock_doc_repo_factory.return_value = mock_doc_repo
+            
+            mock_qdrant = MagicMock()
+            mock_qdrant_factory.return_value = mock_qdrant
+            
+            mock_emb = MagicMock()
+            mock_emb.embed_texts = AsyncMock(return_value=[[0.1]])
+            mock_emb_factory.return_value = mock_emb
+            
+            mock_chunk = MagicMock()
+            mock_chunk.chunk_markdown.return_value = []
+            mock_chunk_factory.return_value = mock_chunk
 
-        # Cannot update
+            result = await store_document(StoreDocumentInput(title="Test", content="Content"))
+            assert "Document stored successfully" in result.message
+
+        # Can update
         from app.tools.document_tools import update_document, UpdateDocumentInput
-        with pytest.raises(ValueError, match="JWT users cannot update documents"):
-            await update_document(UpdateDocumentInput(
+        with patch("app.tools.context.get_collection_repository") as mock_coll_repo, \
+             patch("app.tools.document_tools.get_document_repository") as mock_doc_repo_factory, \
+             patch("app.tools.document_tools.get_qdrant_service") as mock_qdrant_factory, \
+             patch("app.tools.document_tools.get_embedding_service") as mock_emb_factory, \
+             patch("app.tools.document_tools.get_chunking_service") as mock_chunk_factory:
+            mock_coll_repo.return_value.list_by_user.return_value = [
+                {"id": "coll-123", "qdrant_collection": "docs_123"}
+            ]
+            
+            mock_doc = MagicMock()
+            mock_doc.id = "doc-1"
+            mock_doc.collection_id = "coll-123"
+            mock_doc.title = "Old Title"
+            mock_doc.content = "Old Content"
+            mock_doc_repo = MagicMock()
+            mock_doc_repo.get_by_id_for_user.return_value = mock_doc
+            mock_doc_repo.update.return_value = mock_doc
+            mock_doc_repo_factory.return_value = mock_doc_repo
+            
+            mock_qdrant = MagicMock()
+            mock_qdrant_factory.return_value = mock_qdrant
+            
+            mock_emb = MagicMock()
+            mock_emb.embed_texts = AsyncMock(return_value=[[0.1]])
+            mock_emb_factory.return_value = mock_emb
+            
+            mock_chunk = MagicMock()
+            mock_chunk.chunk_markdown.return_value = []
+            mock_chunk_factory.return_value = mock_chunk
+
+            result = await update_document(UpdateDocumentInput(
                 document_id="doc-1",
                 title="Test",
                 content="Content",
             ))
+            assert "Document updated successfully" in result.message
 
-        # Cannot delete
+        # Can delete
         from app.tools.document_tools import delete_document, DeleteDocumentInput
-        with pytest.raises(ValueError, match="JWT users cannot delete documents"):
-            await delete_document(DeleteDocumentInput(document_id="doc-1"))
+        with patch("app.tools.context.get_collection_repository") as mock_coll_repo, \
+             patch("app.tools.document_tools.get_document_repository") as mock_doc_repo_factory, \
+             patch("app.tools.document_tools.get_qdrant_service") as mock_qdrant_factory:
+            mock_coll_repo.return_value.list_by_user.return_value = [
+                {"id": "coll-123", "qdrant_collection": "docs_123"}
+            ]
+            
+            mock_doc = MagicMock()
+            mock_doc.id = "doc-1"
+            mock_doc.collection_id = "coll-123"
+            mock_doc_repo = MagicMock()
+            mock_doc_repo.get_by_id_for_user.return_value = mock_doc
+            mock_doc_repo_factory.return_value = mock_doc_repo
+            
+            mock_qdrant = MagicMock()
+            mock_qdrant_factory.return_value = mock_qdrant
+
+            result = await delete_document(DeleteDocumentInput(document_id="doc-1"))
+            assert "Document deleted successfully" in result.message
 
 
 class TestCollectionIsolation:

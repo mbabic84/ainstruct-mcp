@@ -36,7 +36,7 @@ async def store_document(input_data: StoreDocumentInput) -> StoreDocumentOutput:
 
     auth_type = auth.get("auth_type")
 
-    if auth_type == "pat":
+    if auth_type in ("pat", "jwt"):
         collection_ids = auth.get("collection_ids", [])
         qdrant_collections = auth.get("qdrant_collections", [])
 
@@ -479,7 +479,6 @@ async def move_document(input_data: MoveDocumentInput) -> MoveDocumentOutput:
     user_id = auth.get("user_id")
     auth_type = auth.get("auth_type")
     collection_id = auth.get("collection_id")
-    collection_ids = auth.get("collection_ids", [])
     qdrant_collections = auth.get("qdrant_collections", [])
 
     if is_admin:
@@ -505,11 +504,10 @@ async def move_document(input_data: MoveDocumentInput) -> MoveDocumentOutput:
 
     if is_admin:
         pass
-    elif auth_type == "pat":
-        if input_data.target_collection_id not in qdrant_collections:
+    elif auth_type in ("pat", "jwt"):
+        if auth_type == "pat" and input_data.target_collection_id not in qdrant_collections:
             raise ValueError("Target collection not found or access denied")
-    else:
-        if target_collection["user_id"] != user_id:
+        if auth_type == "jwt" and target_collection["user_id"] != user_id:
             raise ValueError("Target collection not found")
 
     source_qdrant = get_qdrant_service(source_collection_id)

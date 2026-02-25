@@ -1,6 +1,8 @@
 
 from fastapi import APIRouter, HTTPException, status
 
+from app.db import get_pat_token_repository, get_user_repository
+from app.db.models import Scope, generate_pat_token, parse_scopes, scopes_to_str
 from app.rest.deps import DbDep, UserDep
 from app.rest.schemas import (
     ErrorResponse,
@@ -10,8 +12,6 @@ from app.rest.schemas import (
     PatListResponse,
     PatResponse,
 )
-from app.db.models import Scope, generate_pat_token, parse_scopes, scopes_to_str
-from app.db import get_pat_token_repository, get_user_repository
 
 router = APIRouter(prefix="/auth/pat", tags=["PAT Management"])
 

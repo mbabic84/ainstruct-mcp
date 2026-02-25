@@ -4,7 +4,7 @@ Tests list_users, search_users, get_user, update_user, delete_user operations.
 """
 import pytest
 from unittest.mock import MagicMock, patch
-from datetime import datetime
+from datetime import datetime, timezone
 
 from app.tools.admin_tools import (
     ListUsersInput,
@@ -32,7 +32,7 @@ def mock_regular_user():
         "password_hash": "$2b$12$hashedpassword",
         "is_active": True,
         "is_superuser": False,
-        "created_at": datetime.utcnow(),
+        "created_at": datetime.now(timezone.utc),
     }
 
 
@@ -46,7 +46,7 @@ def mock_admin_user():
         "password_hash": "$2b$12$hashedpassword",
         "is_active": True,
         "is_superuser": True,
-        "created_at": datetime.utcnow(),
+        "created_at": datetime.now(timezone.utc),
     }
 
 
@@ -59,7 +59,7 @@ def mock_user_response():
         username="user456",
         is_active=True,
         is_superuser=False,
-        created_at=datetime.utcnow(),
+        created_at=datetime.now(timezone.utc),
     )
 
 
@@ -73,7 +73,7 @@ def mock_user_list():
             username="user1",
             is_active=True,
             is_superuser=False,
-            created_at=datetime.utcnow(),
+            created_at=datetime.now(timezone.utc),
         ),
         UserResponse(
             id="user-2",
@@ -81,7 +81,7 @@ def mock_user_list():
             username="user2",
             is_active=True,
             is_superuser=False,
-            created_at=datetime.utcnow(),
+            created_at=datetime.now(timezone.utc),
         ),
     ]
 

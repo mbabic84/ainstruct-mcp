@@ -4,27 +4,21 @@ RUN apk add --no-cache curl
 
 WORKDIR /app
 
-RUN python -m venv /app/venv && \
-    ln -s /app/venv/bin/python /app/python
+RUN addgroup -g 1000 appgroup && \
+    adduser -u 1000 -G appgroup -D appuser && \
+    mkdir -p /app/data
 
-ENV VIRTUAL_ENV=/app/venv
-ENV PATH=/app/venv/bin:$PATH
+ENV PYTHONPATH=/app/src
 
-COPY pyproject.toml .
-COPY src/ ./src/
-COPY alembic.ini .
-COPY migrations/ ./migrations/
+COPY --chown=appuser:appgroup pyproject.toml .
 
 RUN pip install --no-cache-dir -e .
 
-RUN addgroup -g 1000 appgroup && \
-    adduser -u 1000 -G appgroup -D appuser && \
-    mkdir -p /app/data && \
-    chown -R appuser:appgroup /app
-
 USER appuser
 
-ENV PYTHONPATH=/app/src
+COPY --chown=appuser:appgroup src/ ./src/
+COPY --chown=appuser:appgroup alembic.ini .
+COPY --chown=appuser:appgroup migrations/ ./migrations/
 
 EXPOSE 8000
 

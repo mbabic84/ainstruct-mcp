@@ -5,8 +5,6 @@ services:
       - "6334:6333"
     volumes:
       - qdrant_storage:/qdrant/storage
-    profiles:
-      - test
 
   mcp_server:
     build: .
@@ -21,37 +19,12 @@ services:
     depends_on:
       qdrant:
         condition: service_started
-    profiles:
-      - test
     healthcheck:
       test: ["CMD", "sh", "-c", "curl -s -o /dev/null http://localhost:8000/mcp || exit 0"]
       interval: 2s
       timeout: 5s
       retries: 30
       start_period: 10s
-
-  test_runner:
-    build:
-      context: .
-      dockerfile: Dockerfile.test-base
-    volumes:
-      - ./src:/app/src
-      - ./tests:/app/tests
-      - ./pyproject.toml:/app/pyproject.toml
-      - ./alembic.ini:/app/alembic.ini
-      - ./migrations:/app/migrations
-    environment:
-      - PYTHONPATH=/app
-      - USE_MOCK_EMBEDDINGS=true
-      - MCP_SERVER_URL=http://mcp_server:8000/mcp
-      - MCP_TRANSPORT=http
-    working_dir: /app
-    profiles:
-      - test
-    depends_on:
-      mcp_server:
-        condition: service_healthy
-    command: ["sh", "-c", "python -c \"\nimport urllib.request\nimport sys\nimport time\n\nqdrant_url = 'http://qdrant:6333'\nmax_attempts = 30\nfor i in range(max_attempts):\n    try:\n        urllib.request.urlopen(qdrant_url, timeout=2)\n        print('Qdrant is ready')\n        break\n    except Exception as e:\n        if i == max_attempts - 1:\n            print(f'Failed to connect to Qdrant: {e}', file=sys.stderr)\n            sys.exit(1)\n        print(f'Waiting for Qdrant... ({i+1}/{max_attempts})')\n        time.sleep(2)\n\" && ruff check src/ && mypy src/ && pytest tests/unit tests/integration tests/e2e -v"]
 
 volumes:
   qdrant_storage:

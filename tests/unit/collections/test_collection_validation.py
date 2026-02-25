@@ -317,7 +317,7 @@ class TestRenameCollectionValidation:
             mock_repo.get_by_name_for_user.return_value = None  # No existing collection
             mock_repo.rename.return_value = CollectionResponse(
                 id="collection-123",
-                name="new-special-name",
+                name="new-special-name_123",  # Return the actual new name
                 document_count=0,
                 api_key_count=0,
                 created_at=datetime.utcnow(),

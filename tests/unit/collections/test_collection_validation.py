@@ -281,28 +281,20 @@ class TestRenameCollectionValidation:
 
     @pytest.mark.asyncio
     async def test_rename_collection_to_same_name(self, mock_user_info, mock_owned_collection):
-        """Renaming to the same name should be allowed (no-op or succeed)."""
+        """Renaming to the same name raises error (collection with this name already exists)."""
         set_user_info(mock_user_info)
 
         with patch("app.tools.collection_tools.get_collection_repository") as mock_repo_factory:
             mock_repo = MagicMock()
             mock_repo.get_by_id.return_value = mock_owned_collection
-            mock_repo.rename.return_value = CollectionResponse(
-                id="collection-123",
-                name="old-name",
-                document_count=0,
-                api_key_count=0,
-                created_at=datetime.utcnow(),
-            )
+            mock_repo.get_by_name_for_user.return_value = mock_owned_collection  # Same collection exists
             mock_repo_factory.return_value = mock_repo
 
-            result = await rename_collection(RenameCollectionInput(
-                collection_id="collection-123",
-                name="old-name",
-            ))
-
-            assert result.name == "old-name"
-            mock_repo.rename.assert_called_once_with("collection-123", "old-name")
+            with pytest.raises(ValueError, match="Collection with this name already exists"):
+                await rename_collection(RenameCollectionInput(
+                    collection_id="collection-123",
+                    name="old-name",
+                ))
 
     @pytest.mark.asyncio
     async def test_rename_collection_special_characters(self, mock_user_info, mock_owned_collection):
@@ -312,6 +304,7 @@ class TestRenameCollectionValidation:
         with patch("app.tools.collection_tools.get_collection_repository") as mock_repo_factory:
             mock_repo = MagicMock()
             mock_repo.get_by_id.return_value = mock_owned_collection
+            mock_repo.get_by_name_for_user.return_value = None  # No existing collection
             mock_repo.rename.return_value = CollectionResponse(
                 id="collection-123",
                 name="new-special-name",

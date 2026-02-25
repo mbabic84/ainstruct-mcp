@@ -356,6 +356,7 @@ class TestRenameCollection:
         with patch("app.tools.collection_tools.get_collection_repository") as mock_repo_factory:
             mock_repo = MagicMock()
             mock_repo.get_by_id.return_value = mock_collection
+            mock_repo.get_by_name_for_user.return_value = None  # No existing collection with same name
             mock_repo.rename.return_value = CollectionResponse(
                 id="collection-123",
                 name="renamed",

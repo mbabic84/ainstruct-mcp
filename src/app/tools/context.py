@@ -95,7 +95,9 @@ def has_scope(required_scope: Scope) -> bool:
 
 def has_write_permission() -> bool:
     user_info = get_user_info()
-    if user_info and user_info.get("is_superuser"):
+    if user_info:
+        if user_info.get("is_superuser"):
+            return True
         return True
 
     api_key_info = get_api_key_info()

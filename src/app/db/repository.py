@@ -165,6 +165,23 @@ class DocumentRepository:
         finally:
             session.close()
 
+    def update_collection_id(self, doc_id: str, new_collection_id: str) -> bool:
+        session = self._get_session()
+        try:
+            query = select(DocumentModel).where(DocumentModel.id == doc_id)
+            if self.collection_id:
+                query = query.where(DocumentModel.collection_id == self.collection_id)
+
+            db_doc = session.execute(query).scalar_one_or_none()
+            if not db_doc:
+                return False
+
+            db_doc.collection_id = new_collection_id
+            session.commit()
+            return True
+        finally:
+            session.close()
+
     def update(
         self,
         doc_id: str,

@@ -105,7 +105,7 @@ class TestStoreDocumentErrors:
             mock_chunking_factory.return_value = mock_chunking
             
             mock_embedding = MagicMock()
-            mock_embedding.embed_texts.return_value = [[0.1, 0.2, 0.3]]
+            mock_embedding.embed_texts = AsyncMock(return_value=[[0.1, 0.2, 0.3]])
             mock_embedding_factory.return_value = mock_embedding
             
             input_data = StoreDocumentInput(
@@ -144,8 +144,10 @@ class TestStoreDocumentErrors:
             mock_chunking.chunk_markdown.return_value = mock_chunks
             mock_chunking_factory.return_value = mock_chunking
             
+            async def raise_exception(*args, **kwargs):
+                raise Exception("Embedding service unavailable")
             mock_embedding = MagicMock()
-            mock_embedding.embed_texts.side_effect = Exception("Embedding service unavailable")
+            mock_embedding.embed_texts = raise_exception
             mock_embedding_factory.return_value = mock_embedding
             
             input_data = StoreDocumentInput(
@@ -214,7 +216,7 @@ class TestStoreDocumentErrors:
             mock_chunking_factory.return_value = mock_chunking
             
             mock_embedding = MagicMock()
-            mock_embedding.embed_texts.return_value = [[0.1, 0.2]]
+            mock_embedding.embed_texts = AsyncMock(return_value=[[0.1, 0.2]])
             mock_embedding_factory.return_value = mock_embedding
             
             input_data = StoreDocumentInput(
@@ -238,22 +240,30 @@ class TestStoreDocumentErrors:
         set_api_key_info(mock_api_key_write)
 
         with patch("app.tools.document_tools.get_document_repository") as mock_doc_repo_factory, \
+             patch("app.tools.document_tools.get_qdrant_service") as mock_qdrant_factory, \
+             patch("app.tools.document_tools.get_embedding_service") as mock_embedding_factory, \
              patch("app.tools.document_tools.get_chunking_service") as mock_chunking_factory:
-            
+
             mock_doc_repo = MagicMock()
             mock_doc = MagicMock(id="doc-123", chunk_count=0)
             mock_doc_repo.create.return_value = mock_doc
             mock_doc_repo_factory.return_value = mock_doc_repo
-            
+
+            mock_qdrant = MagicMock()
+            mock_qdrant_factory.return_value = mock_qdrant
+
+            mock_embedding = MagicMock()
+            mock_embedding_factory.return_value = mock_embedding
+
             mock_chunking = MagicMock()
             mock_chunking.chunk_markdown.return_value = []  # Empty chunks
             mock_chunking_factory.return_value = mock_chunking
-            
+
             input_data = StoreDocumentInput(
                 title="Empty Doc",
                 content="",  # Empty content
             )
-            
+
             result = await store_document(input_data)
             
             assert result.document_id == "doc-123"
@@ -337,7 +347,7 @@ class TestUpdateDocumentErrors:
             mock_chunking_factory.return_value = mock_chunking
             
             mock_embedding = MagicMock()
-            mock_embedding.embed_texts.return_value = [[0.1, 0.2]]
+            mock_embedding.embed_texts = AsyncMock(return_value=[[0.1, 0.2]])
             mock_embedding_factory.return_value = mock_embedding
             
             input_data = UpdateDocumentInput(
@@ -387,8 +397,10 @@ class TestUpdateDocumentErrors:
             mock_chunking.chunk_markdown.return_value = mock_chunks
             mock_chunking_factory.return_value = mock_chunking
             
+            async def raise_exception(*args, **kwargs):
+                raise Exception("Embedding failed")
             mock_embedding = MagicMock()
-            mock_embedding.embed_texts.side_effect = Exception("Embedding failed")
+            mock_embedding.embed_texts = raise_exception
             mock_embedding_factory.return_value = mock_embedding
             
             input_data = UpdateDocumentInput(
@@ -629,7 +641,7 @@ class TestTransactionAtomicity:
             mock_chunking_factory.return_value = mock_chunking
             
             mock_embedding = MagicMock()
-            mock_embedding.embed_texts.return_value = [[0.1, 0.2], [0.3, 0.4]]
+            mock_embedding.embed_texts = AsyncMock(return_value=[[0.1, 0.2], [0.3, 0.4]])
             mock_embedding_factory.return_value = mock_embedding
             
             input_data = StoreDocumentInput(
@@ -671,7 +683,7 @@ class TestTransactionAtomicity:
             mock_chunking_factory.return_value = mock_chunking
             
             mock_embedding = MagicMock()
-            mock_embedding.embed_texts.return_value = [[0.1, 0.2]]
+            mock_embedding.embed_texts = AsyncMock(return_value=[[0.1, 0.2]])
             mock_embedding_factory.return_value = mock_embedding
             
             input_data = StoreDocumentInput(title="Test", content="Test")
@@ -713,7 +725,7 @@ class TestTransactionAtomicity:
             mock_chunking_factory.return_value = mock_chunking
             
             mock_embedding = MagicMock()
-            mock_embedding.embed_texts.return_value = [[0.1, 0.2]]
+            mock_embedding.embed_texts = AsyncMock(return_value=[[0.1, 0.2]])
             mock_embedding_factory.return_value = mock_embedding
             
             input_data = UpdateDocumentInput(

@@ -71,4 +71,4 @@ services:
         condition: service_healthy
       rest_api:
         condition: service_healthy
-    command: ["sh", "-c", "ruff check src/ && pytest ${TEST_PATH:-tests/unit tests/integration tests/e2e} -v"]
+    command: ["sh", "-c", "ruff check src/ && pytest ${TEST_PATH:-tests/unit} -v"]

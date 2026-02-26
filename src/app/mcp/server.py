@@ -1,8 +1,5 @@
-import asyncio
 import logging
 
-from alembic import command
-from alembic.config import Config
 from fastmcp import FastMCP
 from fastmcp.server.lifespan import lifespan
 
@@ -82,9 +79,19 @@ log = logging.getLogger(__name__)
 async def db_migrations_lifespan(server):
     log.info("Running database migrations...")
     try:
+        from alembic import command
+        from alembic.config import Config
+        from sqlalchemy import create_engine, text
+
+        sync_url = settings.database_url.replace("+asyncpg", "")
+        engine = create_engine(sync_url)
+        with engine.connect() as conn:
+            conn.execute(text("SELECT 1"))
+        engine.dispose()
+
         alembic_cfg = Config("alembic.ini")
-        alembic_cfg.set_main_option("sqlalchemy.url", f"sqlite:///{settings.db_path}")
-        await asyncio.to_thread(command.upgrade, alembic_cfg, "head")
+        alembic_cfg.set_main_option("sqlalchemy.url", sync_url)
+        command.upgrade(alembic_cfg, "head")
         log.info("Migrations applied successfully!")
     except Exception as e:
         log.error(f"Migration failed: {e}")

@@ -1,7 +1,8 @@
 # SQLite to PostgreSQL Migration Plan
 
 **Date:** 2026-02-26  
-**Status:** Planned  
+**Status:** In Progress  
+**Current Phase:** Phase 7 - MCP Server & REST Routes Complete  
 **Migration Type:** Full Async Migration
 
 ---
@@ -19,6 +20,7 @@ This document outlines the migration from SQLite to PostgreSQL with full async s
 | Migrations | Fresh Alembic migrations (regenerate) |
 | Storage | No Docker volumes (ephemeral for testing) |
 | Pattern | Full async throughout |
+| PostgreSQL | postgres:18-alpine (latest stable) |
 
 ### Why Full Async?
 

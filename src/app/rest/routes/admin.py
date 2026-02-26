@@ -32,8 +32,8 @@ async def list_users(
     offset: int = Query(0, ge=0),
 ):
     user_repo = get_user_repository()
-    users = user_repo.list_all(limit=limit, offset=offset)
-    total = user_repo.count_all()
+    users = await user_repo.list_all(limit=limit, offset=offset)
+    total = len(users)
 
     items = [
         UserListItem(
@@ -72,16 +72,16 @@ async def get_user(
     pat_repo = get_pat_token_repository()
     cat_repo = get_cat_repository()
 
-    user = user_repo.get_by_id(user_id)
+    user = await user_repo.get_by_id(user_id)
     if not user:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
             detail={"code": "USER_NOT_FOUND", "message": "User not found"},
         )
 
-    collections = collection_repo.list_by_user(user_id)
-    pats = pat_repo.list_by_user(user_id)
-    cats = cat_repo.list_all(user_id)
+    collections = await collection_repo.list_by_user(user_id)
+    pats = await pat_repo.list_by_user(user_id)
+    cats = await cat_repo.list_all(user_id)
 
     return UserDetailResponse(
         id=user.id,
@@ -111,7 +111,7 @@ async def update_user(
 ):
     auth_service = get_auth_service()
     user_repo = get_user_repository()
-    user = user_repo.get_by_id(user_id)
+    user = await user_repo.get_by_id(user_id)
 
     if not user:
         raise HTTPException(
@@ -132,9 +132,9 @@ async def update_user(
         update_data["is_superuser"] = body.is_superuser
 
     if update_data:
-        user_repo.update(user_id, **update_data)
+        await user_repo.update(user_id, **update_data)
 
-    updated = user_repo.get_by_id(user_id)
+    updated = await user_repo.get_by_id(user_id)
     return UserResponse(
         id=updated.id,
         email=updated.email,
@@ -159,7 +159,7 @@ async def delete_user(
     admin: AdminDep,
 ):
     user_repo = get_user_repository()
-    user = user_repo.get_by_id(user_id)
+    user = await user_repo.get_by_id(user_id)
 
     if not user:
         raise HTTPException(
@@ -173,5 +173,5 @@ async def delete_user(
             detail={"code": "CANNOT_DELETE_SELF", "message": "Cannot delete your own account"},
         )
 
-    user_repo.delete(user_id)
+    await user_repo.delete(user_id)
     return MessageResponse(message="User deleted successfully")

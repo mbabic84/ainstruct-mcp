@@ -8,10 +8,13 @@ WORKDIR /app
 
 RUN addgroup -g 1000 appgroup && \
     adduser -u 1000 -G appgroup -D appuser && \
-    mkdir -p /app/data /app/.pytest_cache /tmp/pytest_cache /tmp/ruff_cache && \
+    mkdir -p /app/data /app/.venv /app/.pytest_cache /tmp/pytest_cache /tmp/ruff_cache && \
     chown -R appuser:appgroup /app /tmp/pytest_cache /tmp/ruff_cache
 
-ENV PYTHONPATH=/app \
+# Create virtual environment and set PATH before any pip operations
+RUN python -m venv /app/.venv
+ENV PATH="/app/.venv/bin:$PATH" \
+    PYTHONPATH=/app \
     PYTEST_CACHE_DIR=/tmp/pytest_cache \
     RUFF_CACHE_DIR=/tmp/ruff_cache
 

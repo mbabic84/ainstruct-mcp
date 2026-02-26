@@ -35,14 +35,13 @@ jobs:
         with:
           python-version: "3.14"
 
-      - name: Setup Node.js
-        uses: actions/setup-node@v4
+      - name: Install uv
+        uses: astral-sh/setup-uv@v5
         with:
-          node-version: "lts/*"
+          python-version: "3.14"
 
       - name: Install Python dependencies
-        run: |
-          pip install -e ".[dev]"
+        run: uv sync --frozen
 
       - name: Install semantic-release
         run: |
@@ -95,10 +94,10 @@ jobs:
           images: mbabic84/ainstruct-mcp
           tags: |
             type=semver,pattern={{version}},value=v${{ needs.release.outputs.new_release_version }}
-            type=semver,pattern={{major}}.{{minor}},value=v${{ needs.release.outputs.new_release_version }}
-            type=semver,pattern={{major}},value=v${{ needs.release.outputs.new_release_version }}
-            type=sha
+            type=semver,pattern={{major}}.{{minor}},value=${{ needs.release.outputs.new_release_version }}
+            type=semver,pattern={{major}},value=${{ needs.release.outputs.new_release_version }}
             type=raw,value=latest,enable={{is_default_branch}}
+            type=sha
 
       - name: Build and push
         uses: docker/build-push-action@v6

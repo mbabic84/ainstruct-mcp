@@ -4,17 +4,20 @@ services:
     environment:
       POSTGRES_DB: ainstruct
       POSTGRES_USER: ainstruct
-      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-devpassword}
-    tmpfs:
-      - /var/lib/postgresql
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?POSTGRES_PASSWORD is required}
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
     healthcheck:
       test: ["CMD-SHELL", "pg_isready -U ainstruct -d ainstruct"]
       interval: 5s
       timeout: 5s
       retries: 5
       start_period: 5s
+
   qdrant:
     image: qdrant/qdrant:latest
+    volumes:
+      - qdrant_data:/qdrant/storage
     healthcheck:
       test: ["CMD-SHELL", "bash -c ':>/dev/tcp/127.0.0.1/6333'"]
       interval: 5s
@@ -23,17 +26,18 @@ services:
       start_period: 10s
 
   mcp_server:
-    build: .
-    tmpfs:
-      - /tmp
+    build:
+      context: .
+      dockerfile: Dockerfile
+    image: mbabic84/ainstruct-mcp:latest
     environment:
+      - SERVICE=mcp-server
       - QDRANT_URL=http://qdrant:6333
-      - DATABASE_URL=postgresql+asyncpg://ainstruct:${POSTGRES_PASSWORD:-devpassword}@postgres:5432/ainstruct
-      - USE_MOCK_EMBEDDINGS=true
-      - UVICORN_TIMEOUT_GRACEFUL_SHUTDOWN=10
-      - API_KEYS=test_key_123
-      - ADMIN_API_KEY=admin_secret_key
-      - JWT_SECRET_KEY=your-super-secret-jwt-key-change-in-production
+      - DATABASE_URL=postgresql+asyncpg://ainstruct:${POSTGRES_PASSWORD}@postgres:5432/ainstruct
+      - USE_MOCK_EMBEDDINGS=false
+      - API_KEYS=${API_KEYS:?API_KEYS is required}
+      - ADMIN_API_KEY=${ADMIN_API_KEY:?ADMIN_API_KEY is required}
+      - JWT_SECRET_KEY=${JWT_SECRET_KEY:?JWT_SECRET_KEY is required}
     depends_on:
       qdrant:
         condition: service_healthy
@@ -47,47 +51,29 @@ services:
       start_period: 10s
 
   rest_api:
-    build: .
-    command: ["--rest"]
-    tmpfs:
-      - /tmp
+    build:
+      context: .
+      dockerfile: Dockerfile
+    image: mbabic84/ainstruct-mcp:latest
     environment:
+      - SERVICE=rest-api
       - QDRANT_URL=http://qdrant:6333
-      - DATABASE_URL=postgresql+asyncpg://ainstruct:${POSTGRES_PASSWORD:-devpassword}@postgres:5432/ainstruct
-      - USE_MOCK_EMBEDDINGS=true
-      - API_KEYS=test_key_123
-      - ADMIN_API_KEY=admin_secret_key
-      - JWT_SECRET_KEY=your-super-secret-jwt-key-change-in-production
-      - PORT=8000
+      - DATABASE_URL=postgresql+asyncpg://ainstruct:${POSTGRES_PASSWORD}@postgres:5432/ainstruct
+      - USE_MOCK_EMBEDDINGS=false
+      - API_KEYS=${API_KEYS:?API_KEYS is required}
+      - ADMIN_API_KEY=${ADMIN_API_KEY:?ADMIN_API_KEY is required}
+      - JWT_SECRET_KEY=${JWT_SECRET_KEY:?JWT_SECRET_KEY is required}
+      - PORT=8001
     depends_on:
       mcp_server:
         condition: service_healthy
     healthcheck:
-      test: ["CMD", "sh", "-c", "curl -s http://localhost:8000/health -o /dev/null"]
+      test: ["CMD", "sh", "-c", "curl -s http://localhost:8001/health -o /dev/null"]
       interval: 2s
       timeout: 5s
       retries: 30
       start_period: 10s
 
-  test_runner:
-    build:
-      context: .
-      dockerfile: Dockerfile.test-base
-    environment:
-      - PYTHONPATH=/app/src
-      - USE_MOCK_EMBEDDINGS=true
-      - QDRANT_URL=http://qdrant:6333
-      - DATABASE_URL=postgresql+asyncpg://ainstruct:${POSTGRES_PASSWORD:-devpassword}@postgres:5432/ainstruct
-      - MCP_SERVER_URL=http://mcp_server:8000/mcp
-      - MCP_SERVER_BASE_URL=http://rest_api:8000
-      - MCP_TRANSPORT=http
-      - RUFF_CACHE_DIR=/tmp/ruff_cache
-      - PYTEST_CACHE_DIR=/tmp/pytest_cache
-    depends_on:
-      postgres:
-        condition: service_healthy
-      mcp_server:
-        condition: service_healthy
-      rest_api:
-        condition: service_healthy
-    command: ["sh", "-c", "ruff check src/ && cd /app && mypy src/app/ || true"]
+volumes:
+  postgres_data:
+  qdrant_data:

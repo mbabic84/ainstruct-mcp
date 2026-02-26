@@ -15,11 +15,11 @@ fi
 case "$1" in
     --mcp)
         echo "Starting MCP server..."
-        exec python -m app.main
+        exec mcp-server
         ;;
     --rest)
         echo "Starting REST API server..."
-        exec python -m app.rest.run
+        exec rest-api
         ;;
     --help)
         echo "Usage: $0 [options]"

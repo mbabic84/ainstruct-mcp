@@ -1,6 +1,17 @@
 # AI Document Memory MCP Server
 
-Remote MCP server for storing and searching markdown documents with semantic embeddings. Features user authentication with JWT tokens, API key management with permissions, and collection-based data organization.
+Remote MCP server for storing and searching markdown documents with semantic embeddings. Features user authentication with JWT tokens, CAT (Collection Access Token) management with permissions, and collection-based data organization.
+
+## Architecture
+
+The system consists of two services:
+
+| Service | Port | Purpose |
+|---------|------|---------|
+| MCP Server | 8000 | MCP protocol for AI agents |
+| REST API | 8001 | REST API for authentication and management |
+
+Both share the same database (PostgreSQL) and vector store (Qdrant).
 
 ## Quick Start
 
@@ -10,8 +21,10 @@ cp .env.example .env
 ```
 
 2. Edit `.env` with your credentials:
+- `POSTGRES_PASSWORD` - Required for PostgreSQL
 - `OPENROUTER_API_KEY` - Get from https://openrouter.ai
-- `QDRANT_URL` - Point to your existing Qdrant instance (or use local via docker-compose)
+- `API_KEYS` - Comma-separated list of allowed API keys
+- `ADMIN_API_KEY` - Admin authentication key
 
 3. Start the server:
 ```bash
@@ -19,16 +32,37 @@ docker-compose up -d
 ```
 
 4. The MCP server is available at `http://localhost:8000/mcp`
+5. The REST API is available at `http://localhost:8001`
 
 ## New User Onboarding
 
+You can use either the REST API or MCP tools for user management.
+
 ### Step 1: Register Account
+
+**REST API**:
+```bash
+curl -X POST http://localhost:8001/auth/register \
+  -H "Content-Type: application/json" \
+  -d '{"email": "user@example.com", "username": "alice", "password": "secure123"}'
+```
+
+**MCP Tool**:
 ```
 /user_register_tool
 ```
 Provide email, username, and password. A "default" collection is automatically created.
 
 ### Step 2: Login
+
+**REST API**:
+```bash
+curl -X POST http://localhost:8001/auth/login \
+  -H "Content-Type: application/json" \
+  -d '{"username": "alice", "password": "secure123"}'
+```
+
+**MCP Tool**:
 ```
 /user_login_tool
 ```
@@ -38,21 +72,41 @@ Save the returned `access_token` and `refresh_token`.
 
 You have two options for authentication:
 
-#### Option A: API Key (Collection-Specific)
+#### Option A: CAT (Collection Access Token)
+
+**REST API**:
+```bash
+curl -X POST http://localhost:8001/auth/cat \
+  -H "Authorization: Bearer <jwt_token>" \
+  -H "Content-Type: application/json" \
+  -d '{"label": "My Client", "collection_id": "<uuid>", "permission": "read_write"}'
 ```
-/create_api_key_tool
+
+**MCP Tool**:
 ```
-Provide a label, collection ID (from `/list_collections_tool`), permission, and optional expiry. Save the returned key.
+/create_cat_tool
+```
+Provide a label, collection ID (from `/list_collections_tool`), permission, and optional expiry. Save the returned token.
 
 **Use this if**: You only need access to a single collection for document operations.
 
 #### Option B: PAT Token (User-Level)
+
+**REST API**:
+```bash
+curl -X POST http://localhost:8001/auth/pat \
+  -H "Authorization: Bearer <jwt_token>" \
+  -H "Content-Type: application/json" \
+  -d '{"label": "My Client"}'
+```
+
+**MCP Tool**:
 ```
 /create_pat_token_tool
 ```
 Provide a label and optional expiry. Save the returned token.
 
-**Use this if**: You need access to all your collections or want to perform management operations (create collections, manage API keys, etc.).
+**Use this if**: You need access to all your collections or want to perform management operations (create collections, manage CATs, etc.).
 
 ### Step 4: Configure Client
 Update your MCP client config:
@@ -87,9 +141,10 @@ Admin users (`is_superuser=True`) have full access to all admin tools (user mana
 - **Document Management**: Store, retrieve, update, and delete markdown documents with automatic chunking
 - **Semantic Search**: Search documents using embeddings (OpenRouter models)
 - **Collections**: Organize documents into user-owned collections with granular permissions
-- **API Keys**: Create, revoke, and rotate API keys with read/write permissions
+- **CATs (Collection Access Tokens)**: Create, revoke, and rotate tokens with read/write permissions
 - **User Authentication**: JWT-based login with refresh tokens
 - **Admin Tools**: Manage users and view all collections (admin only)
+- **REST API**: Separate REST API service on port 8001
 
 ## MCP Tools
 
@@ -108,11 +163,11 @@ Admin users (`is_superuser=True`) have full access to all admin tools (user mana
 - `user_refresh_tool` - Refresh access tokens
 - `promote_to_admin_tool` - Promote users to admin
 
-### API Key Tools
-- `create_api_key_tool` - Create API keys (collection-specific)
-- `list_api_keys_tool` - List keys
-- `revoke_api_key_tool` - Revoke keys
-- `rotate_api_key_tool` - Rotate keys
+### CAT (Collection Access Token) Tools
+- `create_cat_tool` - Create CATs (collection-specific tokens)
+- `list_cats_tool` - List CATs
+- `revoke_cat_tool` - Revoke CATs
+- `rotate_cat_tool` - Rotate CATs
 
 ### PAT Token Tools
 - `create_pat_token_tool` - Create Personal Access Tokens (user-level)
@@ -135,56 +190,84 @@ Admin users (`is_superuser=True`) have full access to all admin tools (user mana
 
 ## Authentication
 
-### JWT Tokens
-- Obtained via `/user_login_tool`
-- Used for user and collection management
-- Expire after 30 minutes (refreshable)
+The system uses two APIs with different authentication methods:
 
-### API Keys
-- Created via `/create_api_key_tool`
+| API | Purpose | Auth Method |
+|-----|---------|-------------|
+| REST API | Interactive auth + operations | JWT (short-lived) |
+| MCP API | AI agent operations | PAT or CAT (long-lived) |
+
+### JWT Tokens
+- Obtained via REST API `/auth/login` or MCP tool `/user_login_tool`
+- Used for REST API operations and token management
+- Expire after 30 minutes (refreshable via `/auth/refresh`)
+- **Not recommended for MCP** - use PAT or CAT instead
+
+### Collection Access Tokens (CATs)
+- Created via `create_cat_tool` (or REST API `/auth/cat`)
 - **Collection-specific**: Assigned to a single collection
 - Permissions: `read` (search/get) or `read_write` (full access)
 - Optional expiration dates
 - **Use case**: Document operations (store, search, update, delete)
+- **Prefix**: `cat_live_`
 
 ### Personal Access Tokens (PAT)
 - Created via `/create_pat_token_tool`
 - **User-level**: Bound to a user account, not a specific collection
 - **Inherits user scopes**: Read, write, and admin permissions from the user
 - Optional expiration dates (max configurable via `PAT_MAX_EXPIRY_DAYS`)
-- **Use case**: Full API access - document operations (all collections), user/collection management, API key management
+- **Use case**: Full API access - document operations (all collections), user/collection management, CAT management
 - **Prefix**: `pat_live_`
 
-### Comparison: API Key vs PAT Token
+### Comparison: CAT vs PAT Token
 
-| Feature | API Key | PAT Token |
-|---------|---------|-----------|
+| Feature | CAT | PAT Token |
+|---------|-----|-----------|
 | Scope | Single collection | All user's collections |
 | Permissions | read or read_write | Inherits user's scopes (read, write, admin) |
 | Use Case | Document operations | Full API access (documents + management) |
 | Creation | Requires JWT/PAT | Requires JWT |
 | Collection Binding | Yes (one collection) | No (all user collections) |
 | User Binding | No (bound to collection) | Yes (bound to user) |
-| Prefix | `ak_live_` | `pat_live_`
+| Prefix | `cat_live_` | `pat_live_`
 
 ## Collection-Based Data Model
 
 Documents are organized into user-owned collections:
 - Each user gets a "default" collection on registration
-- Collections can have multiple API keys with different permissions
+- Collections can have multiple CATs with different permissions
 - Data is isolated per collection
-- Lost keys can be replaced without data loss
+- Lost tokens can be replaced without data loss
 
 ## Environment Variables
 
-Essential variables:
+Database:
 | Variable | Default | Description |
 |----------|---------|-------------|
-| `OPENROUTER_API_KEY` | - | **Required** - OpenRouter API key |
+| `DATABASE_URL` | - | PostgreSQL connection string (e.g., `postgresql+asyncpg://user:pass@host:5432/db`) |
+| `POSTGRES_PASSWORD` | - | **Required** - PostgreSQL password |
+
+Vector Store:
+| Variable | Default | Description |
+|----------|---------|-------------|
 | `QDRANT_URL` | `http://localhost:6333` | Qdrant server URL |
+| `OPENROUTER_API_KEY` | - | **Required** - OpenRouter API key for embeddings |
+| `EMBEDDING_MODEL` | `Qwen/Qwen3-Embedding-8B` | Embedding model |
+| `EMBEDDING_DIMENSIONS` | `4096` | Embedding dimensions |
+
+Authentication:
+| Variable | Default | Description |
+|----------|---------|-------------|
 | `JWT_SECRET_KEY` | `change-this-secret-in-production` | Secret key for JWT token signing |
+| `API_KEYS` | - | **Required** - Comma-separated list of allowed API keys |
+| `ADMIN_API_KEY` | - | **Required** - Admin authentication key |
+
+Server:
+| Variable | Default | Description |
+|----------|---------|-------------|
+| `SERVICE` | - | Service to run (`mcp-server` or `rest-api`) |
 | `HOST` | `0.0.0.0` | Server host |
-| `PORT` | `8000` | Server port |
+| `PORT` | `8000` | Server port (8001 for REST API) |
 
 PAT Token settings:
 | Variable | Default | Description |
@@ -199,12 +282,34 @@ For a full list, see `docker-compose.yml` and `.env.example`.
 For any MCP-compatible client, use the following configuration:
 
 1. MCP server URL: `http://localhost:8000/mcp`
-2. Authentication: Pass your API key or JWT token via the `Authorization` header:
+2. Authentication: Pass your PAT or CAT token via the `Authorization` header:
    ```
-   Authorization: Bearer YOUR_API_KEY_OR_JWT_TOKEN
+   Authorization: Bearer YOUR_PAT_OR_CAT_TOKEN
    ```
 
 Consult your MCP client's documentation for specific configuration file formats and locations.
+
+## REST API Configuration
+
+The REST API is available at `http://localhost:8001` with the following endpoints:
+
+| Endpoint | Description |
+|----------|-------------|
+| `/auth/register` | Register new user |
+| `/auth/login` | Login and get JWT tokens |
+| `/auth/refresh` | Refresh JWT token |
+| `/auth/profile` | Get user profile |
+| `/auth/pat` | Manage PAT tokens |
+| `/auth/cat` | Manage CAT tokens |
+| `/collections` | Manage collections |
+| `/documents` | Manage documents |
+| `/documents/search` | Semantic search |
+| `/admin/*` | Admin operations |
+
+Authentication uses JWT Bearer tokens:
+```
+Authorization: Bearer YOUR_JWT_TOKEN
+```
 
 ## Development
 

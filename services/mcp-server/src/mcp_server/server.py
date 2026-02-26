@@ -3,6 +3,8 @@ import logging
 from fastmcp import FastMCP
 from fastmcp.server.lifespan import lifespan
 from shared.config import settings
+from starlette.requests import Request
+from starlette.responses import PlainTextResponse
 
 from mcp_server.tools.admin_tools import (
     DeleteUserInput,
@@ -106,6 +108,11 @@ mcp = FastMCP(
 )
 
 
+@mcp.custom_route("/health", methods=["GET"])
+async def health_check(request: Request) -> PlainTextResponse:
+    return PlainTextResponse("OK")
+
+
 @mcp.tool()
 async def store_document_tool(
     title: str,
@@ -127,13 +134,15 @@ async def store_document_tool(
     Returns:
         Document ID, chunk count, and total token count
     """
-    result = await store_document(StoreDocumentInput(
-        title=title,
-        content=content,
-        document_type=document_type,
-        doc_metadata=doc_metadata or {},
-        collection_id=collection_id,
-    ))
+    result = await store_document(
+        StoreDocumentInput(
+            title=title,
+            content=content,
+            document_type=document_type,
+            doc_metadata=doc_metadata or {},
+            collection_id=collection_id,
+        )
+    )
     return {
         "document_id": result.document_id,
         "chunk_count": result.chunk_count,
@@ -159,11 +168,13 @@ async def search_documents_tool(
     Returns:
         List of relevant chunks with source document info, formatted as markdown
     """
-    result = await search_documents(SearchDocumentsInput(
-        query=query,
-        max_results=max_results,
-        max_tokens=max_tokens,
-    ))
+    result = await search_documents(
+        SearchDocumentsInput(
+            query=query,
+            max_results=max_results,
+            max_tokens=max_tokens,
+        )
+    )
     return {
         "results": [r.model_dump() for r in result.results],
         "total_results": result.total_results,
@@ -244,13 +255,15 @@ async def update_document_tool(
     Returns:
         Document ID, chunk count, and total token count
     """
-    result = await update_document(UpdateDocumentInput(
-        document_id=document_id,
-        title=title,
-        content=content,
-        document_type=document_type,
-        doc_metadata=doc_metadata or {},
-    ))
+    result = await update_document(
+        UpdateDocumentInput(
+            document_id=document_id,
+            title=title,
+            content=content,
+            document_type=document_type,
+            doc_metadata=doc_metadata or {},
+        )
+    )
     return {
         "document_id": result.document_id,
         "chunk_count": result.chunk_count,
@@ -274,10 +287,12 @@ async def move_document_tool(
     Returns:
         Document ID, new collection ID, and success message
     """
-    result = await move_document(MoveDocumentInput(
-        document_id=document_id,
-        target_collection_id=target_collection_id,
-    ))
+    result = await move_document(
+        MoveDocumentInput(
+            document_id=document_id,
+            target_collection_id=target_collection_id,
+        )
+    )
     return {
         "document_id": result.document_id,
         "new_collection_id": result.new_collection_id,
@@ -302,11 +317,13 @@ async def user_register_tool(
     Returns:
         Created user information
     """
-    result = await user_register(RegisterInput(
-        email=email,
-        username=username,
-        password=password,
-    ))
+    result = await user_register(
+        RegisterInput(
+            email=email,
+            username=username,
+            password=password,
+        )
+    )
     return result.model_dump()
 
 
@@ -371,12 +388,14 @@ async def create_collection_access_token_tool(
     Returns:
         Created Collection Access Token (only shown once)
     """
-    result = await create_cat(CreateCatInput(
-        label=label,
-        collection_id=collection_id,
-        permission=permission,
-        expires_in_days=expires_in_days,
-    ))
+    result = await create_cat(
+        CreateCatInput(
+            label=label,
+            collection_id=collection_id,
+            permission=permission,
+            expires_in_days=expires_in_days,
+        )
+    )
     return result.model_dump()
 
 
@@ -437,10 +456,12 @@ async def create_pat_token_tool(
     Returns:
         Created PAT token (only shown once)
     """
-    result = await create_pat_token(CreatePatTokenInput(
-        label=label,
-        expires_in_days=expires_in_days,
-    ))
+    result = await create_pat_token(
+        CreatePatTokenInput(
+            label=label,
+            expires_in_days=expires_in_days,
+        )
+    )
     return result.model_dump()
 
 
@@ -555,10 +576,12 @@ async def rename_collection_tool(collection_id: str, name: str) -> dict:
     Returns:
         Updated collection information
     """
-    result = await rename_collection(RenameCollectionInput(
-        collection_id=collection_id,
-        name=name,
-    ))
+    result = await rename_collection(
+        RenameCollectionInput(
+            collection_id=collection_id,
+            name=name,
+        )
+    )
     return result.model_dump()
 
 
@@ -633,14 +656,16 @@ async def update_user_tool(
     Returns:
         Updated user information
     """
-    result = await update_user(UpdateUserInput(
-        user_id=user_id,
-        email=email,
-        username=username,
-        password=password,
-        is_active=is_active,
-        is_superuser=is_superuser,
-    ))
+    result = await update_user(
+        UpdateUserInput(
+            user_id=user_id,
+            email=email,
+            username=username,
+            password=password,
+            is_active=is_active,
+            is_superuser=is_superuser,
+        )
+    )
     return result.model_dump()
 
 

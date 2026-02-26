@@ -1,3 +1,15 @@
+# [3.5.0](https://github.com/mbabic84/ainstruct-mcp/compare/v3.4.1...v3.5.0) (2026-02-26)
+
+
+### Bug Fixes
+
+* complete PostgreSQL migration and fix scope handling ([595100a](https://github.com/mbabic84/ainstruct-mcp/commit/595100abcbbc2813f72811fc0be66c44ada3ff94))
+
+
+### Features
+
+* migrate from SQLite to PostgreSQL with async support ([ea5532b](https://github.com/mbabic84/ainstruct-mcp/commit/ea5532b4da9c6ce5de59ec3a64559d86c873fab3))
+
 ## [3.4.1](https://github.com/mbabic84/ainstruct-mcp/compare/v3.4.0...v3.4.1) (2026-02-26)
 
 

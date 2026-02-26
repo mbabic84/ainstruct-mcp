@@ -1,0 +1,25 @@
+"""
+Entry point for running REST API as a standalone service.
+"""
+import os
+
+import uvicorn
+
+from app.config import settings
+from app.rest.app import create_app
+
+
+def main():
+    app = create_app()
+    port = int(os.getenv("PORT", "8000"))
+
+    uvicorn.run(
+        app,
+        host=settings.host,
+        port=port,
+        log_level="info",
+    )
+
+
+if __name__ == "__main__":
+    main()

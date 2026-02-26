@@ -49,9 +49,13 @@ qdrant_storage/
 
 .kilocode
 opencode.*
+.copilot
 
 # Deploy keys
 deploy_key
 deploy_key.pub
 *.pem
 *.key
+
+# test logs
+test_logs/

@@ -33,23 +33,24 @@ class AuthService:
         username: str,
         email: str,
         is_superuser: bool = False,
-        scopes: list[Scope] | None = None,
+        scopes: list[Scope] | list[str] | None = None,
     ) -> str:
         if scopes is None:
             scopes = [Scope.READ, Scope.WRITE]
 
         import uuid
         expire = datetime.utcnow() + timedelta(minutes=self.access_token_expire_minutes)
+        scope_values = [s.value if isinstance(s, Scope) else s for s in scopes]
         payload = {
             "sub": user_id,
             "username": username,
             "email": email,
             "is_superuser": is_superuser,
-            "scopes": [s.value for s in scopes],
+            "scopes": scope_values,
             "exp": expire,
             "iat": datetime.utcnow(),
             "type": "access",
-            "jti": uuid.uuid4().hex,  # Unique identifier to ensure token uniqueness
+            "jti": uuid.uuid4().hex,
         }
         return jwt.encode(payload, self.secret_key, algorithm=self.algorithm)
 

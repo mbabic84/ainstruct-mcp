@@ -1,3 +1,5 @@
+# syntax=docker/dockerfile:1.4
+
 FROM python:3.14-alpine
 
 RUN apk add --no-cache curl
@@ -11,16 +13,19 @@ RUN addgroup -g 1000 appgroup && \
 
 ENV PYTHONPATH=/app/src
 
-COPY --chown=appuser:appgroup pyproject.toml .
+COPY --chown=appuser:appgroup pyproject.toml ./
 
-RUN pip install --no-cache-dir -e .
+RUN --mount=type=cache,target=/root/.cache/pip \
+    pip install --no-cache-dir -e .
 
-USER appuser
+COPY --chown=appuser:appgroup entrypoint.sh /app/entrypoint.sh
 
 COPY --chown=appuser:appgroup src/ ./src/
+
 COPY --chown=appuser:appgroup alembic.ini .
 COPY --chown=appuser:appgroup migrations/ ./migrations/
 
 EXPOSE 8000
 
-CMD ["python", "-m", "app.main"]
+ENTRYPOINT ["/app/entrypoint.sh"]
+CMD ["--mcp"]

@@ -4,6 +4,9 @@ on:
   pull_request:
     branches:
       - main
+  push:
+    branches:
+      - main
 
 jobs:
   test:
@@ -11,15 +14,8 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
-      - name: Create test environment
-        run: |
-          cat > .env << EOF
-          API_KEYS=test_key_123
-          ADMIN_API_KEY=admin_secret_key
-          JWT_SECRET_KEY=your-super-secret-jwt-key-change-in-production
-          QDRANT_URL=http://qdrant:6333
-          DATABASE_URL=sqlite:///./data/mcp_server.db
-          EOF
+      - name: Make run_tests.sh executable
+        run: chmod +x run_tests.sh
 
       - name: Run all tests
-        run: docker compose up --abort-on-container-exit --exit-code-from test_runner
+        run: ./run_tests.sh

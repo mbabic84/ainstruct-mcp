@@ -1,34 +1,33 @@
 # syntax=docker/dockerfile:1.4
+FROM python:3.14-alpine AS base
 
-FROM python:3.14-alpine
-
-RUN apk add --no-cache curl
+RUN apk add --no-cache curl git
 
 WORKDIR /app
 
+COPY --from=ghcr.io/astral-sh/uv:latest /uv /usr/local/bin/uv
+
 RUN addgroup -g 1000 appgroup && \
     adduser -u 1000 -G appgroup -D appuser && \
-    mkdir -p /app/data /app/.venv && \
+    mkdir -p /app/data && \
     chown -R appuser:appgroup /app
 
-# Create virtual environment and set PATH before any pip operations
-RUN python -m venv /app/.venv
-ENV PATH="/app/.venv/bin:$PATH" \
-    PYTHONPATH=/app/src
+COPY --chown=appuser:appgroup pyproject.toml uv.lock* ./
+COPY --chown=appuser:appgroup packages/ ./packages/
+COPY --chown=appuser:appgroup services/ ./services/
 
-COPY --chown=appuser:appgroup pyproject.toml ./
+RUN uv sync --frozen --no-dev
 
-RUN --mount=type=cache,target=/root/.cache/pip \
-    pip install --no-cache-dir -e .
+# Runtime stage with both services
+FROM base AS runtime
 
-COPY --chown=appuser:appgroup entrypoint.sh /app/entrypoint.sh
-
-COPY --chown=appuser:appgroup src/ ./src/
-
-COPY --chown=appuser:appgroup alembic.ini .
 COPY --chown=appuser:appgroup migrations/ ./migrations/
+COPY --chown=appuser:appgroup alembic.ini ./
+COPY --chown=appuser:appgroup docker/entrypoint.sh /entrypoint.sh
+RUN chmod +x /entrypoint.sh
 
-EXPOSE 8000
+RUN uv sync --frozen --no-dev --package ainstruct-mcp-server \
+         --package ainstruct-rest-api
 
-ENTRYPOINT ["/app/entrypoint.sh"]
-CMD ["--mcp"]
+USER appuser
+ENTRYPOINT ["/entrypoint.sh"]

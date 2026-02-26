@@ -1,5 +1,8 @@
 from fastapi import APIRouter, HTTPException, Query, status
 
+from app.db import get_collection_repository
+from app.db.models import DocumentCreate
+from app.db.qdrant import get_qdrant_service
 from app.rest.deps import DbDep, UserDep
 from app.rest.schemas import (
     DocumentCreate as DocumentCreateSchema,
@@ -17,9 +20,6 @@ from app.rest.schemas import (
     SearchResponse,
     SearchResultItem,
 )
-from app.db import get_collection_repository
-from app.db.models import DocumentCreate
-from app.db.qdrant import get_qdrant_service
 from app.services.chunking import get_chunking_service
 from app.services.embedding import get_embedding_service
 
@@ -326,7 +326,6 @@ async def search_documents(
     db: DbDep,
     user: UserDep,
 ):
-    from app.db.repository import get_document_repository
 
     collection_repo = get_collection_repository()
     embedding_service = get_embedding_service()

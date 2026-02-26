@@ -4,7 +4,7 @@ Verifies that PAT can access documents across all user collections.
 """
 import pytest
 from unittest.mock import AsyncMock, MagicMock, patch
-from datetime import datetime
+from datetime import datetime, timezone
 import uuid
 
 from app.tools.document_tools import (
@@ -78,8 +78,8 @@ def mock_document():
         title="Test Document",
         content="This is test content for the document.",
         document_type="markdown",
-        created_at=datetime.utcnow(),
-        updated_at=datetime.utcnow(),
+        created_at=datetime.now(timezone.utc),
+        updated_at=datetime.now(timezone.utc),
         doc_metadata={"key": "value"},
     )
 
@@ -93,8 +93,8 @@ def mock_other_user_document():
         title="Other User Document",
         content="This belongs to another user.",
         document_type="markdown",
-        created_at=datetime.utcnow(),
-        updated_at=datetime.utcnow(),
+        created_at=datetime.now(timezone.utc),
+        updated_at=datetime.now(timezone.utc),
         doc_metadata={},
     )
 
@@ -370,8 +370,8 @@ class TestJWTDocumentAccess:
             title="Test Doc",
             content="Content",
             document_type="markdown",
-            created_at=datetime.utcnow(),
-            updated_at=datetime.utcnow(),
+            created_at=datetime.now(timezone.utc),
+            updated_at=datetime.now(timezone.utc),
             doc_metadata={},
         )
 
@@ -412,8 +412,8 @@ class TestJWTDocumentAccess:
             title="Test Doc",
             content="Content",
             document_type="markdown",
-            created_at=datetime.utcnow(),
-            updated_at=datetime.utcnow(),
+            created_at=datetime.now(timezone.utc),
+            updated_at=datetime.now(timezone.utc),
             doc_metadata={},
         )
 

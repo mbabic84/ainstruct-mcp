@@ -63,7 +63,6 @@ class CollectionCreate(BaseModel):
 class CollectionResponse(BaseModel):
     id: str
     name: str
-    user_id: str
     document_count: int = 0
     cat_count: int = 0
     created_at: datetime

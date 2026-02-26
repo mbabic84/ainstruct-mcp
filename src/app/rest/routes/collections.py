@@ -1,6 +1,7 @@
 
 from fastapi import APIRouter, HTTPException, status
 
+from app.db import get_collection_repository
 from app.rest.deps import DbDep, UserDep
 from app.rest.schemas import (
     CollectionCreate,
@@ -11,7 +12,6 @@ from app.rest.schemas import (
     ErrorResponse,
     MessageResponse,
 )
-from app.db import get_collection_repository
 
 router = APIRouter(prefix="/collections", tags=["Collections"])
 
@@ -36,7 +36,6 @@ async def create_collection(
     return CollectionResponse(
         id=collection.id,
         name=collection.name,
-        user_id=collection.user_id,
         document_count=0,
         cat_count=0,
         created_at=collection.created_at,
@@ -99,7 +98,6 @@ async def get_collection(
     return CollectionResponse(
         id=collection["id"],
         name=collection["name"],
-        user_id=collection["user_id"],
         document_count=collection.get("document_count", 0),
         cat_count=collection.get("cat_count", 0),
         created_at=collection["created_at"],
@@ -140,7 +138,6 @@ async def rename_collection(
     return CollectionResponse(
         id=updated.id,
         name=updated.name,
-        user_id=updated.user_id,
         document_count=updated.document_count,
         cat_count=updated.cat_count,
         created_at=updated.created_at,

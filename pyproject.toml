@@ -52,6 +52,7 @@ strict = false
 warn_return_any = false
 warn_unused_configs = false
 disallow_untyped_defs = false
+mypy_path = "src"
 
 [[tool.mypy.overrides]]
 module = [

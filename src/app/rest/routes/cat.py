@@ -1,5 +1,7 @@
 from fastapi import APIRouter, HTTPException, Query, status
 
+from app.db import get_cat_repository, get_collection_repository
+from app.db.models import Permission as ModelPermission
 from app.rest.deps import DbDep, UserDep
 from app.rest.schemas import (
     CatCreate,
@@ -9,8 +11,6 @@ from app.rest.schemas import (
     ErrorResponse,
     MessageResponse,
 )
-from app.db.models import Permission as ModelPermission
-from app.db import get_cat_repository, get_collection_repository
 
 router = APIRouter(prefix="/auth/cat", tags=["CAT Management"])
 

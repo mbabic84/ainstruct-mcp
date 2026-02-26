@@ -1,6 +1,6 @@
 import pytest
 from unittest.mock import MagicMock, patch
-from datetime import datetime
+from datetime import datetime, timezone
 
 from app.tools.cat_tools import (
     CreateCatInput,
@@ -44,7 +44,7 @@ def mock_collection():
         "user_id": "test-user-id",
         "document_count": 0,
         "cat_count": 0,
-        "created_at": datetime.utcnow(),
+        "created_at": datetime.now(timezone.utc),
     }
 
 
@@ -56,7 +56,7 @@ def mock_cat():
         "collection_id": "collection-id-123",
         "collection_name": "default",
         "qdrant_collection": "qdrant-uuid",
-        "created_at": datetime.utcnow(),
+        "created_at": datetime.now(timezone.utc),
         "last_used": None,
         "is_active": True,
         "user_id": "test-user-id",

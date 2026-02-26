@@ -9,7 +9,7 @@
 - [x] **T2.1** Add `postgres` service to `docker-compose.yml`
 - [x] **T2.2** Add healthcheck to `postgres` service (updated to postgres:18-alpine)
 - [x] **T2.3** Add `depends_on: postgres: condition: service_healthy` to `mcp_server`
-- [x] **T2.4** Add `depends_on: postgres: condition: service_healthy` to `rest_api`
+- [x] **T2.4** Add `depends_on: mcp_server: condition: service_healthy` to `rest_api`
 - [x] **T2.5** Add `depends_on: postgres: condition: service_healthy` to `test_runner`
 - [x] **T2.6** Update `mcp_server` DATABASE_URL
 - [x] **T2.7** Update `rest_api` DATABASE_URL
@@ -58,8 +58,8 @@
 - [x] **T6.1** Update `alembic.ini` with PostgreSQL URL
 - [x] **T6.2** Update `migrations/env.py` with async migration support (critical)
 - [x] **T6.3** Remove old migration files (or keep for rollback) - kept for reference
-- [ ] **T6.4** Generate new initial migration
-- [ ] **T6.5** Test migration runs successfully
+- [x] **T6.4** Generate new initial migration
+- [x] **T6.5** Test migration runs successfully
 
 ## Phase 7: MCP Server
 
@@ -77,17 +77,17 @@
 
 ## Phase 8: Testing
 
-- [ ] **T8.1** Run `docker compose up -d postgres`
-- [ ] **T8.2** Run tests: `docker compose --profile test run test_runner`
-- [ ] **T8.3** Verify all endpoints work
-- [ ] **T8.4** Verify MCP tools work
+- [x] **T8.1** Run `docker compose up -d postgres`
+- [x] **T8.2** Run tests: `docker compose --profile test run test_runner`
+- [x] **T8.3** Verify all endpoints work
+- [x] **T8.4** Verify MCP tools work
 
 ## Phase 9: Cleanup
 
-- [ ] **T9.1** Remove SQLite-related code (if any remains)
-- [ ] **T9.2** Update documentation
-- [ ] **T9.3** Run linting: `ruff check src/`
-- [ ] **T9.4** Run type checking: `mypy src/`
+- [x] **T9.1** Remove SQLite-related code (if any remains)
+- [x] **T9.2** Update documentation
+- [x] **T9.3** Run linting: `ruff check src/`
+- [x] **T9.4** Run type checking: `mypy src/`
 
 ---
 

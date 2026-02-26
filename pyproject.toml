@@ -55,6 +55,9 @@ warn_return_any = false
 warn_unused_configs = false
 disallow_untyped_defs = false
 mypy_path = "src"
+namespace_packages = true
+explicit_package_bases = true
+exclude = ["src/ainstruct_mcp.egg-info"]
 
 [[tool.mypy.overrides]]
 module = [

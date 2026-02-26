@@ -1,3 +1,14 @@
+## [3.4.1](https://github.com/mbabic84/ainstruct-mcp/compare/v3.4.0...v3.4.1) (2026-02-26)
+
+
+### Bug Fixes
+
+* ensure data directory has correct permissions in Docker images ([48b55c6](https://github.com/mbabic84/ainstruct-mcp/commit/48b55c68c24bb5d541645daeb18e79ac341949ac))
+* remove user_id from CollectionResponse models ([d05e943](https://github.com/mbabic84/ainstruct-mcp/commit/d05e9439ac127ee6c28bd30b81dc53bcc563b8f6))
+* resolve linting issues in REST API routes ([c767395](https://github.com/mbabic84/ainstruct-mcp/commit/c767395520fbe07cc8a3e113970408a8f094996b))
+* resolve mypy type errors in REST API and models ([bfc3874](https://github.com/mbabic84/ainstruct-mcp/commit/bfc38746557eb375cd443dcb8f5ad1eaacb93ea7))
+* restore E2E test dependencies in docker-compose ([8f4727e](https://github.com/mbabic84/ainstruct-mcp/commit/8f4727e164a500e6a84fcdfcd12767942dd35633))
+
 # [3.4.0](https://github.com/mbabic84/ainstruct-mcp/compare/v3.3.0...v3.4.0) (2026-02-25)
 
 

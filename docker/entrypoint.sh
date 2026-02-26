@@ -1,12 +1,14 @@
 #!/bin/sh
 set -e
 
+. /app/.venv/bin/activate
+
 case "$SERVICE" in
     mcp-server)
-        exec uv run mcp-server
+        exec mcp-server
         ;;
     rest-api)
-        exec uv run rest-api
+        exec rest-api
         ;;
     *)
         echo "Usage: SERVICE={mcp-server|rest-api} $0"

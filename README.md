@@ -6,12 +6,38 @@ Remote MCP server for storing and searching markdown documents with semantic emb
 
 The system consists of two services:
 
-| Service | Port | Purpose |
-|---------|------|---------|
+| Service | Default Port | Purpose |
+|---------|--------------|---------|
 | MCP Server | 8000 | MCP protocol for AI agents |
 | REST API | 8001 | REST API for authentication and management |
 
 Both share the same database (PostgreSQL) and vector store (Qdrant).
+
+### Changing Ports
+
+To change the default ports, set the `PORT` environment variable:
+
+**MCP Server:**
+```bash
+docker run -e SERVICE=mcp-server -e PORT=9000 ...
+```
+
+**REST API:**
+```bash
+docker run -e SERVICE=rest-api -e PORT=9001 ...
+```
+
+Or in docker-compose, modify the `ports` mapping:
+```yaml
+mcp_server:
+  ports:
+    - "9000:9000"  # host:container
+
+rest_api:
+  environment:
+    - PORT=9001
+  ports:
+    - "9001:9001"
 
 ## Quick Start
 
@@ -241,47 +267,71 @@ Documents are organized into user-owned collections:
 
 ## Environment Variables
 
-Database:
-| Variable | Default | Description |
-|----------|---------|-------------|
-| `DATABASE_URL` | - | PostgreSQL connection string (e.g., `postgresql+asyncpg://user:pass@host:5432/db`) |
-| `POSTGRES_PASSWORD` | - | **Required** - PostgreSQL password |
+All environment variables are used by both the MCP Server and REST API unless otherwise noted. The `SERVICE` variable determines which service runs.
 
-Vector Store:
-| Variable | Default | Description |
-|----------|---------|-------------|
-| `QDRANT_URL` | `http://localhost:6333` | Qdrant server URL |
-| `OPENROUTER_API_KEY` | - | **Required** - OpenRouter API key for embeddings |
-| `EMBEDDING_MODEL` | `Qwen/Qwen3-Embedding-8B` | Embedding model |
-| `EMBEDDING_DIMENSIONS` | `4096` | Embedding dimensions |
+### Service Selection
 
-Authentication:
-| Variable | Default | Description |
-|----------|---------|-------------|
-| `JWT_SECRET_KEY` | `change-this-secret-in-production` | Secret key for JWT token signing |
-| `API_KEYS` | - | **Required** - Comma-separated list of allowed API keys |
-| `ADMIN_API_KEY` | - | **Required** - Admin authentication key |
+| Variable | Required | Description |
+|----------|----------|-------------|
+| `SERVICE` | Yes | Which service to run: `mcp-server` (default port 8000) or `rest-api` (default port 8001) |
 
-Server:
-| Variable | Default | Description |
-|----------|---------|-------------|
-| `SERVICE` | - | Service to run (`mcp-server` or `rest-api`) |
-| `HOST` | `0.0.0.0` | Server host |
-| `PORT` | `8000` | Server port (8001 for REST API) |
+### Database
 
-PAT Token settings:
-| Variable | Default | Description |
-|----------|---------|-------------|
-| `PAT_DEFAULT_EXPIRY_DAYS` | `90` | Default expiry for new PAT tokens |
-| `PAT_MAX_EXPIRY_DAYS` | `365` | Maximum allowed expiry for PAT tokens |
+| Variable | Default | Required | Description |
+|----------|---------|----------|-------------|
+| `DATABASE_URL` | - | Yes | PostgreSQL connection string (e.g., `postgresql+asyncpg://user:pass@host:5432/db`) |
+| `POSTGRES_PASSWORD` | - | Yes | PostgreSQL password (used in docker-compose) |
 
-For a full list, see `docker-compose.yml` and `.env.example`.
+### Vector Store
+
+| Variable | Default | Required | Description |
+|----------|---------|----------|-------------|
+| `QDRANT_URL` | `http://localhost:6333` | No | Qdrant server URL |
+| `QDRANT_API_KEY` | - | No | Qdrant API key (optional) |
+| `OPENROUTER_API_KEY` | - | Yes | OpenRouter API key for embeddings |
+| `EMBEDDING_MODEL` | `Qwen/Qwen3-Embedding-8B` | No | Embedding model |
+| `EMBEDDING_DIMENSIONS` | `4096` | No | Embedding dimensions |
+| `USE_MOCK_EMBEDDINGS` | `false` | No | Use deterministic hash-based vectors for testing |
+
+### Authentication
+
+| Variable | Default | Required | Description |
+|----------|---------|----------|-------------|
+| `API_KEYS` | - | Yes | Comma-separated list of allowed API keys (for MCP client auth) |
+| `ADMIN_API_KEY` | - | Yes | Admin authentication key |
+| `JWT_SECRET_KEY` | `change-this-secret-in-production` | Yes | Secret key for JWT token signing |
+| `JWT_ALGORITHM` | `HS256` | No | JWT signing algorithm |
+| `JWT_ACCESS_TOKEN_EXPIRE_MINUTES` | `30` | No | Access token expiry time |
+| `JWT_REFRESH_TOKEN_EXPIRE_DAYS` | `7` | No | Refresh token expiry time |
+
+### PAT Token Settings
+
+| Variable | Default | Required | Description |
+|----------|---------|----------|-------------|
+| `PAT_DEFAULT_EXPIRY_DAYS` | `90` | No | Default expiry for new PAT tokens |
+| `PAT_MAX_EXPIRY_DAYS` | `365` | No | Maximum allowed expiry for PAT tokens |
+
+### Server Configuration
+
+| Variable | Default | Required | Description |
+|----------|---------|----------|-------------|
+| `HOST` | `0.0.0.0` | No | Server host |
+| `PORT` | `8000` (MCP), `8001` (REST) | No | Server port. MCP defaults to 8000, REST API defaults to 8001 |
+
+### Document Processing
+
+| Variable | Default | Required | Description |
+|----------|---------|----------|-------------|
+| `CHUNK_MAX_TOKENS` | `400` | No | Maximum tokens per document chunk |
+| `CHUNK_OVERLAP_TOKENS` | `50` | No | Overlap between chunks |
+| `SEARCH_MAX_RESULTS` | `5` | No | Maximum search results |
+| `SEARCH_MAX_TOKENS` | `2000` | No | Maximum tokens in search results |
 
 ## MCP Configuration
 
 For any MCP-compatible client, use the following configuration:
 
-1. MCP server URL: `http://localhost:8000/mcp`
+1. MCP server URL: `http://localhost:8000/mcp` (or custom PORT if changed)
 2. Authentication: Pass your PAT or CAT token via the `Authorization` header:
    ```
    Authorization: Bearer YOUR_PAT_OR_CAT_TOKEN
@@ -291,7 +341,7 @@ Consult your MCP client's documentation for specific configuration file formats 
 
 ## REST API Configuration
 
-The REST API is available at `http://localhost:8001` with the following endpoints:
+The REST API is available at `http://localhost:8001` (or custom PORT if changed) with the following endpoints:
 
 | Endpoint | Description |
 |----------|-------------|

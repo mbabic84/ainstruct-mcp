@@ -36,11 +36,11 @@ async def create_collection(input_data: CreateCollectionInput) -> CollectionResp
 
     repo = get_collection_repository()
 
-    existing = repo.get_by_name_for_user(user_id, name)
+    existing = await repo.get_by_name_for_user(user_id, name)
     if existing:
         raise ValueError("Collection with this name already exists")
 
-    return repo.create(user_id=user_id, name=name)
+    return await repo.create(user_id=user_id, name=name)
 
 
 async def list_collections() -> list[CollectionListResponse]:
@@ -63,7 +63,7 @@ async def list_collections() -> list[CollectionListResponse]:
         raise ValueError("Invalid user info")
 
     repo = get_collection_repository()
-    collections = repo.list_by_user(user_id)
+    collections = await repo.list_by_user(user_id)
 
     return [
         CollectionListResponse(
@@ -81,7 +81,7 @@ async def get_collection(input_data: GetCollectionInput) -> CollectionResponse:
         raise ValueError("JWT authentication required")
 
     repo = get_collection_repository()
-    collection = repo.get_by_id(input_data.collection_id)
+    collection = await repo.get_by_id(input_data.collection_id)
 
     if not collection:
         raise ValueError("Collection not found")
@@ -104,7 +104,7 @@ async def delete_collection(input_data: DeleteCollectionInput) -> dict:
         raise ValueError("JWT authentication required")
 
     repo = get_collection_repository()
-    collection = repo.get_by_id(input_data.collection_id)
+    collection = await repo.get_by_id(input_data.collection_id)
 
     if not collection:
         raise ValueError("Collection not found")
@@ -115,7 +115,7 @@ async def delete_collection(input_data: DeleteCollectionInput) -> dict:
     if collection["cat_count"] > 0:
         raise ValueError("Cannot delete collection with active CAT tokens. Revoke all CAT tokens first.")
 
-    success = repo.delete(input_data.collection_id)
+    success = await repo.delete(input_data.collection_id)
     if not success:
         raise ValueError("Failed to delete collection")
 
@@ -135,7 +135,7 @@ async def rename_collection(input_data: RenameCollectionInput) -> CollectionResp
         raise ValueError("Collection name cannot exceed 255 characters")
 
     repo = get_collection_repository()
-    collection = repo.get_by_id(input_data.collection_id)
+    collection = await repo.get_by_id(input_data.collection_id)
 
     if not collection:
         raise ValueError("Collection not found")
@@ -143,11 +143,11 @@ async def rename_collection(input_data: RenameCollectionInput) -> CollectionResp
     if collection["user_id"] != user_info.get("id") and not user_info.get("is_superuser"):
         raise ValueError("Collection not found")
 
-    existing = repo.get_by_name_for_user(collection["user_id"], name)
+    existing = await repo.get_by_name_for_user(collection["user_id"], name)
     if existing and existing["id"] != input_data.collection_id:
         raise ValueError("Collection with this name already exists")
 
-    result = repo.rename(input_data.collection_id, name)
+    result = await repo.rename(input_data.collection_id, name)
     if not result:
         raise ValueError("Failed to rename collection")
 

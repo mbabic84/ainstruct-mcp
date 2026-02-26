@@ -8,10 +8,13 @@ WORKDIR /app
 
 RUN addgroup -g 1000 appgroup && \
     adduser -u 1000 -G appgroup -D appuser && \
-    mkdir -p /app/data && \
-    chown -R appuser:appgroup /app/data
+    mkdir -p /app/data /app/.venv && \
+    chown -R appuser:appgroup /app
 
-ENV PYTHONPATH=/app/src
+# Create virtual environment and set PATH before any pip operations
+RUN python -m venv /app/.venv
+ENV PATH="/app/.venv/bin:$PATH" \
+    PYTHONPATH=/app/src
 
 COPY --chown=appuser:appgroup pyproject.toml ./
 

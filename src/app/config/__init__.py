@@ -24,6 +24,12 @@ class Settings(BaseSettings):
     admin_api_key: str = ""
 
     db_path: str = "./data/documents.db"
+    database_url: str = "postgresql+asyncpg://postgres:password@localhost:5432/ainstruct"
+
+    db_pool_size: int = 5
+    db_max_overflow: int = 10
+    db_pool_timeout: int = 30
+    db_pool_recycle: int = 1800
 
     chunk_max_tokens: int = 400
     chunk_overlap_tokens: int = 50

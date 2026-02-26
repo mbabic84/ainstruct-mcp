@@ -1,3 +1,10 @@
+# [3.6.0](https://github.com/mbabic84/ainstruct-mcp/compare/v3.5.0...v3.6.0) (2026-02-26)
+
+
+### Features
+
+* add PORT env var support for MCP server ([d8f426e](https://github.com/mbabic84/ainstruct-mcp/commit/d8f426e4f677b5b10b558d43ce6a19f38fca406f))
+
 # [3.5.0](https://github.com/mbabic84/ainstruct-mcp/compare/v3.4.1...v3.5.0) (2026-02-26)
 
 

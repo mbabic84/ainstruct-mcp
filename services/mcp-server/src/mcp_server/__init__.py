@@ -24,8 +24,10 @@ def main():
     if db_dir:
         os.makedirs(db_dir, exist_ok=True)
 
+    port = int(os.getenv("PORT", str(settings.port)))
+
     try:
-        mcp.run(transport="streamable-http", host=settings.host, port=settings.port)
+        mcp.run(transport="streamable-http", host=settings.host, port=port)
     except asyncio.CancelledError:
         logger.info("MCP Server shutdown complete")
         sys.exit(0)

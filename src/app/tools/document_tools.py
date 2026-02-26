@@ -60,7 +60,7 @@ async def store_document(input_data: StoreDocumentInput) -> StoreDocumentOutput:
     embedding_service = get_embedding_service()
     chunking_service = get_chunking_service()
 
-    doc = doc_repo.create(DocumentCreate(
+    doc = await doc_repo.create(DocumentCreate(
         collection_id=collection_id,
         title=input_data.title,
         content=input_data.content,
@@ -85,8 +85,8 @@ async def store_document(input_data: StoreDocumentInput) -> StoreDocumentOutput:
             for c in chunks
         ]
 
-        point_ids = qdrant.upsert_chunks(chunks_with_meta, embeddings)
-        doc_repo.update_qdrant_point_id(doc.id, point_ids)
+        point_ids = await qdrant.upsert_chunks(chunks_with_meta, embeddings)
+        await doc_repo.update_qdrant_point_id(doc.id, point_ids)
 
     total_tokens = sum(c["token_count"] for c in chunks)
 
@@ -135,20 +135,20 @@ async def search_documents(input_data: SearchDocumentsInput) -> SearchDocumentsO
 
     if is_admin:
         qdrant = get_qdrant_service(None, is_admin=True)
-        results = qdrant.search(
+        results = await qdrant.search(
             query_vector=query_embedding,
             limit=input_data.max_results,
         )
     elif qdrant_collections:
         qdrant = get_qdrant_service(None, is_admin=False)
-        results = qdrant.search_multi(
+        results = await qdrant.search_multi(
             collection_names=qdrant_collections,
             query_vector=query_embedding,
             limit=input_data.max_results,
         )
     else:
         qdrant = get_qdrant_service(str(collection) if collection else None)
-        results = qdrant.search(
+        results = await qdrant.search(
             query_vector=query_embedding,
             limit=input_data.max_results,
         )
@@ -220,14 +220,14 @@ async def get_document(input_data: GetDocumentInput) -> GetDocumentOutput | None
 
     if is_admin:
         doc_repo = get_document_repository(None)
-        doc = doc_repo.get_by_id(input_data.document_id)
+        doc = await doc_repo.get_by_id(input_data.document_id)
     elif auth_type in ("pat", "jwt") and user_id:
         doc_repo = get_document_repository(None)
-        doc = doc_repo.get_by_id_for_user(input_data.document_id, user_id)
+        doc = await doc_repo.get_by_id_for_user(input_data.document_id, user_id)
     else:
         collection_id = auth.get("collection_id")
         doc_repo = get_document_repository(str(collection_id) if collection_id else None)
-        doc = doc_repo.get_by_id(input_data.document_id)
+        doc = await doc_repo.get_by_id(input_data.document_id)
 
     if not doc:
         return None
@@ -266,13 +266,13 @@ async def list_documents(input_data: ListDocumentsInput) -> ListDocumentsOutput:
 
     if is_admin:
         doc_repo = get_document_repository(None)
-        docs = doc_repo.list_all(limit=input_data.limit, offset=input_data.offset)
+        docs = await doc_repo.list_all(limit=input_data.limit, offset=input_data.offset)
     elif auth_type in ("pat", "jwt") and user_id:
         doc_repo = get_document_repository(None)
-        docs = doc_repo.list_all_for_user(user_id, limit=input_data.limit, offset=input_data.offset)
+        docs = await doc_repo.list_all_for_user(user_id, limit=input_data.limit, offset=input_data.offset)
     else:
         doc_repo = get_document_repository(str(collection_id) if collection_id else None)
-        docs = doc_repo.list_all(limit=input_data.limit, offset=input_data.offset)
+        docs = await doc_repo.list_all(limit=input_data.limit, offset=input_data.offset)
 
     documents = [
         GetDocumentOutput(
@@ -317,14 +317,14 @@ async def delete_document(input_data: DeleteDocumentInput) -> DeleteDocumentOutp
 
     if is_admin:
         doc_repo = get_document_repository(None)
-        doc = doc_repo.get_by_id(input_data.document_id)
+        doc = await doc_repo.get_by_id(input_data.document_id)
     elif auth_type in ("pat", "jwt") and user_id:
         doc_repo = get_document_repository(None)
-        doc = doc_repo.get_by_id_for_user(input_data.document_id, user_id)
+        doc = await doc_repo.get_by_id_for_user(input_data.document_id, user_id)
     else:
         collection_id = auth.get("collection_id")
         doc_repo = get_document_repository(str(collection_id) if collection_id else None)
-        doc = doc_repo.get_by_id(input_data.document_id)
+        doc = await doc_repo.get_by_id(input_data.document_id)
 
     if not doc:
         return DeleteDocumentOutput(
@@ -344,11 +344,11 @@ async def delete_document(input_data: DeleteDocumentInput) -> DeleteDocumentOutp
     if qdrant_collections:
         for coll in qdrant_collections:
             q = get_qdrant_service(coll)
-            q.delete_by_document_id(input_data.document_id)
+            await q.delete_by_document_id(input_data.document_id)
     else:
-        qdrant.delete_by_document_id(input_data.document_id)
+        await qdrant.delete_by_document_id(input_data.document_id)
 
-    doc_repo.delete(input_data.document_id)
+    await doc_repo.delete(input_data.document_id)
 
     return DeleteDocumentOutput(
         success=True,
@@ -399,13 +399,13 @@ async def update_document(input_data: UpdateDocumentInput) -> UpdateDocumentOutp
 
     if is_admin:
         doc_repo = get_document_repository(None)
-        existing_doc = doc_repo.get_by_id(input_data.document_id)
+        existing_doc = await doc_repo.get_by_id(input_data.document_id)
     elif auth_type in ("pat", "jwt") and user_id:
         doc_repo = get_document_repository(None)
-        existing_doc = doc_repo.get_by_id_for_user(input_data.document_id, user_id)
+        existing_doc = await doc_repo.get_by_id_for_user(input_data.document_id, user_id)
     else:
         doc_repo = get_document_repository(str(collection_id) if collection_id else None)
-        existing_doc = doc_repo.get_by_id(input_data.document_id)
+        existing_doc = await doc_repo.get_by_id(input_data.document_id)
 
     if not existing_doc:
         raise ValueError("Document not found")
@@ -416,12 +416,12 @@ async def update_document(input_data: UpdateDocumentInput) -> UpdateDocumentOutp
     if qdrant_collections:
         for coll in qdrant_collections:
             q = get_qdrant_service(coll)
-            q.delete_by_document_id(input_data.document_id)
+            await q.delete_by_document_id(input_data.document_id)
     else:
         qdrant = get_qdrant_service(str(qdrant_collection) if qdrant_collection else None)
-        qdrant.delete_by_document_id(input_data.document_id)
+        await qdrant.delete_by_document_id(input_data.document_id)
 
-    updated_doc = doc_repo.update(
+    updated_doc = await doc_repo.update(
         doc_id=input_data.document_id,
         title=input_data.title,
         content=input_data.content,
@@ -452,10 +452,10 @@ async def update_document(input_data: UpdateDocumentInput) -> UpdateDocumentOutp
         if qdrant_collections:
             for coll in qdrant_collections:
                 q = get_qdrant_service(coll)
-                point_ids = q.upsert_chunks(chunks_with_meta, embeddings)
+                point_ids = await q.upsert_chunks(chunks_with_meta, embeddings)
         else:
-            point_ids = qdrant.upsert_chunks(chunks_with_meta, embeddings)
-        doc_repo.update_qdrant_point_id(updated_doc.id, point_ids)
+            point_ids = await qdrant.upsert_chunks(chunks_with_meta, embeddings)
+        await doc_repo.update_qdrant_point_id(updated_doc.id, point_ids)
 
     total_tokens = sum(c["token_count"] for c in chunks)
 
@@ -483,13 +483,13 @@ async def move_document(input_data: MoveDocumentInput) -> MoveDocumentOutput:
 
     if is_admin:
         doc_repo = get_document_repository(None)
-        existing_doc = doc_repo.get_by_id(input_data.document_id)
+        existing_doc = await doc_repo.get_by_id(input_data.document_id)
     elif auth_type in ("pat", "jwt") and user_id:
         doc_repo = get_document_repository(None)
-        existing_doc = doc_repo.get_by_id_for_user(input_data.document_id, user_id)
+        existing_doc = await doc_repo.get_by_id_for_user(input_data.document_id, user_id)
     else:
         doc_repo = get_document_repository(str(collection_id) if collection_id else None)
-        existing_doc = doc_repo.get_by_id(input_data.document_id)
+        existing_doc = await doc_repo.get_by_id(input_data.document_id)
 
     if not existing_doc:
         raise ValueError("Document not found")
@@ -497,7 +497,7 @@ async def move_document(input_data: MoveDocumentInput) -> MoveDocumentOutput:
     source_collection_id = existing_doc.collection_id
 
     collection_repo = get_collection_repository()
-    target_collection = collection_repo.get_by_id(input_data.target_collection_id)
+    target_collection = await collection_repo.get_by_id(input_data.target_collection_id)
 
     if not target_collection:
         raise ValueError("Target collection not found")
@@ -511,7 +511,7 @@ async def move_document(input_data: MoveDocumentInput) -> MoveDocumentOutput:
             raise ValueError("Target collection not found")
 
     source_qdrant = get_qdrant_service(source_collection_id)
-    source_qdrant.delete_by_document_id(input_data.document_id)
+    await source_qdrant.delete_by_document_id(input_data.document_id)
 
     embedding_service = get_embedding_service()
     chunking_service = get_chunking_service()
@@ -535,10 +535,10 @@ async def move_document(input_data: MoveDocumentInput) -> MoveDocumentOutput:
             for c in chunks
         ]
 
-        point_ids = target_qdrant.upsert_chunks(chunks_with_meta, embeddings)
-        doc_repo.update_qdrant_point_id(input_data.document_id, point_ids)
+        point_ids = await target_qdrant.upsert_chunks(chunks_with_meta, embeddings)
+        await doc_repo.update_qdrant_point_id(input_data.document_id, point_ids)
 
-    doc_repo.update_collection_id(input_data.document_id, input_data.target_collection_id)
+    await doc_repo.update_collection_id(input_data.document_id, input_data.target_collection_id)
 
     return MoveDocumentOutput(
         document_id=input_data.document_id,

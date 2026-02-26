@@ -32,7 +32,7 @@ async def create_pat(
     pat_repo = get_pat_token_repository()
     user_repo = get_user_repository()
 
-    db_user = user_repo.get_by_id(user.user_id)
+    db_user = await user_repo.get_by_id(user.user_id)
     if not db_user:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
@@ -41,14 +41,14 @@ async def create_pat(
 
     token = generate_pat_token()
 
-    pat_id, _ = pat_repo.create(
+    pat_id, _ = await pat_repo.create(
         label=body.label,
         user_id=user.user_id,
         scopes=scopes_to_str([Scope.READ, Scope.WRITE]),
         expires_in_days=body.expires_in_days,
     )
 
-    pat = pat_repo.get_by_id(pat_id)
+    pat = await pat_repo.get_by_id(pat_id)
 
     return PatResponse(
         id=pat["id"],
@@ -72,7 +72,7 @@ async def list_pats(
     user: UserDep,
 ):
     pat_repo = get_pat_token_repository()
-    pats = pat_repo.list_by_user(user.user_id)
+    pats = await pat_repo.list_by_user(user.user_id)
 
     tokens = [
         PatListItem(
@@ -105,14 +105,14 @@ async def revoke_pat(
 ):
     pat_repo = get_pat_token_repository()
 
-    pat = pat_repo.get_by_id(pat_id)
+    pat = await pat_repo.get_by_id(pat_id)
     if not pat or pat["user_id"] != user.user_id:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
             detail={"code": "PAT_NOT_FOUND", "message": "PAT not found or not owned by user"},
         )
 
-    pat_repo.revoke(pat_id)
+    await pat_repo.revoke(pat_id)
     return MessageResponse(message="PAT revoked successfully")
 
 
@@ -131,23 +131,23 @@ async def rotate_pat(
     pat_repo = get_pat_token_repository()
     user_repo = get_user_repository()
 
-    old_pat = pat_repo.get_by_id(pat_id)
+    old_pat = await pat_repo.get_by_id(pat_id)
     if not old_pat or old_pat["user_id"] != user.user_id:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
             detail={"code": "PAT_NOT_FOUND", "message": "PAT not found or not owned by user"},
         )
 
-    db_user = user_repo.get_by_id(user.user_id)
+    db_user = await user_repo.get_by_id(user.user_id)
     if not db_user:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
             detail={"code": "USER_NOT_FOUND", "message": "User not found"},
         )
 
-    new_pat_id, new_token = pat_repo.rotate(pat_id)
+    new_pat_id, new_token = await pat_repo.rotate(pat_id)
 
-    new_pat = pat_repo.get_by_id(new_pat_id)
+    new_pat = await pat_repo.get_by_id(new_pat_id)
 
     return PatResponse(
         id=new_pat["id"],

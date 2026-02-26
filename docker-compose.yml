@@ -1,4 +1,18 @@
 services:
+  postgres:
+    image: postgres:18-alpine
+    environment:
+      POSTGRES_DB: ainstruct
+      POSTGRES_USER: ainstruct
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-devpassword}
+    tmpfs:
+      - /var/lib/postgresql
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ainstruct -d ainstruct"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+      start_period: 5s
   qdrant:
     image: qdrant/qdrant:latest
     healthcheck:
@@ -14,7 +28,7 @@ services:
       - /tmp
     environment:
       - QDRANT_URL=http://qdrant:6333
-      - DATABASE_URL=sqlite:////tmp/mcp_server.db
+      - DATABASE_URL=postgresql+asyncpg://ainstruct:${POSTGRES_PASSWORD:-devpassword}@postgres:5432/ainstruct
       - USE_MOCK_EMBEDDINGS=true
       - UVICORN_TIMEOUT_GRACEFUL_SHUTDOWN=10
       - API_KEYS=test_key_123
@@ -22,6 +36,8 @@ services:
       - JWT_SECRET_KEY=your-super-secret-jwt-key-change-in-production
     depends_on:
       qdrant:
+        condition: service_healthy
+      postgres:
         condition: service_healthy
     healthcheck:
       test: ["CMD", "sh", "-c", "curl -s http://localhost:8000/mcp -o /dev/null"]
@@ -37,7 +53,7 @@ services:
       - /tmp
     environment:
       - QDRANT_URL=http://qdrant:6333
-      - DATABASE_URL=sqlite:////tmp/mcp_server.db
+      - DATABASE_URL=postgresql+asyncpg://ainstruct:${POSTGRES_PASSWORD:-devpassword}@postgres:5432/ainstruct
       - USE_MOCK_EMBEDDINGS=true
       - API_KEYS=test_key_123
       - ADMIN_API_KEY=admin_secret_key
@@ -45,6 +61,8 @@ services:
       - PORT=8000
     depends_on:
       qdrant:
+        condition: service_healthy
+      postgres:
         condition: service_healthy
     healthcheck:
       test: ["CMD", "sh", "-c", "curl -s http://localhost:8000/health -o /dev/null"]
@@ -61,12 +79,15 @@ services:
       - PYTHONPATH=/app
       - USE_MOCK_EMBEDDINGS=true
       - QDRANT_URL=http://qdrant:6333
+      - DATABASE_URL=postgresql+asyncpg://ainstruct:${POSTGRES_PASSWORD:-devpassword}@postgres:5432/ainstruct
       - MCP_SERVER_URL=http://mcp_server:8000/mcp
       - MCP_SERVER_BASE_URL=http://rest_api:8000
       - MCP_TRANSPORT=http
       - RUFF_CACHE_DIR=/tmp/ruff_cache
       - PYTEST_CACHE_DIR=/tmp/pytest_cache
     depends_on:
+      postgres:
+        condition: service_healthy
       mcp_server:
         condition: service_healthy
       rest_api:

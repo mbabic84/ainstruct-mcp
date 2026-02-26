@@ -1,26 +1,52 @@
-from collections.abc import Generator
+from collections.abc import AsyncGenerator
 from typing import Annotated
 
 from fastapi import Depends, HTTPException, status
 from fastapi.security import HTTPAuthorizationCredentials, HTTPBearer
-from sqlalchemy.orm import Session
+from sqlalchemy.ext.asyncio import AsyncSession
 
 from ..db.models import Scope
 from ..services import get_auth_service
 
 security = HTTPBearer(auto_error=False)
 
+_engine = None
+_async_session_factory = None
 
-def get_db() -> Generator[Session]:
-    from ..config import settings
-    from ..db.models import get_db_engine
 
-    engine = get_db_engine(settings.db_path)
-    session = Session(engine)
-    try:
-        yield session
-    finally:
-        session.close()
+def get_engine():
+    global _engine
+    if _engine is None:
+        from ..config import settings
+        from ..db.models import get_db_engine
+
+        _engine = get_db_engine(settings.database_url)
+    return _engine
+
+
+def get_async_session_factory():
+    global _async_session_factory
+    if _async_session_factory is None:
+        from sqlalchemy.ext.asyncio import async_sessionmaker
+
+        _async_session_factory = async_sessionmaker(
+            bind=get_engine(),
+            class_=AsyncSession,
+            expire_on_commit=False,
+            autocommit=False,
+            autoflush=False,
+        )
+    return _async_session_factory
+
+
+async def get_db() -> AsyncGenerator[AsyncSession]:
+    async_session = get_async_session_factory()
+    async with async_session() as session:
+        try:
+            yield session
+        except Exception:
+            await session.rollback()
+            raise
 
 
 class CurrentUser:
@@ -123,4 +149,4 @@ UserDep = Annotated[CurrentUser, Depends(get_current_user)]
 UserOptionalDep = Annotated[CurrentUser | None, Depends(get_current_user_optional)]
 AdminDep = Annotated[CurrentUser, Depends(require_admin)]
 WriteDep = Annotated[CurrentUser, Depends(require_write_scope)]
-DbDep = Annotated[Session, Depends(get_db)]
+DbDep = Annotated[AsyncSession, Depends(get_db)]

@@ -7,11 +7,12 @@ from datetime import datetime
 from enum import StrEnum
 
 from pydantic import BaseModel, EmailStr
-from sqlalchemy import JSON, Boolean, DateTime, ForeignKey, String, Text, create_engine
+from sqlalchemy import JSON, Boolean, DateTime, ForeignKey, String, Text
+from sqlalchemy.ext.asyncio import AsyncAttrs, create_async_engine
 from sqlalchemy.orm import DeclarativeBase, Mapped, mapped_column, relationship
 
 
-class Base(DeclarativeBase):
+class Base(AsyncAttrs, DeclarativeBase):
     pass
 
 
@@ -249,14 +250,28 @@ class PatTokenListResponse(BaseModel):
     last_used: datetime | None
 
 
-def get_db_engine(db_path: str):
-    return create_engine(f"sqlite:///{db_path}", connect_args={"check_same_thread": False})
+def get_db_engine(database_url: str, pool_size: int = 5, max_overflow: int = 10):
+    return create_async_engine(
+        database_url,
+        pool_size=pool_size,
+        max_overflow=max_overflow,
+        pool_timeout=30,
+        pool_recycle=1800,
+        pool_pre_ping=True,
+        echo=False,
+    )
 
 
-def init_db(db_path: str):
-    engine = get_db_engine(db_path)
-    Base.metadata.create_all(engine)
-    return engine
+def init_db(database_url: str):
+    import asyncio
+
+    async def _init():
+        engine = create_async_engine(database_url)
+        async with engine.begin() as conn:
+            await conn.run_sync(Base.metadata.create_all)
+        await engine.dispose()
+
+    asyncio.run(_init())
 
 
 def compute_content_hash(content: str) -> str:

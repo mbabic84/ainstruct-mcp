@@ -2,7 +2,7 @@ import hashlib
 from datetime import datetime, timedelta
 
 from sqlalchemy import func, or_, select
-from sqlalchemy.orm import Session, sessionmaker
+from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker
 
 from ..config import settings
 from .models import (
@@ -22,31 +22,27 @@ from .models import (
     generate_pat_token,
     hash_cat_token,
     hash_pat_token,
-    init_db,
     parse_scopes,
     scopes_to_str,
 )
 
 
 class DocumentRepository:
-    def __init__(self, engine, collection_id: str | None = None):
-        self.SessionLocal = sessionmaker(bind=engine)
+    def __init__(self, async_session_factory, collection_id: str | None = None):
+        self.async_session = async_session_factory
         self.collection_id = collection_id
 
-    def _get_session(self) -> Session:
-        return self.SessionLocal()
-
-    def create(self, doc: DocumentCreate) -> DocumentResponse:
-        session = self._get_session()
-        try:
+    async def create(self, doc: DocumentCreate) -> DocumentResponse:
+        async with self.async_session() as session:
             content_hash = compute_content_hash(doc.content)
 
-            existing = session.execute(
+            existing = await session.execute(
                 select(DocumentModel).where(
                     DocumentModel.content_hash == content_hash,
                     DocumentModel.collection_id == doc.collection_id,
                 )
-            ).scalar_one_or_none()
+            )
+            existing = existing.scalar_one_or_none()
 
             if existing:
                 return DocumentResponse(
@@ -69,8 +65,8 @@ class DocumentRepository:
                 doc_metadata=doc.doc_metadata,
             )
             session.add(db_doc)
-            session.commit()
-            session.refresh(db_doc)
+            await session.commit()
+            await session.refresh(db_doc)
 
             return DocumentResponse(
                 id=db_doc.id,
@@ -82,17 +78,15 @@ class DocumentRepository:
                 updated_at=db_doc.updated_at,
                 doc_metadata=db_doc.doc_metadata or {},
             )
-        finally:
-            session.close()
 
-    def get_by_id(self, doc_id: str) -> DocumentResponse | None:
-        session = self._get_session()
-        try:
+    async def get_by_id(self, doc_id: str) -> DocumentResponse | None:
+        async with self.async_session() as session:
             query = select(DocumentModel).where(DocumentModel.id == doc_id)
             if self.collection_id:
                 query = query.where(DocumentModel.collection_id == self.collection_id)
 
-            db_doc = session.execute(query).scalar_one_or_none()
+            result = await session.execute(query)
+            db_doc = result.scalar_one_or_none()
             if not db_doc:
                 return None
             return DocumentResponse(
@@ -105,19 +99,15 @@ class DocumentRepository:
                 updated_at=db_doc.updated_at,
                 doc_metadata=db_doc.doc_metadata or {},
             )
-        finally:
-            session.close()
 
-    def list_all(self, limit: int = 50, offset: int = 0) -> list[DocumentResponse]:
-        session = self._get_session()
-        try:
+    async def list_all(self, limit: int = 50, offset: int = 0) -> list[DocumentResponse]:
+        async with self.async_session() as session:
             query = select(DocumentModel).order_by(DocumentModel.created_at.desc())
             if self.collection_id:
                 query = query.where(DocumentModel.collection_id == self.collection_id)
 
-            docs = session.execute(
-                query.limit(limit).offset(offset)
-            ).scalars().all()
+            result = await session.execute(query.limit(limit).offset(offset))
+            docs = result.scalars().all()
 
             return [
                 DocumentResponse(
@@ -132,57 +122,49 @@ class DocumentRepository:
                 )
                 for d in docs
             ]
-        finally:
-            session.close()
 
-    def delete(self, doc_id: str) -> bool:
-        session = self._get_session()
-        try:
+    async def delete(self, doc_id: str) -> bool:
+        async with self.async_session() as session:
             query = select(DocumentModel).where(DocumentModel.id == doc_id)
             if self.collection_id:
                 query = query.where(DocumentModel.collection_id == self.collection_id)
 
-            db_doc = session.execute(query).scalar_one_or_none()
+            result = await session.execute(query)
+            db_doc = result.scalar_one_or_none()
             if not db_doc:
                 return False
-            session.delete(db_doc)
-            session.commit()
+            await session.delete(db_doc)
+            await session.commit()
             return True
-        finally:
-            session.close()
 
-    def update_qdrant_point_id(self, doc_id: str, point_ids: list[str]):
-        session = self._get_session()
-        try:
+    async def update_qdrant_point_id(self, doc_id: str, point_ids: list[str]):
+        async with self.async_session() as session:
             query = select(DocumentModel).where(DocumentModel.id == doc_id)
             if self.collection_id:
                 query = query.where(DocumentModel.collection_id == self.collection_id)
 
-            db_doc = session.execute(query).scalar_one_or_none()
+            result = await session.execute(query)
+            db_doc = result.scalar_one_or_none()
             if db_doc:
                 db_doc.qdrant_point_id = ",".join(point_ids)
-                session.commit()
-        finally:
-            session.close()
+                await session.commit()
 
-    def update_collection_id(self, doc_id: str, new_collection_id: str) -> bool:
-        session = self._get_session()
-        try:
+    async def update_collection_id(self, doc_id: str, new_collection_id: str) -> bool:
+        async with self.async_session() as session:
             query = select(DocumentModel).where(DocumentModel.id == doc_id)
             if self.collection_id:
                 query = query.where(DocumentModel.collection_id == self.collection_id)
 
-            db_doc = session.execute(query).scalar_one_or_none()
+            result = await session.execute(query)
+            db_doc = result.scalar_one_or_none()
             if not db_doc:
                 return False
 
             db_doc.collection_id = new_collection_id
-            session.commit()
+            await session.commit()
             return True
-        finally:
-            session.close()
 
-    def update(
+    async def update(
         self,
         doc_id: str,
         title: str,
@@ -190,13 +172,13 @@ class DocumentRepository:
         document_type: str,
         doc_metadata: dict,
     ) -> DocumentResponse | None:
-        session = self._get_session()
-        try:
+        async with self.async_session() as session:
             query = select(DocumentModel).where(DocumentModel.id == doc_id)
             if self.collection_id:
                 query = query.where(DocumentModel.collection_id == self.collection_id)
 
-            db_doc = session.execute(query).scalar_one_or_none()
+            result = await session.execute(query)
+            db_doc = result.scalar_one_or_none()
             if not db_doc:
                 return None
 
@@ -208,8 +190,8 @@ class DocumentRepository:
             db_doc.document_type = document_type
             db_doc.doc_metadata = doc_metadata
 
-            session.commit()
-            session.refresh(db_doc)
+            await session.commit()
+            await session.refresh(db_doc)
 
             return DocumentResponse(
                 id=db_doc.id,
@@ -221,31 +203,26 @@ class DocumentRepository:
                 updated_at=db_doc.updated_at,
                 doc_metadata=db_doc.doc_metadata or {},
             )
-        finally:
-            session.close()
 
-    def count_by_collection(self, collection_id: str) -> int:
-        session = self._get_session()
-        try:
-            result = session.execute(
+    async def count_by_collection(self, collection_id: str) -> int:
+        async with self.async_session() as session:
+            result = await session.execute(
                 select(func.count(DocumentModel.id)).where(
                     DocumentModel.collection_id == collection_id
                 )
-            ).scalar()
-            return result or 0
-        finally:
-            session.close()
+            )
+            return result.scalar() or 0
 
-    def get_by_id_for_user(self, doc_id: str, user_id: str) -> DocumentResponse | None:
-        session = self._get_session()
-        try:
+    async def get_by_id_for_user(self, doc_id: str, user_id: str) -> DocumentResponse | None:
+        async with self.async_session() as session:
             query = select(DocumentModel).where(
                 DocumentModel.id == doc_id
             ).join(CollectionModel).where(
                 CollectionModel.user_id == user_id
             )
 
-            db_doc = session.execute(query).scalar_one_or_none()
+            result = await session.execute(query)
+            db_doc = result.scalar_one_or_none()
             if not db_doc:
                 return None
             return DocumentResponse(
@@ -258,12 +235,9 @@ class DocumentRepository:
                 updated_at=db_doc.updated_at,
                 doc_metadata=db_doc.doc_metadata or {},
             )
-        finally:
-            session.close()
 
-    def list_all_for_user(self, user_id: str, limit: int = 50, offset: int = 0) -> list[DocumentResponse]:
-        session = self._get_session()
-        try:
+    async def list_all_for_user(self, user_id: str, limit: int = 50, offset: int = 0) -> list[DocumentResponse]:
+        async with self.async_session() as session:
             query = (
                 select(DocumentModel)
                 .join(CollectionModel)
@@ -271,9 +245,8 @@ class DocumentRepository:
                 .order_by(DocumentModel.created_at.desc())
             )
 
-            docs = session.execute(
-                query.limit(limit).offset(offset)
-            ).scalars().all()
+            result = await session.execute(query.limit(limit).offset(offset))
+            docs = result.scalars().all()
 
             return [
                 DocumentResponse(
@@ -288,26 +261,20 @@ class DocumentRepository:
                 )
                 for d in docs
             ]
-        finally:
-            session.close()
 
 
 class UserRepository:
-    def __init__(self, engine):
-        self.SessionLocal = sessionmaker(bind=engine)
+    def __init__(self, async_session_factory):
+        self.async_session = async_session_factory
 
-    def _get_session(self) -> Session:
-        return self.SessionLocal()
-
-    def create(
+    async def create(
         self,
         email: str,
         username: str,
         password_hash: str,
         is_superuser: bool = False,
     ) -> UserResponse:
-        session = self._get_session()
-        try:
+        async with self.async_session() as session:
             user = UserModel(
                 email=email,
                 username=username,
@@ -315,8 +282,8 @@ class UserRepository:
                 is_superuser=is_superuser,
             )
             session.add(user)
-            session.commit()
-            session.refresh(user)
+            await session.commit()
+            await session.refresh(user)
             return UserResponse(
                 id=user.id,
                 email=user.email,
@@ -325,13 +292,11 @@ class UserRepository:
                 is_superuser=user.is_superuser,
                 created_at=user.created_at,
             )
-        finally:
-            session.close()
 
-    def get_by_id(self, user_id: str) -> UserResponse | None:
-        session = self._get_session()
-        try:
-            user = session.get(UserModel, user_id)
+    async def get_by_id(self, user_id: str) -> UserResponse | None:
+        async with self.async_session() as session:
+            result = await session.execute(select(UserModel).where(UserModel.id == user_id))
+            user = result.scalar_one_or_none()
             if not user:
                 return None
             return UserResponse(
@@ -342,15 +307,13 @@ class UserRepository:
                 is_superuser=user.is_superuser,
                 created_at=user.created_at,
             )
-        finally:
-            session.close()
 
-    def get_by_username(self, username: str) -> dict | None:
-        session = self._get_session()
-        try:
-            user = session.execute(
+    async def get_by_username(self, username: str) -> dict | None:
+        async with self.async_session() as session:
+            result = await session.execute(
                 select(UserModel).where(UserModel.username == username)
-            ).scalar_one_or_none()
+            )
+            user = result.scalar_one_or_none()
             if not user:
                 return None
             return {
@@ -362,15 +325,13 @@ class UserRepository:
                 "is_superuser": user.is_superuser,
                 "created_at": user.created_at,
             }
-        finally:
-            session.close()
 
-    def get_by_email(self, email: str) -> UserResponse | None:
-        session = self._get_session()
-        try:
-            user = session.execute(
+    async def get_by_email(self, email: str) -> UserResponse | None:
+        async with self.async_session() as session:
+            result = await session.execute(
                 select(UserModel).where(UserModel.email == email)
-            ).scalar_one_or_none()
+            )
+            user = result.scalar_one_or_none()
             if not user:
                 return None
             return UserResponse(
@@ -381,10 +342,8 @@ class UserRepository:
                 is_superuser=user.is_superuser,
                 created_at=user.created_at,
             )
-        finally:
-            session.close()
 
-    def update(
+    async def update(
         self,
         user_id: str,
         email: str | None = None,
@@ -393,9 +352,9 @@ class UserRepository:
         is_active: bool | None = None,
         is_superuser: bool | None = None,
     ) -> UserResponse | None:
-        session = self._get_session()
-        try:
-            user = session.get(UserModel, user_id)
+        async with self.async_session() as session:
+            result = await session.execute(select(UserModel).where(UserModel.id == user_id))
+            user = result.scalar_one_or_none()
             if not user:
                 return None
             if email is not None:
@@ -408,8 +367,8 @@ class UserRepository:
                 user.is_active = is_active
             if is_superuser is not None:
                 user.is_superuser = is_superuser
-            session.commit()
-            session.refresh(user)
+            await session.commit()
+            await session.refresh(user)
             return UserResponse(
                 id=user.id,
                 email=user.email,
@@ -418,27 +377,21 @@ class UserRepository:
                 is_superuser=user.is_superuser,
                 created_at=user.created_at,
             )
-        finally:
-            session.close()
 
-    def delete(self, user_id: str) -> bool:
-        session = self._get_session()
-        try:
-            user = session.get(UserModel, user_id)
+    async def delete(self, user_id: str) -> bool:
+        async with self.async_session() as session:
+            result = await session.execute(select(UserModel).where(UserModel.id == user_id))
+            user = result.scalar_one_or_none()
             if not user:
                 return False
-            session.delete(user)
-            session.commit()
+            await session.delete(user)
+            await session.commit()
             return True
-        finally:
-            session.close()
 
-    def list_all(self, limit: int = 50, offset: int = 0) -> list[UserResponse]:
-        session = self._get_session()
-        try:
-            users = session.execute(
-                select(UserModel).limit(limit).offset(offset)
-            ).scalars().all()
+    async def list_all(self, limit: int = 50, offset: int = 0) -> list[UserResponse]:
+        async with self.async_session() as session:
+            result = await session.execute(select(UserModel).limit(limit).offset(offset))
+            users = result.scalars().all()
             return [
                 UserResponse(
                     id=u.id,
@@ -450,21 +403,19 @@ class UserRepository:
                 )
                 for u in users
             ]
-        finally:
-            session.close()
 
-    def search(self, query: str, limit: int = 50, offset: int = 0) -> list[UserResponse]:
-        session = self._get_session()
-        try:
+    async def search(self, query: str, limit: int = 50, offset: int = 0) -> list[UserResponse]:
+        async with self.async_session() as session:
             search_pattern = f"%{query}%"
-            users = session.execute(
+            result = await session.execute(
                 select(UserModel).where(
                     or_(
                         UserModel.username.ilike(search_pattern),
                         UserModel.email.ilike(search_pattern),
                     )
                 ).limit(limit).offset(offset)
-            ).scalars().all()
+            )
+            users = result.scalars().all()
             return [
                 UserResponse(
                     id=u.id,
@@ -476,27 +427,21 @@ class UserRepository:
                 )
                 for u in users
             ]
-        finally:
-            session.close()
 
 
 class CollectionRepository:
-    def __init__(self, engine):
-        self.SessionLocal = sessionmaker(bind=engine)
+    def __init__(self, async_session_factory):
+        self.async_session = async_session_factory
 
-    def _get_session(self) -> Session:
-        return self.SessionLocal()
-
-    def create(self, user_id: str, name: str) -> CollectionResponse:
-        session = self._get_session()
-        try:
+    async def create(self, user_id: str, name: str) -> CollectionResponse:
+        async with self.async_session() as session:
             collection = CollectionModel(
                 user_id=user_id,
                 name=name,
             )
             session.add(collection)
-            session.commit()
-            session.refresh(collection)
+            await session.commit()
+            await session.refresh(collection)
             return CollectionResponse(
                 id=collection.id,
                 name=collection.name,
@@ -504,26 +449,29 @@ class CollectionRepository:
                 cat_count=0,
                 created_at=collection.created_at,
             )
-        finally:
-            session.close()
 
-    def get_by_id(self, collection_id: str) -> dict | None:
-        session = self._get_session()
-        try:
-            collection = session.get(CollectionModel, collection_id)
+    async def get_by_id(self, collection_id: str) -> dict | None:
+        async with self.async_session() as session:
+            result = await session.execute(select(CollectionModel).where(CollectionModel.id == collection_id))
+            collection = result.scalar_one_or_none()
             if not collection:
                 return None
-            doc_count = session.execute(
+
+            doc_count_result = await session.execute(
                 select(func.count(DocumentModel.id)).where(
                     DocumentModel.collection_id == collection_id
                 )
-            ).scalar() or 0
-            key_count = session.execute(
+            )
+            doc_count = doc_count_result.scalar() or 0
+
+            key_count_result = await session.execute(
                 select(func.count(CatModel.id)).where(
                     CatModel.collection_id == collection_id,
                     CatModel.is_active.is_(True),
                 )
-            ).scalar() or 0
+            )
+            key_count = key_count_result.scalar() or 0
+
             return {
                 "id": collection.id,
                 "name": collection.name,
@@ -534,15 +482,13 @@ class CollectionRepository:
                 "created_at": collection.created_at,
                 "updated_at": collection.updated_at,
             }
-        finally:
-            session.close()
 
-    def list_by_user(self, user_id: str) -> list[dict]:
-        session = self._get_session()
-        try:
-            collections = session.execute(
+    async def list_by_user(self, user_id: str) -> list[dict]:
+        async with self.async_session() as session:
+            result = await session.execute(
                 select(CollectionModel).where(CollectionModel.user_id == user_id)
-            ).scalars().all()
+            )
+            collections = result.scalars().all()
             return [
                 {
                     "id": c.id,
@@ -553,41 +499,42 @@ class CollectionRepository:
                 }
                 for c in collections
             ]
-        finally:
-            session.close()
 
-    def delete(self, collection_id: str) -> bool:
-        session = self._get_session()
-        try:
-            collection = session.get(CollectionModel, collection_id)
+    async def delete(self, collection_id: str) -> bool:
+        async with self.async_session() as session:
+            result = await session.execute(select(CollectionModel).where(CollectionModel.id == collection_id))
+            collection = result.scalar_one_or_none()
             if not collection:
                 return False
-            session.delete(collection)
-            session.commit()
+            await session.delete(collection)
+            await session.commit()
             return True
-        finally:
-            session.close()
 
-    def rename(self, collection_id: str, name: str) -> CollectionResponse | None:
-        session = self._get_session()
-        try:
-            collection = session.get(CollectionModel, collection_id)
+    async def rename(self, collection_id: str, name: str) -> CollectionResponse | None:
+        async with self.async_session() as session:
+            result = await session.execute(select(CollectionModel).where(CollectionModel.id == collection_id))
+            collection = result.scalar_one_or_none()
             if not collection:
                 return None
             collection.name = name
-            session.commit()
-            session.refresh(collection)
-            doc_count = session.execute(
+            await session.commit()
+            await session.refresh(collection)
+
+            doc_count_result = await session.execute(
                 select(func.count(DocumentModel.id)).where(
                     DocumentModel.collection_id == collection_id
                 )
-            ).scalar() or 0
-            key_count = session.execute(
+            )
+            doc_count = doc_count_result.scalar() or 0
+
+            key_count_result = await session.execute(
                 select(func.count(CatModel.id)).where(
                     CatModel.collection_id == collection_id,
                     CatModel.is_active.is_(True),
                 )
-            ).scalar() or 0
+            )
+            key_count = key_count_result.scalar() or 0
+
             return CollectionResponse(
                 id=collection.id,
                 name=collection.name,
@@ -595,30 +542,25 @@ class CollectionRepository:
                 cat_count=key_count,
                 created_at=collection.created_at,
             )
-        finally:
-            session.close()
 
-    def get_document_count(self, collection_id: str) -> int:
-        session = self._get_session()
-        try:
-            result = session.execute(
+    async def get_document_count(self, collection_id: str) -> int:
+        async with self.async_session() as session:
+            result = await session.execute(
                 select(func.count(DocumentModel.id)).where(
                     DocumentModel.collection_id == collection_id
                 )
-            ).scalar() or 0
-            return result
-        finally:
-            session.close()
+            )
+            return result.scalar() or 0
 
-    def get_by_name_for_user(self, user_id: str, name: str) -> dict | None:
-        session = self._get_session()
-        try:
-            collection = session.execute(
+    async def get_by_name_for_user(self, user_id: str, name: str) -> dict | None:
+        async with self.async_session() as session:
+            result = await session.execute(
                 select(CollectionModel).where(
                     CollectionModel.user_id == user_id,
                     CollectionModel.name == name,
                 )
-            ).scalar_one_or_none()
+            )
+            collection = result.scalar_one_or_none()
             if not collection:
                 return None
             return {
@@ -628,53 +570,52 @@ class CollectionRepository:
                 "user_id": collection.user_id,
                 "created_at": collection.created_at,
             }
-        finally:
-            session.close()
 
-    def get_cat_count(self, collection_id: str) -> int:
-        session = self._get_session()
-        try:
-            result = session.execute(
+    async def get_cat_count(self, collection_id: str) -> int:
+        async with self.async_session() as session:
+            result = await session.execute(
                 select(func.count(CatModel.id)).where(
                     CatModel.collection_id == collection_id,
                     CatModel.is_active.is_(True),
                 )
-            ).scalar()
-            return result or 0
-        finally:
-            session.close()
+            )
+            return result.scalar() or 0
 
 
 class CatRepository:
-    def __init__(self, engine):
-        self.SessionLocal = sessionmaker(bind=engine)
-
-    def _get_session(self) -> Session:
-        return self.SessionLocal()
+    def __init__(self, async_session_factory):
+        self.async_session = async_session_factory
 
     @staticmethod
     def hash_key(key: str) -> str:
         return hashlib.sha256(key.encode("utf-8")).hexdigest()
 
-    def validate(self, key: str) -> dict | None:
-        session = self._get_session()
-        try:
+    async def validate(self, key: str) -> dict | None:
+        async with self.async_session() as session:
             key_hash = self.hash_key(key)
-            api_key = session.execute(
+            result = await session.execute(
                 select(CatModel).where(
                     CatModel.key_hash == key_hash,
                     CatModel.is_active,
                 )
-            ).scalar_one_or_none()
+            )
+            api_key = result.scalar_one_or_none()
 
             if api_key:
                 if api_key.expires_at and api_key.expires_at < datetime.utcnow():
                     return None
-                collection = session.get(CollectionModel, api_key.collection_id)
+
+                collection_result = await session.execute(
+                    select(CollectionModel).where(CollectionModel.id == api_key.collection_id)
+                )
+                collection = collection_result.scalar_one_or_none()
+
                 if not collection:
                     return None
+
                 api_key.last_used = datetime.utcnow()
-                session.commit()
+                await session.commit()
+
                 return {
                     "id": api_key.id,
                     "label": api_key.label,
@@ -686,16 +627,19 @@ class CatRepository:
                     "is_admin": False,
                 }
             return None
-        finally:
-            session.close()
 
-    def get_by_id(self, key_id: str) -> dict | None:
-        session = self._get_session()
-        try:
-            api_key = session.get(CatModel, key_id)
+    async def get_by_id(self, key_id: str) -> dict | None:
+        async with self.async_session() as session:
+            result = await session.execute(select(CatModel).where(CatModel.id == key_id))
+            api_key = result.scalar_one_or_none()
             if not api_key:
                 return None
-            collection = session.get(CollectionModel, api_key.collection_id)
+
+            collection_result = await session.execute(
+                select(CollectionModel).where(CollectionModel.id == api_key.collection_id)
+            )
+            collection = collection_result.scalar_one_or_none()
+
             return {
                 "id": api_key.id,
                 "label": api_key.label,
@@ -709,10 +653,8 @@ class CatRepository:
                 "created_at": api_key.created_at,
                 "last_used": api_key.last_used,
             }
-        finally:
-            session.close()
 
-    def create(
+    async def create(
         self,
         label: str,
         collection_id: str,
@@ -720,8 +662,7 @@ class CatRepository:
         permission: Permission = Permission.READ_WRITE,
         expires_in_days: int | None = None,
     ) -> tuple[str, str]:
-        session = self._get_session()
-        try:
+        async with self.async_session() as session:
             key = generate_cat_token()
             key_hash = hash_cat_token(key)
 
@@ -740,22 +681,25 @@ class CatRepository:
                 expires_at=expires_at,
             )
             session.add(api_key)
-            session.commit()
+            await session.commit()
             return api_key.id, key
-        finally:
-            session.close()
 
-    def list_all(self, user_id: str | None = None) -> list[dict]:
-        session = self._get_session()
-        try:
+    async def list_all(self, user_id: str | None = None) -> list[dict]:
+        async with self.async_session() as session:
             query = select(CatModel)
             if user_id:
                 query = query.where(CatModel.user_id == user_id)
-            keys = session.execute(query).scalars().all()
-            result = []
+            result = await session.execute(query)
+            keys = result.scalars().all()
+
+            result_list = []
             for k in keys:
-                collection = session.get(CollectionModel, k.collection_id)
-                result.append({
+                collection_result = await session.execute(
+                    select(CollectionModel).where(CollectionModel.id == k.collection_id)
+                )
+                collection = collection_result.scalar_one_or_none()
+
+                result_list.append({
                     "id": k.id,
                     "label": k.label,
                     "collection_id": k.collection_id,
@@ -767,38 +711,32 @@ class CatRepository:
                     "permission": Permission(k.permission),
                     "expires_at": k.expires_at,
                 })
-            return result
-        finally:
-            session.close()
+            return result_list
 
-    def delete(self, key_id: str) -> bool:
-        session = self._get_session()
-        try:
-            key = session.get(CatModel, key_id)
+    async def delete(self, key_id: str) -> bool:
+        async with self.async_session() as session:
+            result = await session.execute(select(CatModel).where(CatModel.id == key_id))
+            key = result.scalar_one_or_none()
             if not key:
                 return False
-            session.delete(key)
-            session.commit()
+            await session.delete(key)
+            await session.commit()
             return True
-        finally:
-            session.close()
 
-    def revoke(self, key_id: str) -> bool:
-        session = self._get_session()
-        try:
-            key = session.get(CatModel, key_id)
+    async def revoke(self, key_id: str) -> bool:
+        async with self.async_session() as session:
+            result = await session.execute(select(CatModel).where(CatModel.id == key_id))
+            key = result.scalar_one_or_none()
             if not key:
                 return False
             key.is_active = False
-            session.commit()
+            await session.commit()
             return True
-        finally:
-            session.close()
 
-    def rotate(self, key_id: str) -> tuple[str, str] | None:
-        session = self._get_session()
-        try:
-            old_key = session.get(CatModel, key_id)
+    async def rotate(self, key_id: str) -> tuple[str, str] | None:
+        async with self.async_session() as session:
+            result = await session.execute(select(CatModel).where(CatModel.id == key_id))
+            old_key = result.scalar_one_or_none()
             if not old_key:
                 return None
 
@@ -816,36 +754,31 @@ class CatRepository:
                 expires_at=old_key.expires_at,
             )
             session.add(new_api_key)
-            session.commit()
+            await session.commit()
             return new_api_key.id, new_key
-        finally:
-            session.close()
 
-    def list_by_user(self, user_id: str) -> list[dict]:
-        return self.list_all(user_id=user_id)
+    async def list_by_user(self, user_id: str) -> list[dict]:
+        return await self.list_all(user_id=user_id)
 
 
 class PatTokenRepository:
-    def __init__(self, engine):
-        self.SessionLocal = sessionmaker(bind=engine)
-
-    def _get_session(self) -> Session:
-        return self.SessionLocal()
+    def __init__(self, async_session_factory):
+        self.async_session = async_session_factory
 
     @staticmethod
     def hash_token(token: str) -> str:
         return hashlib.sha256(token.encode("utf-8")).hexdigest()
 
-    def validate(self, token: str) -> dict | None:
-        session = self._get_session()
-        try:
+    async def validate(self, token: str) -> dict | None:
+        async with self.async_session() as session:
             token_hash = self.hash_token(token)
-            pat_token = session.execute(
+            result = await session.execute(
                 select(PatTokenModel).where(
                     PatTokenModel.token_hash == token_hash,
                     PatTokenModel.is_active.is_(True),
                 )
-            ).scalar_one_or_none()
+            )
+            pat_token = result.scalar_one_or_none()
 
             if not pat_token:
                 return None
@@ -853,12 +786,14 @@ class PatTokenRepository:
             if pat_token.expires_at and pat_token.expires_at < datetime.utcnow():
                 return None
 
-            user = session.get(UserModel, pat_token.user_id)
+            user_result = await session.execute(select(UserModel).where(UserModel.id == pat_token.user_id))
+            user = user_result.scalar_one_or_none()
+
             if not user or not user.is_active:
                 return None
 
             pat_token.last_used = datetime.utcnow()
-            session.commit()
+            await session.commit()
 
             return {
                 "id": pat_token.id,
@@ -869,13 +804,11 @@ class PatTokenRepository:
                 "username": user.username,
                 "email": user.email,
             }
-        finally:
-            session.close()
 
-    def get_by_id(self, token_id: str) -> dict | None:
-        session = self._get_session()
-        try:
-            pat_token = session.get(PatTokenModel, token_id)
+    async def get_by_id(self, token_id: str) -> dict | None:
+        async with self.async_session() as session:
+            result = await session.execute(select(PatTokenModel).where(PatTokenModel.id == token_id))
+            pat_token = result.scalar_one_or_none()
             if not pat_token:
                 return None
             return {
@@ -888,18 +821,15 @@ class PatTokenRepository:
                 "is_active": pat_token.is_active,
                 "last_used": pat_token.last_used,
             }
-        finally:
-            session.close()
 
-    def create(
+    async def create(
         self,
         label: str,
         user_id: str,
         scopes: list[str],
         expires_in_days: int | None = None,
     ) -> tuple[str, str]:
-        session = self._get_session()
-        try:
+        async with self.async_session() as session:
             token = generate_pat_token()
             token_hash = hash_pat_token(token)
 
@@ -917,18 +847,16 @@ class PatTokenRepository:
                 expires_at=expires_at,
             )
             session.add(pat_token)
-            session.commit()
+            await session.commit()
             return pat_token.id, token
-        finally:
-            session.close()
 
-    def list_all(self, user_id: str | None = None) -> list[dict]:
-        session = self._get_session()
-        try:
+    async def list_all(self, user_id: str | None = None) -> list[dict]:
+        async with self.async_session() as session:
             query = select(PatTokenModel)
             if user_id:
                 query = query.where(PatTokenModel.user_id == user_id)
-            tokens = session.execute(query.order_by(PatTokenModel.created_at.desc())).scalars().all()
+            result = await session.execute(query.order_by(PatTokenModel.created_at.desc()))
+            tokens = result.scalars().all()
             return [
                 {
                     "id": t.id,
@@ -942,37 +870,31 @@ class PatTokenRepository:
                 }
                 for t in tokens
             ]
-        finally:
-            session.close()
 
-    def delete(self, token_id: str) -> bool:
-        session = self._get_session()
-        try:
-            token = session.get(PatTokenModel, token_id)
+    async def delete(self, token_id: str) -> bool:
+        async with self.async_session() as session:
+            result = await session.execute(select(PatTokenModel).where(PatTokenModel.id == token_id))
+            token = result.scalar_one_or_none()
             if not token:
                 return False
-            session.delete(token)
-            session.commit()
+            await session.delete(token)
+            await session.commit()
             return True
-        finally:
-            session.close()
 
-    def revoke(self, token_id: str) -> bool:
-        session = self._get_session()
-        try:
-            token = session.get(PatTokenModel, token_id)
+    async def revoke(self, token_id: str) -> bool:
+        async with self.async_session() as session:
+            result = await session.execute(select(PatTokenModel).where(PatTokenModel.id == token_id))
+            token = result.scalar_one_or_none()
             if not token:
                 return False
             token.is_active = False
-            session.commit()
+            await session.commit()
             return True
-        finally:
-            session.close()
 
-    def rotate(self, token_id: str) -> tuple[str, str] | None:
-        session = self._get_session()
-        try:
-            old_token = session.get(PatTokenModel, token_id)
+    async def rotate(self, token_id: str) -> tuple[str, str] | None:
+        async with self.async_session() as session:
+            result = await session.execute(select(PatTokenModel).where(PatTokenModel.id == token_id))
+            old_token = result.scalar_one_or_none()
             if not old_token:
                 return None
 
@@ -989,48 +911,53 @@ class PatTokenRepository:
                 expires_at=old_token.expires_at,
             )
             session.add(new_pat_token)
-            session.commit()
+            await session.commit()
             return new_pat_token.id, new_token
-        finally:
-            session.close()
 
-    def list_by_user(self, user_id: str) -> list[dict]:
-        return self.list_all(user_id=user_id)
+    async def list_by_user(self, user_id: str) -> list[dict]:
+        return await self.list_all(user_id=user_id)
 
 
 _engine = None
+_async_session_factory = None
+
+
+def get_async_session_factory():
+    global _engine, _async_session_factory
+    if _engine is None:
+        from .models import get_db_engine
+        _engine = get_db_engine(settings.database_url)
+    if _async_session_factory is None:
+        _async_session_factory = async_sessionmaker(
+            bind=_engine,
+            class_=AsyncSession,
+            expire_on_commit=False,
+            autocommit=False,
+            autoflush=False,
+        )
+    return _async_session_factory
 
 
 def get_document_repository(collection_id: str | None = None) -> DocumentRepository:
-    global _engine
-    if _engine is None:
-        _engine = init_db(settings.db_path)
-    return DocumentRepository(_engine, collection_id)
+    async_session = get_async_session_factory()
+    return DocumentRepository(async_session, collection_id)
 
 
 def get_cat_repository() -> CatRepository:
-    global _engine
-    if _engine is None:
-        _engine = init_db(settings.db_path)
-    return CatRepository(_engine)
+    async_session = get_async_session_factory()
+    return CatRepository(async_session)
 
 
 def get_user_repository() -> UserRepository:
-    global _engine
-    if _engine is None:
-        _engine = init_db(settings.db_path)
-    return UserRepository(_engine)
+    async_session = get_async_session_factory()
+    return UserRepository(async_session)
 
 
 def get_collection_repository() -> CollectionRepository:
-    global _engine
-    if _engine is None:
-        _engine = init_db(settings.db_path)
-    return CollectionRepository(_engine)
+    async_session = get_async_session_factory()
+    return CollectionRepository(async_session)
 
 
 def get_pat_token_repository() -> PatTokenRepository:
-    global _engine
-    if _engine is None:
-        _engine = init_db(settings.db_path)
-    return PatTokenRepository(_engine)
+    async_session = get_async_session_factory()
+    return PatTokenRepository(async_session)

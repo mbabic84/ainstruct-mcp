@@ -32,7 +32,7 @@ async def create_cat(
     cat_repo = get_cat_repository()
     collection_repo = get_collection_repository()
 
-    collection = collection_repo.get_by_id(body.collection_id)
+    collection = await collection_repo.get_by_id(body.collection_id)
     if not collection:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
@@ -45,7 +45,7 @@ async def create_cat(
             detail={"code": "FORBIDDEN", "message": "Cannot create CAT for another user's collection"},
         )
 
-    cat_id, token = cat_repo.create(
+    cat_id, token = await cat_repo.create(
         label=body.label,
         collection_id=body.collection_id,
         user_id=user.user_id,
@@ -53,7 +53,7 @@ async def create_cat(
         expires_in_days=body.expires_in_days,
     )
 
-    cat = cat_repo.get_by_id(cat_id)
+    cat = await cat_repo.get_by_id(cat_id)
 
     return CatResponse(
         id=cat["id"],
@@ -81,7 +81,7 @@ async def list_cats(
     collection_repo = get_collection_repository()
 
     if collection_id:
-        collection = collection_repo.get_by_id(collection_id)
+        collection = await collection_repo.get_by_id(collection_id)
         if not collection:
             raise HTTPException(
                 status_code=status.HTTP_404_NOT_FOUND,
@@ -92,14 +92,14 @@ async def list_cats(
                 status_code=status.HTTP_403_FORBIDDEN,
                 detail={"code": "FORBIDDEN", "message": "Cannot access another user's collection"},
             )
-        all_cats = cat_repo.list_all(user.user_id)
+        all_cats = await cat_repo.list_all(user.user_id)
         cats = [c for c in all_cats if c["collection_id"] == collection_id]
     else:
-        cats = cat_repo.list_all(user.user_id)
+        cats = await cat_repo.list_all(user.user_id)
 
     tokens = []
     for cat in cats:
-        collection = collection_repo.get_by_id(cat["collection_id"])
+        collection = await collection_repo.get_by_id(cat["collection_id"])
         collection_name = collection["name"] if collection else "unknown"
 
         tokens.append(
@@ -134,19 +134,19 @@ async def revoke_cat(
     cat_repo = get_cat_repository()
     collection_repo = get_collection_repository()
 
-    cat = cat_repo.get_by_id(cat_id)
+    cat = await cat_repo.get_by_id(cat_id)
     if not cat:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
             detail={"code": "CAT_NOT_FOUND", "message": "CAT not found"},
         )
 
-    collection = collection_repo.get_by_id(cat["collection_id"])
+    collection = await collection_repo.get_by_id(cat["collection_id"])
     if collection and collection["user_id"] != user.user_id and not user.is_superuser:
         raise HTTPException(
             status_code=status.HTTP_403_FORBIDDEN,
             detail={"code": "FORBIDDEN", "message": "Cannot revoke CAT for another user's collection"},
         )
 
-    cat_repo.revoke(cat_id)
+    await cat_repo.revoke(cat_id)
     return MessageResponse(message="CAT revoked successfully")

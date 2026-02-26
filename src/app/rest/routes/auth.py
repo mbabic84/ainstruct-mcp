@@ -31,14 +31,14 @@ async def register(
     user_repo = get_user_repository()
     auth_service = AuthService()
 
-    existing_user = user_repo.get_by_username(body.username)
+    existing_user = await user_repo.get_by_username(body.username)
     if existing_user:
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
             detail={"code": "USERNAME_EXISTS", "message": "Username already registered"},
         )
 
-    existing_email = user_repo.get_by_email(body.email)
+    existing_email = await user_repo.get_by_email(body.email)
     if existing_email:
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
@@ -46,7 +46,7 @@ async def register(
         )
 
     password_hash = auth_service.hash_password(body.password)
-    user = user_repo.create(
+    user = await user_repo.create(
         username=body.username,
         email=body.email,
         password_hash=password_hash,
@@ -80,7 +80,7 @@ async def login(
     user_repo = get_user_repository()
     auth_service = AuthService()
 
-    user = user_repo.get_by_username(body.username)
+    user = await user_repo.get_by_username(body.username)
 
     if not user:
         raise HTTPException(
@@ -145,25 +145,25 @@ async def refresh(
             detail={"code": "INVALID_REFRESH_TOKEN", "message": "Refresh token invalid or expired"},
         )
 
-    user = user_repo.get_by_id(payload.get("sub"))
-    if not user or not user["is_active"]:
+    user = await user_repo.get_by_id(payload.get("sub"))
+    if not user or not user.is_active:
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
             detail={"code": "INVALID_REFRESH_TOKEN", "message": "User not found or inactive"},
         )
 
     scopes = ["read", "write"]
-    if user["is_superuser"]:
+    if user.is_superuser:
         scopes.append("admin")
 
     access_token = auth_service.create_access_token(
-        user_id=user["id"],
-        username=user["username"],
-        email=user["email"],
-        is_superuser=user["is_superuser"],
+        user_id=user.id,
+        username=user.username,
+        email=user.email,
+        is_superuser=user.is_superuser,
         scopes=[s for s in scopes],
     )
-    refresh_token = auth_service.create_refresh_token(user_id=user["id"])
+    refresh_token = auth_service.create_refresh_token(user_id=user.id)
 
     return TokenResponse(
         access_token=access_token,

@@ -42,7 +42,7 @@ async def store_document(
     from app.db.repository import get_document_repository
 
     collection_repo = get_collection_repository()
-    collection = collection_repo.get_by_id(body.collection_id)
+    collection = await collection_repo.get_by_id(body.collection_id)
 
     if not collection:
         raise HTTPException(
@@ -68,7 +68,7 @@ async def store_document(
         doc_metadata=body.metadata or {},
     )
 
-    document = doc_repo.create(doc_create)
+    document = await doc_repo.create(doc_create)
 
     chunks = chunking_service.chunk_markdown(body.content, body.title)
     token_count = sum(c.get("token_count", 0) for c in chunks)
@@ -87,7 +87,7 @@ async def store_document(
     vectors = await embedding_service.embed_texts(texts)
 
     qdrant_service = get_qdrant_service(collection["qdrant_collection"])
-    qdrant_service.upsert_chunks(chunk_data, vectors)
+    await qdrant_service.upsert_chunks(chunk_data, vectors)
 
     return DocumentStoreResponse(
         id=document.id,
@@ -116,7 +116,7 @@ async def list_documents(
     doc_repo = get_document_repository()
 
     if collection_id:
-        collection = collection_repo.get_by_id(collection_id)
+        collection = await collection_repo.get_by_id(collection_id)
         if not collection:
             raise HTTPException(
                 status_code=status.HTTP_404_NOT_FOUND,
@@ -127,10 +127,10 @@ async def list_documents(
                 status_code=status.HTTP_403_FORBIDDEN,
                 detail={"code": "FORBIDDEN", "message": "Cannot access another user's collection"},
             )
-        documents = doc_repo.list_all_for_user(user.user_id, limit, offset)
-        total = doc_repo.count_by_collection(collection_id)
+        documents = await doc_repo.list_all_for_user(user.user_id, limit, offset)
+        total = await doc_repo.count_by_collection(collection_id)
     else:
-        documents = doc_repo.list_all_for_user(user.user_id, limit, offset)
+        documents = await doc_repo.list_all_for_user(user.user_id, limit, offset)
         total = len(documents)
 
     items = [
@@ -170,14 +170,14 @@ async def get_document(
     doc_repo = get_document_repository()
     collection_repo = get_collection_repository()
 
-    document = doc_repo.get_by_id(document_id)
+    document = await doc_repo.get_by_id(document_id)
     if not document:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
             detail={"code": "DOCUMENT_NOT_FOUND", "message": "Document not found"},
         )
 
-    collection = collection_repo.get_by_id(document.collection_id)
+    collection = await collection_repo.get_by_id(document.collection_id)
     if collection and collection["user_id"] != user.user_id and not user.is_superuser:
         raise HTTPException(
             status_code=status.HTTP_403_FORBIDDEN,
@@ -216,14 +216,14 @@ async def update_document(
     embedding_service = get_embedding_service()
     chunking_service = get_chunking_service()
 
-    document = doc_repo.get_by_id(document_id)
+    document = await doc_repo.get_by_id(document_id)
     if not document:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
             detail={"code": "DOCUMENT_NOT_FOUND", "message": "Document not found"},
         )
 
-    collection = collection_repo.get_by_id(document.collection_id)
+    collection = await collection_repo.get_by_id(document.collection_id)
     if collection and collection["user_id"] != user.user_id and not user.is_superuser:
         raise HTTPException(
             status_code=status.HTTP_403_FORBIDDEN,
@@ -261,13 +261,13 @@ async def update_document(
 
         if collection:
             qdrant_service = get_qdrant_service(collection["qdrant_collection"])
-            qdrant_service.delete_by_document_id(document.id)
-            qdrant_service.upsert_chunks(chunk_data, vectors)
+            await qdrant_service.delete_by_document_id(document.id)
+            await qdrant_service.upsert_chunks(chunk_data, vectors)
 
     if update_data:
-        updated = doc_repo.update(document_id, **update_data)
+        updated = await doc_repo.update(document_id, **update_data)
     else:
-        updated = doc_repo.get_by_id(document_id)
+        updated = await doc_repo.get_by_id(document_id)
 
     return DocumentUpdateResponse(
         id=updated.id,
@@ -295,14 +295,14 @@ async def delete_document(
     doc_repo = get_document_repository()
     collection_repo = get_collection_repository()
 
-    document = doc_repo.get_by_id(document_id)
+    document = await doc_repo.get_by_id(document_id)
     if not document:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
             detail={"code": "DOCUMENT_NOT_FOUND", "message": "Document not found"},
         )
 
-    collection = collection_repo.get_by_id(document.collection_id)
+    collection = await collection_repo.get_by_id(document.collection_id)
     if collection and collection["user_id"] != user.user_id and not user.is_superuser:
         raise HTTPException(
             status_code=status.HTTP_403_FORBIDDEN,
@@ -311,9 +311,9 @@ async def delete_document(
 
     if collection:
         qdrant_service = get_qdrant_service(collection["qdrant_collection"])
-        qdrant_service.delete_by_document_id(document.id)
+        await qdrant_service.delete_by_document_id(document.id)
 
-    doc_repo.delete(document_id)
+    await doc_repo.delete(document_id)
     return MessageResponse(message="Document deleted successfully")
 
 
@@ -331,7 +331,7 @@ async def search_documents(
     embedding_service = get_embedding_service()
 
     if body.collection_id:
-        collection = collection_repo.get_by_id(body.collection_id)
+        collection = await collection_repo.get_by_id(body.collection_id)
         if not collection:
             raise HTTPException(
                 status_code=status.HTTP_404_NOT_FOUND,
@@ -345,7 +345,7 @@ async def search_documents(
         collection_ids = [body.collection_id]
         collection_names = {collection["id"]: collection["name"]}
     else:
-        collections = collection_repo.list_by_user(user.user_id)
+        collections = await collection_repo.list_by_user(user.user_id)
         collection_ids = [c["id"] for c in collections]
         collection_names = {c["id"]: c["name"] for c in collections}
         if not collection_ids:
@@ -360,12 +360,12 @@ async def search_documents(
 
     all_results = []
     for coll_id in collection_ids:
-        collection = collection_repo.get_by_id(coll_id)
+        collection = await collection_repo.get_by_id(coll_id)
         if not collection:
             continue
 
         qdrant_service = get_qdrant_service(collection["qdrant_collection"])
-        results = qdrant_service.search(
+        results = await qdrant_service.search(
             query_vector=query_vector,
             limit=body.max_results,
         )

@@ -4,8 +4,8 @@ from sqlalchemy import create_engine, pool
 
 from alembic import context
 
-from src.app.config import settings
-from src.app.db.models import Base
+from shared.config import settings
+from shared.db.models import Base
 
 config = context.config
 

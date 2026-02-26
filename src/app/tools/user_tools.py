@@ -24,17 +24,17 @@ async def user_register(input_data: RegisterInput) -> UserResponse:
     repo = get_user_repository()
     auth_service = get_auth_service()
 
-    existing = repo.get_by_username(input_data.username)
+    existing = await repo.get_by_username(input_data.username)
     if existing:
         raise ValueError("Username already exists")
 
-    existing_email = repo.get_by_email(input_data.email)
+    existing_email = await repo.get_by_email(input_data.email)
     if existing_email:
         raise ValueError("Email already exists")
 
     password_hash = auth_service.hash_password(input_data.password)
 
-    user = repo.create(
+    user = await repo.create(
         email=input_data.email,
         username=input_data.username,
         password_hash=password_hash,
@@ -42,7 +42,7 @@ async def user_register(input_data: RegisterInput) -> UserResponse:
     )
 
     collection_repo = get_collection_repository()
-    collection_repo.create(user_id=user.id, name="default")
+    await collection_repo.create(user_id=user.id, name="default")
 
     return user
 
@@ -51,7 +51,7 @@ async def user_login(input_data: LoginInput) -> TokenResponse:
     repo = get_user_repository()
     auth_service = get_auth_service()
 
-    user = repo.get_by_username(input_data.username)
+    user = await repo.get_by_username(input_data.username)
     if not user:
         raise ValueError("Invalid username or password")
 
@@ -92,7 +92,7 @@ async def user_profile() -> dict:
         raise ValueError("Not authenticated")
 
     repo = get_user_repository()
-    user = repo.get_by_id(auth_context["user_id"])
+    user = await repo.get_by_id(auth_context["user_id"])
 
     if not user:
         raise ValueError("User not found")
@@ -111,7 +111,7 @@ async def user_refresh(input_data: RefreshInput) -> TokenResponse:
     user_id = payload.get("sub")
     if not user_id:
         raise ValueError("Invalid token payload")
-    user = repo.get_by_id(user_id)
+    user = await repo.get_by_id(user_id)
 
     if not user:
         raise ValueError("User not found")

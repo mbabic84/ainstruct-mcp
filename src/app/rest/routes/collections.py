@@ -28,7 +28,7 @@ async def create_collection(
 ):
     collection_repo = get_collection_repository()
 
-    collection = collection_repo.create(
+    collection = await collection_repo.create(
         user_id=user.user_id,
         name=body.name,
     )
@@ -52,7 +52,7 @@ async def list_collections(
     user: UserDep,
 ):
     collection_repo = get_collection_repository()
-    collections = collection_repo.list_by_user(user.user_id)
+    collections = await collection_repo.list_by_user(user.user_id)
 
     items = [
         CollectionListItem(
@@ -81,7 +81,7 @@ async def get_collection(
     user: UserDep,
 ):
     collection_repo = get_collection_repository()
-    collection = collection_repo.get_by_id(collection_id)
+    collection = await collection_repo.get_by_id(collection_id)
 
     if not collection:
         raise HTTPException(
@@ -119,7 +119,7 @@ async def rename_collection(
     user: UserDep,
 ):
     collection_repo = get_collection_repository()
-    collection = collection_repo.get_by_id(collection_id)
+    collection = await collection_repo.get_by_id(collection_id)
 
     if not collection:
         raise HTTPException(
@@ -133,7 +133,7 @@ async def rename_collection(
             detail={"code": "FORBIDDEN", "message": "Cannot modify another user's collection"},
         )
 
-    updated = collection_repo.rename(collection_id, name=body.name)
+    updated = await collection_repo.rename(collection_id, name=body.name)
 
     return CollectionResponse(
         id=updated.id,
@@ -160,7 +160,7 @@ async def delete_collection(
 ):
     collection_repo = get_collection_repository()
 
-    collection = collection_repo.get_by_id(collection_id)
+    collection = await collection_repo.get_by_id(collection_id)
     if not collection:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
@@ -183,5 +183,5 @@ async def delete_collection(
             },
         )
 
-    collection_repo.delete(collection_id)
+    await collection_repo.delete(collection_id)
     return MessageResponse(message="Collection deleted successfully")

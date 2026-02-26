@@ -33,7 +33,7 @@ async def create_cat(input_data: CreateCatInput) -> CatResponse:
         raise ValueError("JWT or PAT authentication required to create CAT tokens")
 
     collection_repo = get_collection_repository()
-    collection = collection_repo.get_by_id(input_data.collection_id)
+    collection = await collection_repo.get_by_id(input_data.collection_id)
 
     if not collection:
         raise ValueError("Collection not found")
@@ -47,7 +47,7 @@ async def create_cat(input_data: CreateCatInput) -> CatResponse:
         raise ValueError(f"Invalid permission: {input_data.permission}. Must be 'read' or 'read_write'")
 
     repo = get_cat_repository()
-    key_id, key = repo.create(
+    key_id, key = await repo.create(
         label=input_data.label,
         collection_id=input_data.collection_id,
         user_id=user_id,
@@ -55,7 +55,7 @@ async def create_cat(input_data: CreateCatInput) -> CatResponse:
         expires_in_days=input_data.expires_in_days,
     )
 
-    key_info = repo.get_by_id(key_id)
+    key_info = await repo.get_by_id(key_id)
     if not key_info:
         raise ValueError("Failed to retrieve key info")
 
@@ -84,7 +84,7 @@ async def list_cats() -> list[CatListResponse]:
         user_id = auth_info.get("id")
 
     repo = get_cat_repository()
-    keys = repo.list_all(user_id=user_id)
+    keys = await repo.list_all(user_id=user_id)
 
     return [
         CatListResponse(
@@ -105,7 +105,7 @@ async def list_cats() -> list[CatListResponse]:
 async def revoke_cat(input_data: RevokeCatInput) -> dict:
     repo = get_cat_repository()
 
-    key_info = repo.get_by_id(input_data.key_id)
+    key_info = await repo.get_by_id(input_data.key_id)
     if not key_info:
         raise ValueError("CAT token not found")
 
@@ -117,7 +117,7 @@ async def revoke_cat(input_data: RevokeCatInput) -> dict:
         if key_info.get("user_id") and key_info.get("user_id") != auth_info.get("id"):
             raise ValueError("You can only revoke your own CAT tokens")
 
-    success = repo.revoke(input_data.key_id)
+    success = await repo.revoke(input_data.key_id)
     if not success:
         raise ValueError("Failed to revoke CAT token")
 
@@ -127,7 +127,7 @@ async def revoke_cat(input_data: RevokeCatInput) -> dict:
 async def rotate_cat(input_data: RotateCatInput) -> CatResponse:
     repo = get_cat_repository()
 
-    key_info = repo.get_by_id(input_data.key_id)
+    key_info = await repo.get_by_id(input_data.key_id)
     if not key_info:
         raise ValueError("CAT token not found")
 
@@ -139,12 +139,12 @@ async def rotate_cat(input_data: RotateCatInput) -> CatResponse:
         if key_info.get("user_id") and key_info.get("user_id") != auth_info.get("id"):
             raise ValueError("You can only rotate your own CAT tokens")
 
-    result = repo.rotate(input_data.key_id)
+    result = await repo.rotate(input_data.key_id)
     if not result:
         raise ValueError("Failed to rotate CAT token")
 
     new_key_id, new_key = result
-    new_key_info = repo.get_by_id(new_key_id)
+    new_key_info = await repo.get_by_id(new_key_id)
     if not new_key_info:
         raise ValueError("Failed to retrieve new key info")
 

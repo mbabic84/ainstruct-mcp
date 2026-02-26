@@ -1,6 +1,6 @@
 import uuid
 
-from qdrant_client import QdrantClient
+from qdrant_client import AsyncQdrantClient
 from qdrant_client.models import (
     Distance,
     FieldCondition,
@@ -15,7 +15,7 @@ from ..config import settings
 
 class QdrantService:
     def __init__(self, collection_name: str | None = None, is_admin: bool = False):
-        self.client = QdrantClient(
+        self.client = AsyncQdrantClient(
             url=settings.qdrant_url,
             api_key=settings.qdrant_api_key,
         )
@@ -24,12 +24,13 @@ class QdrantService:
         if collection_name and not is_admin:
             self._ensure_collection()
 
-    def _ensure_collection(self):
-        collections = self.client.get_collections().collections
+    async def _ensure_collection(self):
+        collections_response = await self.client.get_collections()
+        collections = collections_response.collections
         collection_names = [c.name for c in collections]
 
         if self.collection_name not in collection_names:
-            self.client.create_collection(
+            await self.client.create_collection(
                 collection_name=self.collection_name,
                 vectors_config=VectorParams(
                     size=settings.embedding_dimensions,
@@ -37,11 +38,12 @@ class QdrantService:
                 ),
             )
 
-    def get_all_collections(self) -> list[str]:
-        collections = self.client.get_collections().collections
+    async def get_all_collections(self) -> list[str]:
+        collections_response = await self.client.get_collections()
+        collections = collections_response.collections
         return [c.name for c in collections]
 
-    def upsert_chunks(
+    async def upsert_chunks(
         self,
         chunks: list[dict],
         vectors: list[list[float]],
@@ -60,13 +62,13 @@ class QdrantService:
 
         if self.collection_name is None:
             raise ValueError("Collection name is required for upsert")
-        self.client.upsert(
+        await self.client.upsert(
             collection_name=self.collection_name,
             points=points,
         )
         return [p.id for p in points]
 
-    def search(
+    async def search(
         self,
         query_vector: list[float],
         limit: int = 5,
@@ -74,8 +76,8 @@ class QdrantService:
     ) -> list[dict]:
         if self.is_admin:
             all_results = []
-            for collection in self.get_all_collections():
-                results = self._search_collection(
+            for collection in await self.get_all_collections():
+                results = await self._search_collection(
                     collection, query_vector, limit, filter_document_id
                 )
                 all_results.extend(results)
@@ -86,11 +88,11 @@ class QdrantService:
         if self.collection_name is None:
             raise ValueError("Collection name is required for non-admin search")
 
-        return self._search_collection(
+        return await self._search_collection(
             self.collection_name, query_vector, limit, filter_document_id
         )
 
-    def _search_collection(
+    async def _search_collection(
         self,
         collection_name: str,
         query_vector: list[float],
@@ -108,7 +110,7 @@ class QdrantService:
                 ]
             )
 
-        search_result = self.client.query_points(
+        search_result = await self.client.query_points(
             collection_name=collection_name,
             query=query_vector,
             limit=limit,
@@ -131,17 +133,17 @@ class QdrantService:
             for r in results
         ]
 
-    def delete_by_document_id(self, document_id: str):
+    async def delete_by_document_id(self, document_id: str):
         if self.is_admin:
-            for collection in self.get_all_collections():
-                self._delete_from_collection(collection, document_id)
+            for collection in await self.get_all_collections():
+                await self._delete_from_collection(collection, document_id)
         else:
             if self.collection_name is None:
                 raise ValueError("Collection name is required for non-admin delete")
-            self._delete_from_collection(self.collection_name, document_id)
+            await self._delete_from_collection(self.collection_name, document_id)
 
-    def _delete_from_collection(self, collection_name: str, document_id: str):
-        self.client.delete(
+    async def _delete_from_collection(self, collection_name: str, document_id: str):
+        await self.client.delete(
             collection_name=collection_name,
             points_selector=Filter(
                 must=[
@@ -153,7 +155,7 @@ class QdrantService:
             ),
         )
 
-    def delete_by_point_ids(self, point_ids: list[str]):
+    async def delete_by_point_ids(self, point_ids: list[str]):
         if self.is_admin:
             raise ValueError("Admin cannot delete by point IDs across all collections")
 
@@ -162,12 +164,12 @@ class QdrantService:
 
         from qdrant_client.models import PointIdsList
 
-        self.client.delete(
+        await self.client.delete(
             collection_name=self.collection_name,
             points_selector=PointIdsList(points=list(point_ids)),
         )
 
-    def search_multi(
+    async def search_multi(
         self,
         collection_names: list[str],
         query_vector: list[float],
@@ -176,7 +178,7 @@ class QdrantService:
     ) -> list[dict]:
         all_results = []
         for coll in collection_names:
-            results = self._search_collection(
+            results = await self._search_collection(
                 coll, query_vector, limit, filter_document_id
             )
             all_results.extend(results)

@@ -38,14 +38,14 @@ async def create_pat_token(input_data: CreatePatTokenInput) -> PatTokenResponse:
     scopes_str = [s.value if isinstance(s, Scope) else str(s) for s in scopes]
 
     repo = get_pat_token_repository()
-    token_id, token = repo.create(
+    token_id, token = await repo.create(
         label=input_data.label,
         user_id=user_id,
         scopes=scopes_str,
         expires_in_days=input_data.expires_in_days,
     )
 
-    token_info = repo.get_by_id(token_id)
+    token_info = await repo.get_by_id(token_id)
     if not token_info:
         raise ValueError("Failed to retrieve token info")
 
@@ -70,7 +70,7 @@ async def list_pat_tokens() -> list[PatTokenListResponse]:
         user_id = user_info.get("id")
 
     repo = get_pat_token_repository()
-    tokens = repo.list_all(user_id=user_id)
+    tokens = await repo.list_all(user_id=user_id)
 
     return [
         PatTokenListResponse(
@@ -90,7 +90,7 @@ async def list_pat_tokens() -> list[PatTokenListResponse]:
 async def revoke_pat_token(input_data: RevokePatTokenInput) -> dict:
     repo = get_pat_token_repository()
 
-    token_info = repo.get_by_id(input_data.pat_id)
+    token_info = await repo.get_by_id(input_data.pat_id)
     if not token_info:
         raise ValueError("PAT token not found")
 
@@ -99,7 +99,7 @@ async def revoke_pat_token(input_data: RevokePatTokenInput) -> dict:
         if token_info.get("user_id") != user_info.get("id"):
             raise ValueError("You can only revoke your own PAT tokens")
 
-    success = repo.revoke(input_data.pat_id)
+    success = await repo.revoke(input_data.pat_id)
     if not success:
         raise ValueError("Failed to revoke PAT token")
 
@@ -109,7 +109,7 @@ async def revoke_pat_token(input_data: RevokePatTokenInput) -> dict:
 async def rotate_pat_token(input_data: RotatePatTokenInput) -> PatTokenResponse:
     repo = get_pat_token_repository()
 
-    token_info = repo.get_by_id(input_data.pat_id)
+    token_info = await repo.get_by_id(input_data.pat_id)
     if not token_info:
         raise ValueError("PAT token not found")
 
@@ -118,12 +118,12 @@ async def rotate_pat_token(input_data: RotatePatTokenInput) -> PatTokenResponse:
         if token_info.get("user_id") != user_info.get("id"):
             raise ValueError("You can only rotate your own PAT tokens")
 
-    result = repo.rotate(input_data.pat_id)
+    result = await repo.rotate(input_data.pat_id)
     if not result:
         raise ValueError("Failed to rotate PAT token")
 
     new_token_id, new_token = result
-    new_token_info = repo.get_by_id(new_token_id)
+    new_token_info = await repo.get_by_id(new_token_id)
     if not new_token_info:
         raise ValueError("Failed to retrieve new token info")
 

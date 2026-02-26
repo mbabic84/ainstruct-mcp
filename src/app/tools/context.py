@@ -123,6 +123,8 @@ def get_collection_repository():
 
 
 def get_auth_context() -> dict:
+    import asyncio
+
     user_info = get_user_info()
     cat_info = get_cat_info()
     pat_info = get_pat_info()
@@ -130,7 +132,9 @@ def get_auth_context() -> dict:
     if user_info:
         collection_repo = get_collection_repository()
         user_id = user_info.get("id")
-        user_collections = collection_repo.list_by_user(user_id) if user_id else []
+        user_collections = asyncio.get_event_loop().run_until_complete(
+            collection_repo.list_by_user(user_id)
+        ) if user_id else []
 
         return {
             "id": user_info.get("id"),
@@ -148,7 +152,9 @@ def get_auth_context() -> dict:
     if pat_info:
         collection_repo = get_collection_repository()
         user_id = pat_info.get("user_id")
-        user_collections = collection_repo.list_by_user(user_id) if user_id else []
+        user_collections = asyncio.get_event_loop().run_until_complete(
+            collection_repo.list_by_user(user_id)
+        ) if user_id else []
 
         return {
             "id": pat_info.get("id"),

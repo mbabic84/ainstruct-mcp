@@ -1,0 +1,132 @@
+name: ainstruct-mcp
+
+x-shared-env: &shared-env
+  POSTGRES_PASSWORD: c4a162b4507727091661b7dffb97e28cb418364303c4f763
+  ADMIN_API_KEY: 1a8935df5990f27c40b2becc90fb2a47fd463c794eadb3ab63a15b3ce0a19c8f
+  JWT_SECRET_KEY: fec1bc727a9b7ebbb37bddbb29b185f39da1b88c47aa052d645b57f3e87a24a2
+  QDRANT_URL: http://qdrant:6333
+  OPENROUTER_API_KEY: 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
+  EMBEDDING_MODEL: Qwen/Qwen3-Embedding-8B
+  EMBEDDING_DIMENSIONS: "4096"
+  LOG_LEVEL: info
+
+services:
+  postgres:
+    image: postgres:18-alpine
+    restart: unless-stopped
+    environment:
+      POSTGRES_DB: ainstruct
+      POSTGRES_USER: ainstruct
+      POSTGRES_PASSWORD: c4a162b4507727091661b7dffb97e28cb418364303c4f763
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ainstruct -d ainstruct"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+      start_period: 5s
+    deploy:
+      resources: {}
+    logging:
+      driver: json-file
+      options:
+        max-size: "10m"
+        max-file: "3"
+    networks:
+      - ainstruct_network
+
+  qdrant:
+    image: qdrant/qdrant:v1.12.0
+    restart: unless-stopped
+    volumes:
+      - qdrant_data:/qdrant/storage
+    healthcheck:
+      test: ["CMD-SHELL", "bash -c ':>/dev/tcp/127.0.0.1/6333'"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 10s
+    deploy:
+      resources: {}
+    logging:
+      driver: json-file
+      options:
+        max-size: "10m"
+        max-file: "3"
+    networks:
+      - ainstruct_network
+
+  mcp_server:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    image: mbabic84/ainstruct-mcp:3.5.0
+    restart: unless-stopped
+    ports:
+      - "8000:8000"
+    environment:
+      <<: *shared-env
+      SERVICE: mcp-server
+      PORT: "8000"
+      DATABASE_URL: postgresql+asyncpg://ainstruct:${POSTGRES_PASSWORD}@postgres:5432/ainstruct
+    depends_on:
+      qdrant:
+        condition: service_healthy
+      postgres:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD", "curl", "-sf", "http://localhost:8000/health"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 30s
+    deploy:
+      resources: {}
+    logging:
+      driver: json-file
+      options:
+        max-size: "50m"
+        max-file: "5"
+    networks:
+      - ainstruct_network
+
+  rest_api:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    image: mbabic84/ainstruct-mcp:3.5.0
+    restart: unless-stopped
+    ports:
+      - "8001:8001"
+    environment:
+      <<: *shared-env
+      SERVICE: rest-api
+      PORT: "8001"
+      DATABASE_URL: postgresql+asyncpg://ainstruct:${POSTGRES_PASSWORD}@postgres:5432/ainstruct
+    depends_on:
+      mcp_server:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD", "curl", "-sf", "http://localhost:8001/health"]
+      interval: 10s
+      timeout: 5s
+      retries: 3
+      start_period: 15s
+    deploy:
+      resources: {}
+    logging:
+      driver: json-file
+      options:
+        max-size: "50m"
+        max-file: "5"
+    networks:
+      - ainstruct_network
+
+volumes:
+  postgres_data:
+  qdrant_data:
+
+networks:
+  ainstruct_network:
+    driver: bridge

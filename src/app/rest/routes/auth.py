@@ -1,4 +1,4 @@
-from fastapi import APIRouter, HTTPException, Query, status
+from fastapi import APIRouter, HTTPException, status
 
 from app.rest.deps import DbDep, UserDep
 from app.rest.schemas import (
@@ -25,8 +25,8 @@ async def register(
     body: UserCreate,
     db: DbDep,
 ):
-    from app.services.auth_service import AuthService
     from app.db import get_user_repository
+    from app.services.auth_service import AuthService
 
     user_repo = get_user_repository()
     auth_service = AuthService()
@@ -74,8 +74,8 @@ async def login(
     body: UserLogin,
     db: DbDep,
 ):
-    from app.services.auth_service import AuthService
     from app.db import get_user_repository
+    from app.services.auth_service import AuthService
 
     user_repo = get_user_repository()
     auth_service = AuthService()
@@ -132,8 +132,8 @@ async def refresh(
     body: RefreshRequest,
     db: DbDep,
 ):
-    from app.services.auth_service import AuthService
     from app.db import get_user_repository
+    from app.services.auth_service import AuthService
 
     auth_service = AuthService()
     user_repo = get_user_repository()

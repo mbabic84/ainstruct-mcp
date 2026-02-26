@@ -4,7 +4,7 @@ Tests end-to-end scenarios like user registration -> collection -> API key -> do
 """
 import pytest
 from unittest.mock import AsyncMock, MagicMock, patch
-from datetime import datetime
+from datetime import datetime, timezone
 import uuid
 
 from app.tools.user_tools import (
@@ -73,7 +73,7 @@ class TestCompleteUserWorkflow:
                 username="testuser",
                 is_active=True,
                 is_superuser=False,
-                created_at=datetime.utcnow(),
+                created_at=datetime.now(timezone.utc),
             )
             mock_user_repo_factory.return_value = mock_user_repo
 
@@ -87,7 +87,7 @@ class TestCompleteUserWorkflow:
                 name="default",
                 document_count=0,
                 cat_count=0,
-                created_at=datetime.utcnow(),
+                created_at=datetime.now(timezone.utc),
             )
             mock_coll_factory.return_value = mock_coll_repo
 
@@ -150,7 +150,7 @@ class TestCompleteUserWorkflow:
                     "name": "default",
                     "qdrant_collection": "qdrant-uuid",
                     "user_id": "user-123",
-                    "created_at": datetime.utcnow(),
+                    "created_at": datetime.now(timezone.utc),
                 }
             ]
             mock_coll_factory.return_value = mock_coll_repo
@@ -173,7 +173,7 @@ class TestCompleteUserWorkflow:
                 "user_id": "user-123",
                 "document_count": 0,
                 "cat_count": 0,
-                "created_at": datetime.utcnow(),
+                "created_at": datetime.now(timezone.utc),
             }
             mock_coll_factory.return_value = mock_coll_repo
 
@@ -185,7 +185,7 @@ class TestCompleteUserWorkflow:
                 "collection_id": "default-collection-id",
                 "collection_name": "default",
                 "permission": Permission.READ_WRITE,
-                "created_at": datetime.utcnow(),
+                "created_at": datetime.now(timezone.utc),
                 "expires_at": None,
             }
             mock_key_repo_factory.return_value = mock_key_repo
@@ -225,8 +225,8 @@ class TestCompleteUserWorkflow:
                 title="Test Doc",
                 content="Test content",
                 document_type="markdown",
-                created_at=datetime.utcnow(),
-                updated_at=datetime.utcnow(),
+                created_at=datetime.now(timezone.utc),
+                updated_at=datetime.now(timezone.utc),
                 doc_metadata={},
             )
             mock_doc_repo_factory.return_value = mock_doc_repo
@@ -334,8 +334,8 @@ class TestPermissionEnforcement:
                 title="Test",
                 content="Content",
                 document_type="markdown",
-                created_at=datetime.utcnow(),
-                updated_at=datetime.utcnow(),
+                created_at=datetime.now(timezone.utc),
+                updated_at=datetime.now(timezone.utc),
                 doc_metadata={},
             )
             mock_repo_factory.return_value = mock_repo
@@ -487,8 +487,8 @@ class TestCollectionIsolation:
                 title="Test",
                 content="Content",
                 document_type="markdown",
-                created_at=datetime.utcnow(),
-                updated_at=datetime.utcnow(),
+                created_at=datetime.now(timezone.utc),
+                updated_at=datetime.now(timezone.utc),
                 doc_metadata={},
             )
             mock_repo_factory.return_value = mock_repo
@@ -527,7 +527,7 @@ class TestCollectionIsolation:
                 "user_id": "user-456",  # Different user
                 "document_count": 5,
                 "cat_count": 1,
-                "created_at": datetime.utcnow(),
+                "created_at": datetime.now(timezone.utc),
             }
             mock_repo_factory.return_value = mock_repo
 
@@ -565,7 +565,7 @@ class TestAPIKeyRotation:
                 "collection_name": "default",
                 "user_id": "user-123",
                 "permission": Permission.READ_WRITE,
-                "created_at": datetime.utcnow(),
+                "created_at": datetime.now(timezone.utc),
                 "expires_at": None,
             }
             mock_repo.rotate.return_value = ("new-key-id", "ak_live_newkey123")
@@ -606,7 +606,7 @@ class TestPatTokenWorkflow:
                 "label": "Test PAT",
                 "user_id": "user-123",
                 "scopes": [Scope.READ, Scope.WRITE],
-                "created_at": datetime.utcnow(),
+                "created_at": datetime.now(timezone.utc),
                 "expires_at": None,
                 "is_active": True,
                 "last_used": None,
@@ -641,7 +641,7 @@ class TestPatTokenWorkflow:
                 "label": "Read-only PAT",
                 "user_id": "user-123",
                 "scopes": [Scope.READ],
-                "created_at": datetime.utcnow(),
+                "created_at": datetime.now(timezone.utc),
                 "expires_at": None,
                 "is_active": True,
                 "last_used": None,
@@ -674,8 +674,8 @@ class TestPatTokenWorkflow:
                 "label": "Test PAT",
                 "user_id": "user-123",
                 "scopes": [Scope.READ, Scope.WRITE],
-                "created_at": datetime.utcnow(),
-                "expires_at": datetime.utcnow(),
+                "created_at": datetime.now(timezone.utc),
+                "expires_at": datetime.now(timezone.utc),
                 "is_active": True,
                 "last_used": None,
             }
@@ -723,7 +723,7 @@ class TestPatTokenWorkflow:
                     "label": "PAT 1",
                     "user_id": "user-123",
                     "scopes": [Scope.READ, Scope.WRITE],
-                    "created_at": datetime.utcnow(),
+                    "created_at": datetime.now(timezone.utc),
                     "expires_at": None,
                     "is_active": True,
                     "last_used": None,
@@ -733,7 +733,7 @@ class TestPatTokenWorkflow:
                     "label": "PAT 2",
                     "user_id": "user-123",
                     "scopes": [Scope.READ],
-                    "created_at": datetime.utcnow(),
+                    "created_at": datetime.now(timezone.utc),
                     "expires_at": None,
                     "is_active": True,
                     "last_used": None,
@@ -764,7 +764,7 @@ class TestPatTokenWorkflow:
                 "label": "Test PAT",
                 "user_id": "user-123",
                 "scopes": [Scope.READ, Scope.WRITE],
-                "created_at": datetime.utcnow(),
+                "created_at": datetime.now(timezone.utc),
                 "expires_at": None,
                 "is_active": True,
                 "last_used": None,
@@ -794,7 +794,7 @@ class TestPatTokenWorkflow:
                 "label": "Test PAT",
                 "user_id": "user-123",
                 "scopes": [Scope.READ, Scope.WRITE],
-                "created_at": datetime.utcnow(),
+                "created_at": datetime.now(timezone.utc),
                 "expires_at": None,
                 "is_active": True,
                 "last_used": None,
@@ -836,7 +836,7 @@ class TestPatTokenPermissions:
                     "id": "collection-1",
                     "name": "default",
                     "user_id": "user-123",
-                    "created_at": datetime.utcnow(),
+                    "created_at": datetime.now(timezone.utc),
                 }
             ]
             mock_coll_factory.return_value = mock_coll_repo

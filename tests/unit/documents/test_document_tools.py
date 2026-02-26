@@ -4,7 +4,7 @@ Tests store, search, get, list, update, delete operations.
 """
 import pytest
 from unittest.mock import AsyncMock, MagicMock, patch
-from datetime import datetime
+from datetime import datetime, timezone
 import uuid
 
 from app.tools.document_tools import (
@@ -98,8 +98,8 @@ def mock_document():
         title="Test Document",
         content="This is test content for the document.",
         document_type="markdown",
-        created_at=datetime.utcnow(),
-        updated_at=datetime.utcnow(),
+        created_at=datetime.now(timezone.utc),
+        updated_at=datetime.now(timezone.utc),
         doc_metadata={"key": "value"},
     )
 

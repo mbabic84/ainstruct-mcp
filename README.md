@@ -365,9 +365,11 @@ Authorization: Bearer YOUR_JWT_TOKEN
 
 ### Testing
 ```bash
-./run_tests.sh
+./scripts/test.sh
 ```
-Runs linting, type checking, and tests.
+Runs linting, type checking, and tests using uv.
+
+For more details, see [Testing Guide](./docs/TESTING.md).
 
 ### Database Migrations
 ```bash
@@ -375,7 +377,7 @@ alembic revision --autogenerate -m "description"
 alembic upgrade head
 ```
 
-For more details, see [Testing Guide](./docs/TESTING.md) and [Development Guide](./docs/DEVELOPMENT.md).
+For more details, see [Testing Guide](./docs/TESTING.md).
 
 ## License
 

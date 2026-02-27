@@ -17,13 +17,13 @@ jobs:
           python-version: "3.14"
 
       - name: Install dependencies
-        run: uv sync --all-packages
+        run: uv sync --all-packages --frozen
 
       - name: Run linting
-        run: uv run ruff check packages/ services/ tests/
+        run: uv run --frozen ruff check packages/ services/ tests/
 
       - name: Run type checking
-        run: uv run mypy packages/ services/
+        run: uv run --frozen mypy packages/ services/
 
       - name: Run tests
-        run: uv run pytest tests/ -v
+        run: uv run --frozen pytest tests/ -v

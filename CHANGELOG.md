@@ -1,3 +1,10 @@
+# [3.8.0](https://github.com/mbabic84/ainstruct-mcp/compare/v3.7.0...v3.8.0) (2026-02-27)
+
+
+### Features
+
+* remove MCP tools with REST equivalents ([c642c64](https://github.com/mbabic84/ainstruct-mcp/commit/c642c64726c2df0d072bcdb1ae56563a9ad92668))
+
 # [3.7.0](https://github.com/mbabic84/ainstruct-mcp/compare/v3.6.0...v3.7.0) (2026-02-27)
 
 

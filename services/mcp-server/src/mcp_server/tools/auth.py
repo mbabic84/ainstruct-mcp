@@ -80,23 +80,14 @@ def is_jwt_token(token: str) -> bool:
 
 # Auth type constants
 class AuthLevel:
-    NONE = "none"           # No auth required (public)
+    NONE = "none"  # No auth required (public)
     JWT_OR_PAT = "jwt_or_pat"  # JWT or PAT token required
-    API_KEY = "api_key"     # API key OR JWT/PAT (documents)
-    ADMIN = "admin"         # JWT or PAT + admin scope
+    API_KEY = "api_key"  # API key OR JWT/PAT (documents)
+    ADMIN = "admin"  # JWT or PAT + admin scope
 
 
 # Public tools that don't require authentication
-PUBLIC_TOOLS: set[str] = {
-    "user_register_tool",
-    "user_login_tool",
-    "user_refresh_tool",
-}
-
-# Tools requiring JWT or PAT authentication (user-level access)
-USER_TOOLS: set[str] = {
-    "user_profile_tool",
-}
+PUBLIC_TOOLS: set[str] = set()
 
 # Tools requiring JWT or PAT authentication (collection management - user owns collections)
 USER_COLLECTION_TOOLS: set[str] = {
@@ -114,10 +105,6 @@ KEY_PAT_TOOLS: set[str] = {
     "list_collection_access_tokens_tool",
     "revoke_collection_access_token_tool",
     "rotate_collection_access_token_tool",
-    "create_pat_token_tool",
-    "list_pat_tokens_tool",
-    "revoke_pat_token_tool",
-    "rotate_pat_token_tool",
 }
 
 # Tools accepting API key or JWT/PAT (document operations bound to a single collection)
@@ -131,13 +118,7 @@ DOCUMENT_TOOLS: set[str] = {
 }
 
 # Tools requiring admin scope (JWT or PAT with admin)
-ADMIN_TOOLS: set[str] = {
-    "list_users_tool",
-    "search_users_tool",
-    "get_user_tool",
-    "update_user_tool",
-    "delete_user_tool",
-}
+ADMIN_TOOLS: set[str] = set()
 
 
 def get_tool_auth_level(tool_name: str) -> str:
@@ -156,10 +137,9 @@ def get_tool_auth_level(tool_name: str) -> str:
         return AuthLevel.JWT_OR_PAT
     if tool_name in USER_COLLECTION_TOOLS:
         return AuthLevel.JWT_OR_PAT
-    if tool_name in USER_TOOLS:
-        return AuthLevel.JWT_OR_PAT
     # Default to ADMIN for unknown tools - fail closed for security
     return AuthLevel.ADMIN
+
 
 # MCP protocol methods that don't require authentication
 PUBLIC_PROTOCOL_METHODS: set[str] = {
@@ -184,7 +164,7 @@ class AuthMiddleware(Middleware):
         """Handle authentication for tool calls."""
         # Get tool name from the message (message IS the CallToolRequestParams)
         message = context.message
-        tool_name = getattr(message, 'name', None)
+        tool_name = getattr(message, "name", None)
 
         # For public tools, allow without auth
         if tool_name and tool_name in PUBLIC_TOOLS:
@@ -203,10 +183,10 @@ class AuthMiddleware(Middleware):
         # Approach 2: Try context.fastmcp_context (works with Streamable HTTP)
         if not auth_header:
             try:
-                fastmcp_ctx = getattr(context, 'fastmcp_context', None)
-                if fastmcp_ctx and hasattr(fastmcp_ctx, 'request_context'):
+                fastmcp_ctx = getattr(context, "fastmcp_context", None)
+                if fastmcp_ctx and hasattr(fastmcp_ctx, "request_context"):
                     request_ctx = fastmcp_ctx.request_context
-                    if request_ctx and hasattr(request_ctx, 'request'):
+                    if request_ctx and hasattr(request_ctx, "request"):
                         auth_header = request_ctx.request.headers.get("Authorization")
             except Exception:
                 pass
@@ -264,10 +244,10 @@ class AuthMiddleware(Middleware):
         # Approach 2: Try context.fastmcp_context (works with Streamable HTTP)
         if not auth_header:
             try:
-                fastmcp_ctx = getattr(context, 'fastmcp_context', None)
-                if fastmcp_ctx and hasattr(fastmcp_ctx, 'request_context'):
+                fastmcp_ctx = getattr(context, "fastmcp_context", None)
+                if fastmcp_ctx and hasattr(fastmcp_ctx, "request_context"):
                     request_ctx = fastmcp_ctx.request_context
-                    if request_ctx and hasattr(request_ctx, 'request'):
+                    if request_ctx and hasattr(request_ctx, "request"):
                         auth_header = request_ctx.request.headers.get("Authorization")
             except Exception:
                 pass
@@ -377,6 +357,7 @@ def require_scope(required_scope: Scope) -> Callable:
             raise ValueError(f"Insufficient permissions: requires '{required_scope.value}' scope")
 
         return wrapper
+
     return decorator
 
 

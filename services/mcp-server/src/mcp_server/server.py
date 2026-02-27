@@ -6,18 +6,6 @@ from shared.config import settings
 from starlette.requests import Request
 from starlette.responses import PlainTextResponse
 
-from mcp_server.tools.admin_tools import (
-    DeleteUserInput,
-    GetUserInput,
-    ListUsersInput,
-    SearchUsersInput,
-    UpdateUserInput,
-    delete_user,
-    get_user,
-    list_users,
-    search_users,
-    update_user,
-)
 from mcp_server.tools.auth import setup_auth
 from mcp_server.tools.cat_tools import (
     CreateCatInput,
@@ -54,24 +42,6 @@ from mcp_server.tools.document_tools import (
     search_documents,
     store_document,
     update_document,
-)
-from mcp_server.tools.pat_tools import (
-    CreatePatTokenInput,
-    RevokePatTokenInput,
-    RotatePatTokenInput,
-    create_pat_token,
-    list_pat_tokens,
-    revoke_pat_token,
-    rotate_pat_token,
-)
-from mcp_server.tools.user_tools import (
-    LoginInput,
-    RefreshInput,
-    RegisterInput,
-    user_login,
-    user_profile,
-    user_refresh,
-    user_register,
 )
 
 log = logging.getLogger(__name__)
@@ -301,75 +271,6 @@ async def move_document_tool(
 
 
 @mcp.tool()
-async def user_register_tool(
-    email: str,
-    username: str,
-    password: str,
-) -> dict:
-    """
-    Register a new user account. This tool is public and does not require authentication.
-
-    Args:
-        email: User email address
-        username: Unique username
-        password: User password
-
-    Returns:
-        Created user information
-    """
-    result = await user_register(
-        RegisterInput(
-            email=email,
-            username=username,
-            password=password,
-        )
-    )
-    return result.model_dump()
-
-
-@mcp.tool()
-async def user_login_tool(username: str, password: str) -> dict:
-    """
-    Authenticate a user and receive access and refresh tokens.
-
-    Args:
-        username: User username
-        password: User password
-
-    Returns:
-        Access token, refresh token, and expiry information
-    """
-    result = await user_login(LoginInput(username=username, password=password))
-    return result.model_dump()
-
-
-@mcp.tool()
-async def user_profile_tool() -> dict:
-    """
-    Get the current authenticated user's profile information.
-
-    Returns:
-        Current user profile
-    """
-    return await user_profile()
-
-
-@mcp.tool()
-async def user_refresh_tool(refresh_token: str) -> dict:
-    """
-    Refresh an access token using a valid refresh token.
-
-    Args:
-        refresh_token: Valid refresh token
-
-    Returns:
-        New access token, refresh token, and expiry information
-    """
-    result = await user_refresh(RefreshInput(refresh_token=refresh_token))
-    return result.model_dump()
-
-
-@mcp.tool()
 async def create_collection_access_token_tool(
     label: str,
     collection_id: str,
@@ -438,72 +339,6 @@ async def rotate_collection_access_token_tool(key_id: str) -> dict:
         New Collection Access Token (only shown once)
     """
     result = await rotate_cat(RotateCatInput(key_id=key_id))
-    return result.model_dump()
-
-
-@mcp.tool()
-async def create_pat_token_tool(
-    label: str,
-    expires_in_days: int | None = None,
-) -> dict:
-    """
-    Create a new Personal Access Token (PAT) for the authenticated user.
-
-    Args:
-        label: Descriptive label for the PAT
-        expires_in_days: Optional expiry in days
-
-    Returns:
-        Created PAT token (only shown once)
-    """
-    result = await create_pat_token(
-        CreatePatTokenInput(
-            label=label,
-            expires_in_days=expires_in_days,
-        )
-    )
-    return result.model_dump()
-
-
-@mcp.tool()
-async def list_pat_tokens_tool() -> dict:
-    """
-    List all PAT tokens for the current user. Admins see all tokens.
-
-    Returns:
-        List of PAT tokens (without the actual token values)
-    """
-    result = await list_pat_tokens()
-    return {"tokens": [t.model_dump() for t in result]}
-
-
-@mcp.tool()
-async def revoke_pat_token_tool(pat_id: str) -> dict:
-    """
-    Revoke (deactivate) a PAT token.
-
-    Args:
-        pat_id: ID of the PAT token to revoke
-
-    Returns:
-        Success confirmation
-    """
-    result = await revoke_pat_token(RevokePatTokenInput(pat_id=pat_id))
-    return result
-
-
-@mcp.tool()
-async def rotate_pat_token_tool(pat_id: str) -> dict:
-    """
-    Rotate a PAT token. The old token is revoked and a new one is created.
-
-    Args:
-        pat_id: ID of the PAT token to rotate
-
-    Returns:
-        New PAT token (only shown once)
-    """
-    result = await rotate_pat_token(RotatePatTokenInput(pat_id=pat_id))
     return result.model_dump()
 
 
@@ -583,105 +418,6 @@ async def rename_collection_tool(collection_id: str, name: str) -> dict:
         )
     )
     return result.model_dump()
-
-
-@mcp.tool()
-async def list_users_tool(limit: int = 50, offset: int = 0) -> dict:
-    """
-    List all users. Requires admin scope.
-
-    Args:
-        limit: Number of users to return (default: 50)
-        offset: Pagination offset (default: 0)
-
-    Returns:
-        List of users
-    """
-    result = await list_users(ListUsersInput(limit=limit, offset=offset))
-    return {"users": [u.model_dump() for u in result]}
-
-
-@mcp.tool()
-async def search_users_tool(query: str, limit: int = 50, offset: int = 0) -> dict:
-    """
-    Search users by username or email. Requires admin scope.
-
-    Args:
-        query: Search query (case-insensitive partial match on username or email)
-        limit: Number of results to return (default: 50)
-        offset: Pagination offset (default: 0)
-
-    Returns:
-        List of matching users
-    """
-    result = await search_users(SearchUsersInput(query=query, limit=limit, offset=offset))
-    return {"users": [u.model_dump() for u in result]}
-
-
-@mcp.tool()
-async def get_user_tool(user_id: str) -> dict:
-    """
-    Get a specific user by ID. Requires admin scope.
-
-    Args:
-        user_id: UUID of the user
-
-    Returns:
-        User information
-    """
-    result = await get_user(GetUserInput(user_id=user_id))
-    return result.model_dump()
-
-
-@mcp.tool()
-async def update_user_tool(
-    user_id: str,
-    email: str | None = None,
-    username: str | None = None,
-    password: str | None = None,
-    is_active: bool | None = None,
-    is_superuser: bool | None = None,
-) -> dict:
-    """
-    Update a user. Requires admin scope.
-
-    Args:
-        user_id: UUID of the user to update
-        email: New email address
-        username: New username
-        password: New password
-        is_active: Account active status
-        is_superuser: Superuser status
-
-    Returns:
-        Updated user information
-    """
-    result = await update_user(
-        UpdateUserInput(
-            user_id=user_id,
-            email=email,
-            username=username,
-            password=password,
-            is_active=is_active,
-            is_superuser=is_superuser,
-        )
-    )
-    return result.model_dump()
-
-
-@mcp.tool()
-async def delete_user_tool(user_id: str) -> dict:
-    """
-    Delete a user. Requires admin scope.
-
-    Args:
-        user_id: UUID of the user to delete
-
-    Returns:
-        Success confirmation
-    """
-    result = await delete_user(DeleteUserInput(user_id=user_id))
-    return result
 
 
 setup_auth(mcp)

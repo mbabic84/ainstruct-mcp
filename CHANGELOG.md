@@ -1,3 +1,15 @@
+# [3.9.0](https://github.com/mbabic84/ainstruct-mcp/compare/v3.8.1...v3.9.0) (2026-02-27)
+
+
+### Bug Fixes
+
+* add blank line between import sections in mcp_server/__init__.py ([ef23ebb](https://github.com/mbabic84/ainstruct-mcp/commit/ef23ebb87383f9db112b3d7982521d93ac4c97e7))
+
+
+### Features
+
+* enable stateless mode for streamable-http transport ([a9df1e0](https://github.com/mbabic84/ainstruct-mcp/commit/a9df1e039301b3e02b957a124d588b178123a155))
+
 ## [3.8.1](https://github.com/mbabic84/ainstruct-mcp/compare/v3.8.0...v3.8.1) (2026-02-27)
 
 

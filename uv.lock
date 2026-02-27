@@ -27,7 +27,7 @@ requires-dist = [
 
 [[package]]
 name = "ainstruct-mcp-workspace"
-version = "3.8.1"
+version = "3.9.0"
 source = { virtual = "." }
 
 [package.dev-dependencies]

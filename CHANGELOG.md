@@ -1,3 +1,10 @@
+## [3.6.1](https://github.com/mbabic84/ainstruct-mcp/compare/v3.6.0...v3.6.1) (2026-02-26)
+
+
+### Bug Fixes
+
+* add /health endpoint and fix docker production runtime ([eec3004](https://github.com/mbabic84/ainstruct-mcp/commit/eec300463120ea59eebb196223ef610859cbfa69))
+
 # [3.6.0](https://github.com/mbabic84/ainstruct-mcp/compare/v3.5.0...v3.6.0) (2026-02-26)
 
 

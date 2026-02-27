@@ -1,3 +1,16 @@
+# [3.7.0](https://github.com/mbabic84/ainstruct-mcp/compare/v3.6.0...v3.7.0) (2026-02-27)
+
+
+### Bug Fixes
+
+* add /health endpoint and fix docker production runtime ([86fe92d](https://github.com/mbabic84/ainstruct-mcp/commit/86fe92d4c7883e720c41f87db7dbc5f0dc7cfcff))
+* add deploy/ to gitignore and add PRODUCTION.md ([a67c82c](https://github.com/mbabic84/ainstruct-mcp/commit/a67c82ca71f50351dcb7c7395476fa8d59fac91c))
+
+
+### Features
+
+* add promote user to admin endpoint ([75c9e92](https://github.com/mbabic84/ainstruct-mcp/commit/75c9e92dbdc45d4f8503b0bd4727c4a0a69ff81d))
+
 ## [3.6.1](https://github.com/mbabic84/ainstruct-mcp/compare/v3.6.0...v3.6.1) (2026-02-27)
 
 

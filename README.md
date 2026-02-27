@@ -139,15 +139,15 @@ Update your MCP client config:
 
 Admin users (`is_superuser=True`) have full access to all admin REST API endpoints.
 
-### Promote to Admin (First Admin Only)
+### Promote to Admin
 
 ```bash
 curl -X POST http://localhost:8001/api/v1/admin/users/<user_id>/promote \
-  -H "X-Admin-Key: <your-admin-api-key>"
+  -H "X-Admin-API-Key: <your-admin-api-key>"
 ```
 
-- First promotion: No admin API key needed
-- Subsequent promotions: Requires `ADMIN_API_KEY` environment variable
+- Requires valid `X-Admin-API-Key` header
+- Works regardless of existing admin users
 
 ## Key Features
 

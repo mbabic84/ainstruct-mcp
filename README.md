@@ -58,40 +58,32 @@ docker-compose up -d
 ```
 
 4. The MCP server is available at `http://localhost:8000/mcp`
-5. The REST API is available at `http://localhost:8001`
+5. The REST API is available at `http://localhost:8001/api/v1`
 
 ## New User Onboarding
 
-You can use either the REST API or MCP tools for user management.
+User management (registration, login, token management) is available via the REST API only.
 
 ### Step 1: Register Account
 
 **REST API**:
 ```bash
-curl -X POST http://localhost:8001/auth/register \
+curl -X POST http://localhost:8001/api/v1/auth/register \
   -H "Content-Type: application/json" \
   -d '{"email": "user@example.com", "username": "alice", "password": "secure123"}'
 ```
 
-**MCP Tool**:
-```
-/user_register_tool
-```
-Provide email, username, and password. A "default" collection is automatically created.
+A "default" collection is automatically created for new users.
 
 ### Step 2: Login
 
 **REST API**:
 ```bash
-curl -X POST http://localhost:8001/auth/login \
+curl -X POST http://localhost:8001/api/v1/auth/login \
   -H "Content-Type: application/json" \
   -d '{"username": "alice", "password": "secure123"}'
 ```
 
-**MCP Tool**:
-```
-/user_login_tool
-```
 Save the returned `access_token` and `refresh_token`.
 
 ### Step 3: Create Authentication Credential
@@ -102,17 +94,13 @@ You have two options for authentication:
 
 **REST API**:
 ```bash
-curl -X POST http://localhost:8001/auth/cat \
+curl -X POST http://localhost:8001/api/v1/auth/cat \
   -H "Authorization: Bearer <jwt_token>" \
   -H "Content-Type: application/json" \
   -d '{"label": "My Client", "collection_id": "<uuid>", "permission": "read_write"}'
 ```
 
-**MCP Tool**:
-```
-/create_cat_tool
-```
-Provide a label, collection ID (from `/list_collections_tool`), permission, and optional expiry. Save the returned token.
+Provide a label, collection ID (from `/collections`), permission, and optional expiry. Save the returned token.
 
 **Use this if**: You only need access to a single collection for document operations.
 
@@ -120,16 +108,12 @@ Provide a label, collection ID (from `/list_collections_tool`), permission, and 
 
 **REST API**:
 ```bash
-curl -X POST http://localhost:8001/auth/pat \
+curl -X POST http://localhost:8001/api/v1/auth/pat \
   -H "Authorization: Bearer <jwt_token>" \
   -H "Content-Type: application/json" \
   -d '{"label": "My Client"}'
 ```
 
-**MCP Tool**:
-```
-/create_pat_token_tool
-```
 Provide a label and optional expiry. Save the returned token.
 
 **Use this if**: You need access to all your collections or want to perform management operations (create collections, manage CATs, etc.).
@@ -153,12 +137,15 @@ Update your MCP client config:
 
 ## Admin Users
 
-Admin users (`is_superuser=True`) have full access to all admin tools (user management) and all scopes implicitly.
+Admin users (`is_superuser=True`) have full access to all admin REST API endpoints.
 
-### Promote to Admin
+### Promote to Admin (First Admin Only)
+
+```bash
+curl -X POST http://localhost:8001/api/v1/admin/users/<user_id>/promote \
+  -H "X-Admin-Key: <your-admin-api-key>"
 ```
-/promote_to_admin_tool
-```
+
 - First promotion: No admin API key needed
 - Subsequent promotions: Requires `ADMIN_API_KEY` environment variable
 
@@ -181,25 +168,13 @@ Admin users (`is_superuser=True`) have full access to all admin tools (user mana
 - `list_documents_tool` - List documents
 - `update_document_tool` - Update documents
 - `delete_document_tool` - Delete documents
+- `move_document_tool` - Move document between collections
 
-### User Tools
-- `user_register_tool` - Register new accounts (public)
-- `user_login_tool` - Authenticate and get tokens
-- `user_profile_tool` - Get profile info
-- `user_refresh_tool` - Refresh access tokens
-- `promote_to_admin_tool` - Promote users to admin
-
-### CAT (Collection Access Token) Tools
-- `create_cat_tool` - Create CATs (collection-specific tokens)
-- `list_cats_tool` - List CATs
-- `revoke_cat_tool` - Revoke CATs
-- `rotate_cat_tool` - Rotate CATs
-
-### PAT Token Tools
-- `create_pat_token_tool` - Create Personal Access Tokens (user-level)
-- `list_pat_tokens_tool` - List PAT tokens
-- `revoke_pat_token_tool` - Revoke PAT tokens
-- `rotate_pat_token_tool` - Rotate PAT tokens
+### Collection Access Token (CAT) Tools
+- `create_collection_access_token_tool` - Create CATs (collection-specific tokens)
+- `list_collection_access_tokens_tool` - List CATs
+- `revoke_collection_access_token_tool` - Revoke CATs
+- `rotate_collection_access_token_tool` - Rotate CATs
 
 ### Collection Tools
 - `create_collection_tool` - Create collections
@@ -207,12 +182,6 @@ Admin users (`is_superuser=True`) have full access to all admin tools (user mana
 - `get_collection_tool` - Get collection details
 - `delete_collection_tool` - Delete collections
 - `rename_collection_tool` - Rename collections
-
-### Admin Tools
-- `list_users_tool` - List all users
-- `get_user_tool` - Get user details
-- `update_user_tool` - Update users
-- `delete_user_tool` - Delete users
 
 ## Authentication
 
@@ -224,13 +193,13 @@ The system uses two APIs with different authentication methods:
 | MCP API | AI agent operations | PAT or CAT (long-lived) |
 
 ### JWT Tokens
-- Obtained via REST API `/auth/login` or MCP tool `/user_login_tool`
+- Obtained via REST API `/api/v1/auth/login`
 - Used for REST API operations and token management
-- Expire after 30 minutes (refreshable via `/auth/refresh`)
+- Expire after 30 minutes (refreshable via `/api/v1/auth/refresh`)
 - **Not recommended for MCP** - use PAT or CAT instead
 
 ### Collection Access Tokens (CATs)
-- Created via `create_cat_tool` (or REST API `/auth/cat`)
+- Created via REST API `/api/v1/auth/cat`
 - **Collection-specific**: Assigned to a single collection
 - Permissions: `read` (search/get) or `read_write` (full access)
 - Optional expiration dates
@@ -238,7 +207,7 @@ The system uses two APIs with different authentication methods:
 - **Prefix**: `cat_live_`
 
 ### Personal Access Tokens (PAT)
-- Created via `/create_pat_token_tool`
+- Created via REST API `/api/v1/auth/pat`
 - **User-level**: Bound to a user account, not a specific collection
 - **Inherits user scopes**: Read, write, and admin permissions from the user
 - Optional expiration dates (max configurable via `PAT_MAX_EXPIRY_DAYS`)
@@ -341,20 +310,66 @@ Consult your MCP client's documentation for specific configuration file formats 
 
 ## REST API Configuration
 
-The REST API is available at `http://localhost:8001` (or custom PORT if changed) with the following endpoints:
+The REST API is available at `http://localhost:8001/api/v1` with the following endpoints:
 
-| Endpoint | Description |
-|----------|-------------|
-| `/auth/register` | Register new user |
-| `/auth/login` | Login and get JWT tokens |
-| `/auth/refresh` | Refresh JWT token |
-| `/auth/profile` | Get user profile |
-| `/auth/pat` | Manage PAT tokens |
-| `/auth/cat` | Manage CAT tokens |
-| `/collections` | Manage collections |
-| `/documents` | Manage documents |
-| `/documents/search` | Semantic search |
-| `/admin/*` | Admin operations |
+### Authentication
+
+| Method | Endpoint | Description |
+|--------|----------|-------------|
+| POST | `/auth/register` | Register new user |
+| POST | `/auth/login` | Login and get JWT tokens |
+| POST | `/auth/refresh` | Refresh JWT token |
+| GET | `/auth/profile` | Get user profile |
+
+### PAT Tokens
+
+| Method | Endpoint | Description |
+|--------|----------|-------------|
+| POST | `/auth/pat` | Create PAT token |
+| GET | `/auth/pat` | List PAT tokens |
+| DELETE | `/auth/pat/{pat_id}` | Revoke PAT token |
+| POST | `/auth/pat/{pat_id}/rotate` | Rotate PAT token |
+
+### CAT Tokens
+
+| Method | Endpoint | Description |
+|--------|----------|-------------|
+| POST | `/auth/cat` | Create CAT token |
+| GET | `/auth/cat` | List CAT tokens |
+| DELETE | `/auth/cat/{cat_id}` | Revoke CAT token |
+| POST | `/auth/cat/{cat_id}/rotate` | Rotate CAT token |
+
+### Collections
+
+| Method | Endpoint | Description |
+|--------|----------|-------------|
+| POST | `/collections` | Create collection |
+| GET | `/collections` | List collections |
+| GET | `/collections/{collection_id}` | Get collection |
+| PATCH | `/collections/{collection_id}` | Rename collection |
+| DELETE | `/collections/{collection_id}` | Delete collection |
+
+### Documents
+
+| Method | Endpoint | Description |
+|--------|----------|-------------|
+| POST | `/documents` | Store document |
+| GET | `/documents` | List documents |
+| GET | `/documents/{document_id}` | Get document |
+| PATCH | `/documents/{document_id}` | Update document |
+| DELETE | `/documents/{document_id}` | Delete document |
+| POST | `/documents/search` | Semantic search |
+
+### Admin
+
+| Method | Endpoint | Description |
+|--------|----------|-------------|
+| GET | `/admin/users` | List users |
+| GET | `/admin/users/search` | Search users |
+| GET | `/admin/users/{user_id}` | Get user details |
+| PATCH | `/admin/users/{user_id}` | Update user |
+| DELETE | `/admin/users/{user_id}` | Delete user |
+| POST | `/admin/users/{user_id}/promote` | Promote to admin |
 
 Authentication uses JWT Bearer tokens:
 ```

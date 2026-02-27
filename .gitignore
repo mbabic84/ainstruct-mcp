@@ -51,6 +51,9 @@ qdrant_storage/
 opencode.*
 .copilot
 
+# Deploy
+deploy/
+
 # Deploy keys
 deploy_key
 deploy_key.pub

@@ -1,7 +1,11 @@
-# Plan: Add Promote User to Admin Endpoint (Option A)
+# Plan: Add Promote User to Admin Endpoint
 
 ## Goal
-Add an endpoint to promote an existing user to superuser using `ADMIN_API_KEY` authentication, enabling creation of the first admin user without requiring an existing admin. This endpoint only works when there are no existing admin users.
+Add an endpoint to promote an existing user to superuser using `ADMIN_API_KEY` authentication. The endpoint works regardless of whether admin users already exist.
+
+## Status: IMPLEMENTED (with fix needed)
+
+The endpoint was implemented but has a bug: it incorrectly restricts promotion to only work when no admin users exist. See [promote_user_endpoint_fix.md](./promote_user_endpoint_fix.md) for the fix.
 
 ---
 
@@ -121,9 +125,10 @@ X-Admin-API-Key: <admin_api_key>
 - `200` - User promoted successfully, returns `UserResponse`
 - `401` - Invalid admin API key
 - `404` - User not found
-- `409` - Admin user already exists
 - `422` - Missing header
 - `503` - Admin API key not configured on server
+
+> **Note:** The 409 response was originally documented but is incorrect. The endpoint allows promotion regardless of existing admins. See [promote_user_endpoint_fix.md](./promote_user_endpoint_fix.md).
 
 ---
 
@@ -144,7 +149,7 @@ X-Admin-API-Key: <admin_api_key>
 2. Admin uses `POST /api/v1/admin/users/{user_id}/promote` with `X-Admin-API-Key` header
 3. User can now login and access admin endpoints
 
-**Note:** This endpoint only works when there are no existing admin users. Once an admin exists, use `PATCH /api/v1/admin/users/{user_id}` with `is_superuser: true/false` to modify user roles.
+> **Note:** The endpoint works regardless of whether admin users already exist. Use `PATCH /api/v1/admin/users/{user_id}` with `is_superuser: true/false` to modify user roles.
 
 ---
 
@@ -152,3 +157,7 @@ X-Admin-API-Key: <admin_api_key>
 
 - Demotion can be done using the existing `PATCH /api/v1/admin/users/{user_id}` endpoint with `is_superuser: false`
 - This approach mirrors the MCP server's current capability where ADMIN_API_KEY can access `update_user_tool` to set `is_superuser=true`
+
+## Bug Fix
+
+The original implementation incorrectly restricted the endpoint to only work when no admin exists. See [promote_user_endpoint_fix.md](./promote_user_endpoint_fix.md) for the fix details.

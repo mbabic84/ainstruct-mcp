@@ -1,0 +1,210 @@
+import httpx
+
+
+class ApiClient:
+    def __init__(self, base_url: str = "http://localhost:8000"):
+        self.base_url = base_url
+        self._client = httpx.Client(timeout=30.0)
+        self.access_token: str | None = None
+        self.refresh_token: str | None = None
+
+    def set_tokens(self, access_token: str, refresh_token: str):
+        self.access_token = access_token
+        self.refresh_token = refresh_token
+
+    def clear_tokens(self):
+        self.access_token = None
+        self.refresh_token = None
+
+    def _get_headers(self) -> dict:
+        headers = {"Content-Type": "application/json"}
+        if self.access_token:
+            headers["Authorization"] = f"Bearer {self.access_token}"
+        return headers
+
+    def _request(
+        self,
+        method: str,
+        path: str,
+        json: dict | None = None,
+        params: dict | None = None,
+    ) -> httpx.Response:
+        url = f"{self.base_url}{path}"
+        return self._client.request(
+            method=method,
+            url=url,
+            json=json,
+            params=params,
+            headers=self._get_headers(),
+        )
+
+    def register(self, username: str, email: str, password: str) -> httpx.Response:
+        return self._request(
+            "POST",
+            "/api/v1/auth/register",
+            json={"username": username, "email": email, "password": password},
+        )
+
+    def login(self, username: str, password: str) -> httpx.Response:
+        return self._request(
+            "POST",
+            "/api/v1/auth/login",
+            json={"username": username, "password": password},
+        )
+
+    def refresh(self, refresh_token: str) -> httpx.Response:
+        return self._request(
+            "POST",
+            "/api/v1/auth/refresh",
+            json={"refresh_token": refresh_token},
+        )
+
+    def get_profile(self) -> httpx.Response:
+        return self._request("GET", "/api/v1/auth/profile")
+
+    def list_collections(self) -> httpx.Response:
+        return self._request("GET", "/api/v1/collections")
+
+    def create_collection(self, name: str) -> httpx.Response:
+        return self._request("POST", "/api/v1/collections", json={"name": name})
+
+    def get_collection(self, collection_id: str) -> httpx.Response:
+        return self._request("GET", f"/api/v1/collections/{collection_id}")
+
+    def rename_collection(self, collection_id: str, name: str) -> httpx.Response:
+        return self._request("PATCH", f"/api/v1/collections/{collection_id}", json={"name": name})
+
+    def delete_collection(self, collection_id: str) -> httpx.Response:
+        return self._request("DELETE", f"/api/v1/collections/{collection_id}")
+
+    def list_documents(
+        self, collection_id: str | None = None, limit: int = 50, offset: int = 0
+    ) -> httpx.Response:
+        params: dict = {"limit": limit, "offset": offset}
+        if collection_id:
+            params["collection_id"] = collection_id
+        return self._request("GET", "/api/v1/documents", params=params)
+
+    def create_document(
+        self,
+        title: str,
+        content: str,
+        collection_id: str,
+        document_type: str = "markdown",
+        metadata: dict | None = None,
+    ) -> httpx.Response:
+        return self._request(
+            "POST",
+            "/api/v1/documents",
+            json={
+                "title": title,
+                "content": content,
+                "collection_id": collection_id,
+                "document_type": document_type,
+                "metadata": metadata,
+            },
+        )
+
+    def get_document(self, document_id: str) -> httpx.Response:
+        return self._request("GET", f"/api/v1/documents/{document_id}")
+
+    def update_document(
+        self,
+        document_id: str,
+        title: str | None = None,
+        content: str | None = None,
+        document_type: str | None = None,
+        metadata: dict | None = None,
+    ) -> httpx.Response:
+        json: dict = {}
+        if title is not None:
+            json["title"] = title
+        if content is not None:
+            json["content"] = content
+        if document_type is not None:
+            json["document_type"] = document_type
+        if metadata is not None:
+            json["metadata"] = metadata
+        return self._request("PATCH", f"/api/v1/documents/{document_id}", json=json)
+
+    def delete_document(self, document_id: str) -> httpx.Response:
+        return self._request("DELETE", f"/api/v1/documents/{document_id}")
+
+    def list_pats(self) -> httpx.Response:
+        return self._request("GET", "/api/v1/auth/pat")
+
+    def create_pat(self, label: str, expires_in_days: int | None = None) -> httpx.Response:
+        json: dict = {"label": label}
+        if expires_in_days is not None:
+            json["expires_in_days"] = expires_in_days
+        return self._request("POST", "/api/v1/auth/pat", json=json)
+
+    def revoke_pat(self, pat_id: str) -> httpx.Response:
+        return self._request("DELETE", f"/api/v1/auth/pat/{pat_id}")
+
+    def rotate_pat(self, pat_id: str) -> httpx.Response:
+        return self._request("POST", f"/api/v1/auth/pat/{pat_id}/rotate")
+
+    def list_cats(self, collection_id: str | None = None) -> httpx.Response:
+        params: dict = {}
+        if collection_id:
+            params["collection_id"] = collection_id
+        return self._request("GET", "/api/v1/auth/cat", params=params)
+
+    def create_cat(
+        self,
+        label: str,
+        collection_id: str,
+        permission: str = "read_write",
+        expires_in_days: int | None = None,
+    ) -> httpx.Response:
+        json: dict = {
+            "label": label,
+            "collection_id": collection_id,
+            "permission": permission,
+        }
+        if expires_in_days is not None:
+            json["expires_in_days"] = expires_in_days
+        return self._request("POST", "/api/v1/auth/cat", json=json)
+
+    def revoke_cat(self, cat_id: str) -> httpx.Response:
+        return self._request("DELETE", f"/api/v1/auth/cat/{cat_id}")
+
+    def rotate_cat(self, cat_id: str) -> httpx.Response:
+        return self._request("POST", f"/api/v1/auth/cat/{cat_id}/rotate")
+
+    def list_users(self, limit: int = 50, offset: int = 0) -> httpx.Response:
+        return self._request(
+            "GET", "/api/v1/admin/users", params={"limit": limit, "offset": offset}
+        )
+
+    def get_user(self, user_id: str) -> httpx.Response:
+        return self._request("GET", f"/api/v1/admin/users/{user_id}")
+
+    def update_user(
+        self,
+        user_id: str,
+        email: str | None = None,
+        username: str | None = None,
+        password: str | None = None,
+        is_active: bool | None = None,
+        is_superuser: bool | None = None,
+    ) -> httpx.Response:
+        json: dict = {}
+        if email is not None:
+            json["email"] = email
+        if username is not None:
+            json["username"] = username
+        if password is not None:
+            json["password"] = password
+        if is_active is not None:
+            json["is_active"] = is_active
+        if is_superuser is not None:
+            json["is_superuser"] = is_superuser
+        return self._request("PATCH", f"/api/v1/admin/users/{user_id}", json=json)
+
+    def delete_user(self, user_id: str) -> httpx.Response:
+        return self._request("DELETE", f"/api/v1/admin/users/{user_id}")
+
+    def close(self):
+        self._client.close()

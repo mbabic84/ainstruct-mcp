@@ -27,7 +27,8 @@ COPY --chown=appuser:appgroup docker/entrypoint.sh /entrypoint.sh
 RUN chmod +x /entrypoint.sh
 
 RUN uv sync --frozen --no-dev --package ainstruct-mcp-server \
-         --package ainstruct-rest-api
+         --package ainstruct-rest-api \
+         --package ainstruct-web-ui
 
 USER appuser
 ENTRYPOINT ["/entrypoint.sh"]

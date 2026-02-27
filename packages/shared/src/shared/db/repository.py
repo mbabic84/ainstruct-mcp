@@ -215,10 +215,11 @@ class DocumentRepository:
 
     async def get_by_id_for_user(self, doc_id: str, user_id: str) -> DocumentResponse | None:
         async with self.async_session() as session:
-            query = select(DocumentModel).where(
-                DocumentModel.id == doc_id
-            ).join(CollectionModel).where(
-                CollectionModel.user_id == user_id
+            query = (
+                select(DocumentModel)
+                .where(DocumentModel.id == doc_id)
+                .join(CollectionModel)
+                .where(CollectionModel.user_id == user_id)
             )
 
             result = await session.execute(query)
@@ -236,7 +237,9 @@ class DocumentRepository:
                 doc_metadata=db_doc.doc_metadata or {},
             )
 
-    async def list_all_for_user(self, user_id: str, limit: int = 50, offset: int = 0) -> list[DocumentResponse]:
+    async def list_all_for_user(
+        self, user_id: str, limit: int = 50, offset: int = 0
+    ) -> list[DocumentResponse]:
         async with self.async_session() as session:
             query = (
                 select(DocumentModel)
@@ -310,9 +313,7 @@ class UserRepository:
 
     async def get_by_username(self, username: str) -> dict | None:
         async with self.async_session() as session:
-            result = await session.execute(
-                select(UserModel).where(UserModel.username == username)
-            )
+            result = await session.execute(select(UserModel).where(UserModel.username == username))
             user = result.scalar_one_or_none()
             if not user:
                 return None
@@ -328,9 +329,7 @@ class UserRepository:
 
     async def get_by_email(self, email: str) -> UserResponse | None:
         async with self.async_session() as session:
-            result = await session.execute(
-                select(UserModel).where(UserModel.email == email)
-            )
+            result = await session.execute(select(UserModel).where(UserModel.email == email))
             user = result.scalar_one_or_none()
             if not user:
                 return None
@@ -408,12 +407,15 @@ class UserRepository:
         async with self.async_session() as session:
             search_pattern = f"%{query}%"
             result = await session.execute(
-                select(UserModel).where(
+                select(UserModel)
+                .where(
                     or_(
                         UserModel.username.ilike(search_pattern),
                         UserModel.email.ilike(search_pattern),
                     )
-                ).limit(limit).offset(offset)
+                )
+                .limit(limit)
+                .offset(offset)
             )
             users = result.scalars().all()
             return [
@@ -427,6 +429,13 @@ class UserRepository:
                 )
                 for u in users
             ]
+
+    async def count_superusers(self) -> int:
+        async with self.async_session() as session:
+            result = await session.execute(
+                select(func.count(UserModel.id)).where(UserModel.is_superuser.is_(True))
+            )
+            return result.scalar() or 0
 
 
 class CollectionRepository:
@@ -452,7 +461,9 @@ class CollectionRepository:
 
     async def get_by_id(self, collection_id: str) -> dict | None:
         async with self.async_session() as session:
-            result = await session.execute(select(CollectionModel).where(CollectionModel.id == collection_id))
+            result = await session.execute(
+                select(CollectionModel).where(CollectionModel.id == collection_id)
+            )
             collection = result.scalar_one_or_none()
             if not collection:
                 return None
@@ -502,7 +513,9 @@ class CollectionRepository:
 
     async def delete(self, collection_id: str) -> bool:
         async with self.async_session() as session:
-            result = await session.execute(select(CollectionModel).where(CollectionModel.id == collection_id))
+            result = await session.execute(
+                select(CollectionModel).where(CollectionModel.id == collection_id)
+            )
             collection = result.scalar_one_or_none()
             if not collection:
                 return False
@@ -512,7 +525,9 @@ class CollectionRepository:
 
     async def rename(self, collection_id: str, name: str) -> CollectionResponse | None:
         async with self.async_session() as session:
-            result = await session.execute(select(CollectionModel).where(CollectionModel.id == collection_id))
+            result = await session.execute(
+                select(CollectionModel).where(CollectionModel.id == collection_id)
+            )
             collection = result.scalar_one_or_none()
             if not collection:
                 return None
@@ -670,7 +685,9 @@ class CatRepository:
             if expires_in_days is not None:
                 expires_at = datetime.utcnow() + timedelta(days=expires_in_days)
             elif settings.api_key_default_expiry_days is not None:
-                expires_at = datetime.utcnow() + timedelta(days=settings.api_key_default_expiry_days)
+                expires_at = datetime.utcnow() + timedelta(
+                    days=settings.api_key_default_expiry_days
+                )
 
             api_key = CatModel(
                 key_hash=key_hash,
@@ -699,18 +716,20 @@ class CatRepository:
                 )
                 collection = collection_result.scalar_one_or_none()
 
-                result_list.append({
-                    "id": k.id,
-                    "label": k.label,
-                    "collection_id": k.collection_id,
-                    "collection_name": collection.name if collection else None,
-                    "created_at": k.created_at,
-                    "last_used": k.last_used,
-                    "is_active": k.is_active,
-                    "user_id": k.user_id,
-                    "permission": Permission(k.permission),
-                    "expires_at": k.expires_at,
-                })
+                result_list.append(
+                    {
+                        "id": k.id,
+                        "label": k.label,
+                        "collection_id": k.collection_id,
+                        "collection_name": collection.name if collection else None,
+                        "created_at": k.created_at,
+                        "last_used": k.last_used,
+                        "is_active": k.is_active,
+                        "user_id": k.user_id,
+                        "permission": Permission(k.permission),
+                        "expires_at": k.expires_at,
+                    }
+                )
             return result_list
 
     async def delete(self, key_id: str) -> bool:
@@ -786,7 +805,9 @@ class PatTokenRepository:
             if pat_token.expires_at and pat_token.expires_at < datetime.utcnow():
                 return None
 
-            user_result = await session.execute(select(UserModel).where(UserModel.id == pat_token.user_id))
+            user_result = await session.execute(
+                select(UserModel).where(UserModel.id == pat_token.user_id)
+            )
             user = user_result.scalar_one_or_none()
 
             if not user or not user.is_active:
@@ -807,7 +828,9 @@ class PatTokenRepository:
 
     async def get_by_id(self, token_id: str) -> dict | None:
         async with self.async_session() as session:
-            result = await session.execute(select(PatTokenModel).where(PatTokenModel.id == token_id))
+            result = await session.execute(
+                select(PatTokenModel).where(PatTokenModel.id == token_id)
+            )
             pat_token = result.scalar_one_or_none()
             if not pat_token:
                 return None
@@ -873,7 +896,9 @@ class PatTokenRepository:
 
     async def delete(self, token_id: str) -> bool:
         async with self.async_session() as session:
-            result = await session.execute(select(PatTokenModel).where(PatTokenModel.id == token_id))
+            result = await session.execute(
+                select(PatTokenModel).where(PatTokenModel.id == token_id)
+            )
             token = result.scalar_one_or_none()
             if not token:
                 return False
@@ -883,7 +908,9 @@ class PatTokenRepository:
 
     async def revoke(self, token_id: str) -> bool:
         async with self.async_session() as session:
-            result = await session.execute(select(PatTokenModel).where(PatTokenModel.id == token_id))
+            result = await session.execute(
+                select(PatTokenModel).where(PatTokenModel.id == token_id)
+            )
             token = result.scalar_one_or_none()
             if not token:
                 return False
@@ -893,7 +920,9 @@ class PatTokenRepository:
 
     async def rotate(self, token_id: str) -> tuple[str, str] | None:
         async with self.async_session() as session:
-            result = await session.execute(select(PatTokenModel).where(PatTokenModel.id == token_id))
+            result = await session.execute(
+                select(PatTokenModel).where(PatTokenModel.id == token_id)
+            )
             old_token = result.scalar_one_or_none()
             if not old_token:
                 return None
@@ -926,6 +955,7 @@ def get_async_session_factory():
     global _engine, _async_session_factory
     if _engine is None:
         from shared.db.models import get_db_engine
+
         _engine = get_db_engine(settings.database_url)
     if _async_session_factory is None:
         _async_session_factory = async_sessionmaker(

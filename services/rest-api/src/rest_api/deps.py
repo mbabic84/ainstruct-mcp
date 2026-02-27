@@ -1,8 +1,9 @@
 from collections.abc import AsyncGenerator
 from typing import Annotated
 
-from fastapi import Depends, HTTPException, status
+from fastapi import Depends, Header, HTTPException, status
 from fastapi.security import HTTPAuthorizationCredentials, HTTPBearer
+from shared.config import settings
 from shared.db.models import Scope
 from shared.services import get_auth_service
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -49,7 +50,9 @@ async def get_db() -> AsyncGenerator[AsyncSession]:
 
 
 class CurrentUser:
-    def __init__(self, user_id: str, username: str, email: str, is_superuser: bool, scopes: list[Scope]):
+    def __init__(
+        self, user_id: str, username: str, email: str, is_superuser: bool, scopes: list[Scope]
+    ):
         self.user_id = user_id
         self.username = username
         self.email = email
@@ -149,3 +152,25 @@ UserOptionalDep = Annotated[CurrentUser | None, Depends(get_current_user_optiona
 AdminDep = Annotated[CurrentUser, Depends(require_admin)]
 WriteDep = Annotated[CurrentUser, Depends(require_write_scope)]
 DbDep = Annotated[AsyncSession, Depends(get_db)]
+
+
+async def require_admin_api_key(
+    x_admin_api_key: str = Header(..., alias="X-Admin-API-Key"),
+) -> str:
+    if not settings.admin_api_key:
+        raise HTTPException(
+            status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
+            detail={
+                "code": "ADMIN_API_KEY_NOT_CONFIGURED",
+                "message": "Admin API key not configured",
+            },
+        )
+    if x_admin_api_key != settings.admin_api_key:
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail={"code": "INVALID_ADMIN_API_KEY", "message": "Invalid admin API key"},
+        )
+    return x_admin_api_key
+
+
+AdminApiKeyDep = Annotated[str, Depends(require_admin_api_key)]

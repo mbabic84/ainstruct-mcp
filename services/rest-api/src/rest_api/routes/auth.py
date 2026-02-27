@@ -176,13 +176,20 @@ async def refresh(
 async def get_profile(
     user: UserDep,
 ):
-    from datetime import datetime
+    user_repo = get_user_repository()
+    db_user = await user_repo.get_by_id(user.user_id)
+
+    if not db_user:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail={"code": "USER_NOT_FOUND", "message": "User not found"},
+        )
 
     return UserResponse(
-        id=user.user_id,
-        email=user.email,
-        username=user.username,
-        is_active=True,
-        is_superuser=user.is_superuser,
-        created_at=datetime.utcnow(),
+        id=db_user.id,
+        email=db_user.email,
+        username=db_user.username,
+        is_active=db_user.is_active,
+        is_superuser=db_user.is_superuser,
+        created_at=db_user.created_at,
     )

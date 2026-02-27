@@ -4,7 +4,6 @@ import os
 import sys
 
 from shared.config import settings
-
 from mcp_server.server import mcp
 
 logger = logging.getLogger(__name__)
@@ -27,7 +26,14 @@ def main():
     port = int(os.getenv("PORT", str(settings.port)))
 
     try:
-        mcp.run(transport="streamable-http", host=settings.host, port=port)
+        app = mcp.http_app(
+            path="/mcp",
+            transport="streamable-http",
+            stateless_http=True,
+        )
+        import uvicorn
+
+        uvicorn.run(app, host=settings.host, port=port)
     except asyncio.CancelledError:
         logger.info("MCP Server shutdown complete")
         sys.exit(0)

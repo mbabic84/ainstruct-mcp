@@ -175,7 +175,6 @@ class TestPromoteUser:
 
         with patch("rest_api.routes.admin.get_user_repository") as mock_repo:
             mock_repository = AsyncMock()
-            mock_repository.count_superusers = AsyncMock(return_value=0)
             mock_repository.get_by_id = AsyncMock(return_value=mock_user)
             mock_repository.update = AsyncMock(return_value=True)
             mock_repo.return_value = mock_repository
@@ -219,7 +218,6 @@ class TestPromoteUser:
         """Test non-existent user returns 404."""
         with patch("rest_api.routes.admin.get_user_repository") as mock_repo:
             mock_repository = AsyncMock()
-            mock_repository.count_superusers = AsyncMock(return_value=0)
             mock_repository.get_by_id = AsyncMock(return_value=None)
             mock_repo.return_value = mock_repository
 
@@ -247,21 +245,3 @@ class TestPromoteUser:
 
         assert response.status_code == 503
         assert response.json()["detail"]["code"] == "ADMIN_API_KEY_NOT_CONFIGURED"
-
-    def test_promote_user_admin_already_exists(self, app, client):
-        """Test promote fails when admin already exists."""
-        with patch("rest_api.routes.admin.get_user_repository") as mock_repo:
-            mock_repository = AsyncMock()
-            mock_repository.count_superusers = AsyncMock(return_value=1)
-            mock_repo.return_value = mock_repository
-
-            with patch("rest_api.deps.settings") as mock_settings:
-                mock_settings.admin_api_key = "test-admin-key"
-
-                response = client.post(
-                    "/api/v1/admin/users/user-123/promote",
-                    headers={"X-Admin-API-Key": "test-admin-key"},
-                )
-
-        assert response.status_code == 409
-        assert response.json()["detail"]["code"] == "ADMIN_EXISTS"

@@ -11,6 +11,7 @@ members = ["packages/*", "services/*"]
 ainstruct-shared = { workspace = true }
 ainstruct-mcp-server = { workspace = true }
 ainstruct-rest-api = { workspace = true }
+ainstruct-web-ui = { workspace = true }
 
 [tool.ruff]
 line-length = 100
@@ -28,7 +29,7 @@ warn_unused_configs = false
 disallow_untyped_defs = false
 namespace_packages = true
 explicit_package_bases = true
-mypy_path = "packages/shared/src:services/mcp-server/src:services/rest-api/src"
+mypy_path = "packages/shared/src:services/mcp-server/src:services/rest-api/src:services/web-ui/src"
 ignore_errors = true
 
 [[tool.mypy.overrides]]

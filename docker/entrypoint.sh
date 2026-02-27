@@ -10,8 +10,11 @@ case "$SERVICE" in
     rest-api)
         exec rest-api
         ;;
+    web-ui)
+        exec web-ui
+        ;;
     *)
-        echo "Usage: SERVICE={mcp-server|rest-api} $0"
+        echo "Usage: SERVICE={mcp-server|rest-api|web-ui} $0"
         exit 1
         ;;
 esac

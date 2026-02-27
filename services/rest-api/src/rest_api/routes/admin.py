@@ -215,7 +215,6 @@ async def delete_user(
         404: {"model": ErrorResponse, "description": "User not found"},
         401: {"model": ErrorResponse, "description": "Invalid admin API key"},
         503: {"model": ErrorResponse, "description": "Admin API key not configured"},
-        409: {"model": ErrorResponse, "description": "Admin user already exists"},
     },
 )
 async def promote_user(
@@ -224,16 +223,6 @@ async def promote_user(
     db: DbDep,
 ):
     user_repo = get_user_repository()
-
-    existing_superusers = await user_repo.count_superusers()
-    if existing_superusers > 0:
-        raise HTTPException(
-            status_code=status.HTTP_409_CONFLICT,
-            detail={
-                "code": "ADMIN_EXISTS",
-                "message": "An admin user already exists. Use PATCH /users/{user_id} to modify user roles.",
-            },
-        )
 
     user = await user_repo.get_by_id(user_id)
 

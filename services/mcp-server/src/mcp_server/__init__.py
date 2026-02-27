@@ -4,6 +4,7 @@ import os
 import sys
 
 from shared.config import settings
+
 from mcp_server.server import mcp
 
 logger = logging.getLogger(__name__)

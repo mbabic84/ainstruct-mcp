@@ -7,7 +7,7 @@ from shared.db import (
 )
 from shared.services import get_auth_service
 
-from rest_api.deps import AdminDep, DbDep
+from rest_api.deps import AdminApiKeyDep, AdminDep, DbDep
 from rest_api.schemas import (
     ErrorResponse,
     MessageResponse,
@@ -53,6 +53,37 @@ async def list_users(
         limit=limit,
         offset=offset,
     )
+
+
+@router.get(
+    "/users/search",
+    response_model=UserListResponse,
+    responses={
+        400: {"model": ErrorResponse, "description": "Query parameter required"},
+    },
+)
+async def search_users(
+    query: str = Query(..., min_length=1, description="Search query"),
+    limit: int = Query(50, ge=1, le=100),
+    offset: int = Query(0, ge=0),
+    db: DbDep = None,
+    admin: AdminDep = None,
+):
+    user_repo = get_user_repository()
+    users = await user_repo.search(query=query, limit=limit, offset=offset)
+
+    items = [
+        UserListItem(
+            id=u.id,
+            email=u.email,
+            username=u.username,
+            is_active=u.is_active,
+            is_superuser=u.is_superuser,
+            created_at=u.created_at,
+        )
+        for u in users
+    ]
+    return UserListResponse(users=items, total=len(users), limit=limit, offset=offset)
 
 
 @router.get(
@@ -175,3 +206,51 @@ async def delete_user(
 
     await user_repo.delete(user_id)
     return MessageResponse(message="User deleted successfully")
+
+
+@router.post(
+    "/users/{user_id}/promote",
+    response_model=UserResponse,
+    responses={
+        404: {"model": ErrorResponse, "description": "User not found"},
+        401: {"model": ErrorResponse, "description": "Invalid admin API key"},
+        503: {"model": ErrorResponse, "description": "Admin API key not configured"},
+        409: {"model": ErrorResponse, "description": "Admin user already exists"},
+    },
+)
+async def promote_user(
+    user_id: str,
+    admin_api_key: AdminApiKeyDep,
+    db: DbDep,
+):
+    user_repo = get_user_repository()
+
+    existing_superusers = await user_repo.count_superusers()
+    if existing_superusers > 0:
+        raise HTTPException(
+            status_code=status.HTTP_409_CONFLICT,
+            detail={
+                "code": "ADMIN_EXISTS",
+                "message": "An admin user already exists. Use PATCH /users/{user_id} to modify user roles.",
+            },
+        )
+
+    user = await user_repo.get_by_id(user_id)
+
+    if not user:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail={"code": "USER_NOT_FOUND", "message": "User not found"},
+        )
+
+    await user_repo.update(user_id, is_superuser=True)
+
+    updated = await user_repo.get_by_id(user_id)
+    return UserResponse(
+        id=updated.id,
+        email=updated.email,
+        username=updated.username,
+        is_active=updated.is_active,
+        is_superuser=updated.is_superuser,
+        created_at=updated.created_at,
+    )

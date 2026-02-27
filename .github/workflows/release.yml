@@ -13,6 +13,7 @@ permissions:
 
 jobs:
   release:
+    name: Release
     runs-on: ubuntu-latest
     outputs:
       new_release_published: ${{ steps.semantic-release.outputs.new_release_published }}

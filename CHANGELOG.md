@@ -1,3 +1,10 @@
+# [3.10.0](https://github.com/mbabic84/ainstruct-mcp/compare/v3.9.0...v3.10.0) (2026-02-27)
+
+
+### Features
+
+* add web-ui dashboard service ([1cb9ce9](https://github.com/mbabic84/ainstruct-mcp/commit/1cb9ce9341928cff3c7538e793f41921df8fbef5))
+
 # [3.9.0](https://github.com/mbabic84/ainstruct-mcp/compare/v3.8.1...v3.9.0) (2026-02-27)
 
 

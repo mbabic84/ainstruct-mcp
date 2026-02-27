@@ -1,3 +1,10 @@
+## [3.8.1](https://github.com/mbabic84/ainstruct-mcp/compare/v3.8.0...v3.8.1) (2026-02-27)
+
+
+### Bug Fixes
+
+* allow promote user regardless of existing admins ([2699ea7](https://github.com/mbabic84/ainstruct-mcp/commit/2699ea78a8d98d88f771b1bbb4e593b89ac46b75))
+
 # [3.8.0](https://github.com/mbabic84/ainstruct-mcp/compare/v3.7.0...v3.8.0) (2026-02-27)
 
 

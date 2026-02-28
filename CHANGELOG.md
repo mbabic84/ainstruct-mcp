@@ -1,3 +1,15 @@
+# [3.14.0](https://github.com/mbabic84/ainstruct-mcp/compare/v3.13.0...v3.14.0) (2026-02-28)
+
+
+### Bug Fixes
+
+* **web-ui:** persist auth tokens in browser localStorage ([6c7ead6](https://github.com/mbabic84/ainstruct-mcp/commit/6c7ead6c24c8ced7f98ec5c9eb8beef92dfa42ba))
+
+
+### Features
+
+* **web-ui:** add smart token refresh with JWT expiry check ([2173642](https://github.com/mbabic84/ainstruct-mcp/commit/21736426cdcfa3b63a0e69a0a8baad6969c72ffa))
+
 # [3.13.0](https://github.com/mbabic84/ainstruct-mcp/compare/v3.12.1...v3.13.0) (2026-02-28)
 
 

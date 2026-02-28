@@ -1,6 +1,6 @@
 [project]
 name = "ainstruct-mcp-workspace"
-version = "3.13.0"
+version = "3.14.0"
 description = "Monorepo for ainstruct services - MCP server and REST API"
 requires-python = ">=3.14"
 

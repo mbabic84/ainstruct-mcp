@@ -1,3 +1,10 @@
+# [3.11.0](https://github.com/mbabic84/ainstruct-mcp/compare/v3.10.1...v3.11.0) (2026-02-28)
+
+
+### Features
+
+* improve login page with centered form, validation and remember me checkbox ([0747e42](https://github.com/mbabic84/ainstruct-mcp/commit/0747e428ee869f0f5cf5ebd3b53122870bd81c3c))
+
 ## [3.10.1](https://github.com/mbabic84/ainstruct-mcp/compare/v3.10.0...v3.10.1) (2026-02-28)
 
 

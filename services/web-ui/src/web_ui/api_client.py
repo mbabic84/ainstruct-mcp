@@ -56,7 +56,6 @@ class ApiClient:
         path: str,
         json: dict | None = None,
         params: dict | None = None,
-        _retry: bool = False,
     ) -> httpx.Response:
         url = self._get_url(path)
         response = self._client.request(

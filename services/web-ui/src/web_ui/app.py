@@ -17,14 +17,78 @@ body, html { margin: 0; padding: 0; }
 ui.add_head_html(
     """
 <script>
-function checkAuthRedirect() {
-    const token = localStorage.getItem('access_token');
-    const path = window.location.pathname;
-    if (token && (path === '/login' || path === '/register' || path === '/')) {
-        window.location.href = '/dashboard';
+(function() {
+    let isRefreshing = false;
+    let refreshPromise = null;
+
+    // Decode JWT and extract expiry timestamp (in milliseconds)
+    window.__getTokenExpiry = function() {
+        const token = localStorage.getItem('access_token');
+        if (!token) return null;
+        try {
+            const payload = JSON.parse(atob(token.split('.')[1]));
+            return payload.exp * 1000; // Convert seconds to milliseconds
+        } catch (e) {
+            return null;
+        }
     }
-}
-window.addEventListener('DOMContentLoaded', checkAuthRedirect);
+
+    // Token refresh function - call this to refresh tokens
+    async function refreshToken() {
+        const refreshToken = localStorage.getItem('refresh_token');
+        if (!refreshToken) {
+            return null;
+        }
+
+        try {
+            const response = await fetch('/api/v1/auth/refresh', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ refresh_token: refreshToken })
+            });
+
+            if (response.ok) {
+                const data = await response.json();
+                localStorage.setItem('access_token', data.access_token);
+                localStorage.setItem('refresh_token', data.refresh_token);
+                return data.access_token;
+            }
+        } catch (e) {
+            console.error('Token refresh failed:', e);
+        }
+        return null;
+    }
+
+    // Smart refresh - only refresh if expired or about to expire (within 5 minutes)
+    window.__forceRefreshToken = async function() {
+        const expiry = window.__getTokenExpiry();
+        const now = Date.now();
+        const buffer = 5 * 60 * 1000; // 5 minutes in milliseconds
+
+        // Token still valid (not expiring within buffer period)
+        if (expiry && now < expiry - buffer) {
+            return localStorage.getItem('access_token');
+        }
+
+        // Token expired or about to expire - refresh
+        return await refreshToken();
+    };
+
+    // Get current access token from localStorage
+    window.__getAccessToken = function() {
+        return localStorage.getItem('access_token');
+    };
+
+    // Check auth and redirect
+    function checkAuthRedirect() {
+        const token = localStorage.getItem('access_token');
+        const path = window.location.pathname;
+        if (token && (path === '/login' || path === '/register' || path === '/')) {
+            window.location.href = '/dashboard';
+        }
+    }
+    window.addEventListener('DOMContentLoaded', checkAuthRedirect);
+})();
 </script>
 """,
     shared=True,
@@ -34,9 +98,18 @@ api_client = ApiClient(hostname=API_HOSTNAME)
 
 
 async def load_tokens_from_storage():
-    """Load tokens from localStorage on page load."""
+    """Load tokens from localStorage on page load and refresh if needed."""
+    # First load tokens from localStorage
     access_token = await ui.run_javascript("localStorage.getItem('access_token')")
     refresh_token = await ui.run_javascript("localStorage.getItem('refresh_token')")
+    if access_token:
+        api_client.set_tokens(access_token, refresh_token)
+
+    # Try to refresh token to handle expiration
+    await ui.run_javascript("window.__forceRefreshToken()")
+
+    # Load potentially refreshed token
+    access_token = await ui.run_javascript("localStorage.getItem('access_token')")
     if access_token:
         api_client.set_tokens(access_token, refresh_token)
 

@@ -536,7 +536,7 @@ def tokens_page():
                 pat_label = ui.input("Token Label").classes("w-full")
                 pat_expires = ui.input("Expires in (days, optional)").classes("w-full")
 
-                def create_pat():
+                async def create_pat():
                     expires_days = None
                     if pat_expires.value:
                         try:
@@ -548,6 +548,8 @@ def tokens_page():
                     if response.status_code == 201:
                         data = response.json()
                         token = data.get("token", "N/A")
+                        origin = await ui.run_javascript("window.location.origin")
+                        mcp_url = f"{origin}/mcp"
                         with ui.dialog() as dialog, ui.card().classes("w-[500px]"):
                             ui.label("Token Created").classes("text-xl font-bold mb-2")
                             ui.label(
@@ -555,6 +557,23 @@ def tokens_page():
                             ).classes("text-sm text-grey-7 mb-4")
                             token_input = ui.input(value=token).classes("w-full font-mono")
                             token_input.props("readonly")
+                            ui.label("MCP Configuration (OpenCode format)").classes(
+                                "text-sm font-bold mt-4 mb-2"
+                            )
+                            mcp_config = f'''{{
+  "ainstruct": {{
+    "type": "remote",
+    "url": "{mcp_url}",
+    "headers": {{
+      "Authorization": "Bearer {token}"
+    }},
+    "enabled": true
+  }}
+}}'''
+                            mcp_input = ui.textarea(value=mcp_config).classes(
+                                "w-full font-mono text-sm"
+                            )
+                            mcp_input.props("readonly rows=8")
                             with ui.row().classes("w-full justify-end gap-2"):
                                 ui.button(
                                     "Copy",
@@ -712,7 +731,7 @@ def tokens_page():
                 ).classes("w-full")
                 cat_expires = ui.input("Expires in (days, optional)").classes("w-full")
 
-                def create_cat():
+                async def create_cat():
                     expires_days = None
                     if cat_expires.value:
                         try:
@@ -739,6 +758,8 @@ def tokens_page():
                     if response.status_code == 201:
                         data = response.json()
                         token = data.get("token", "N/A")
+                        origin = await ui.run_javascript("window.location.origin")
+                        mcp_url = f"{origin}/mcp"
                         with ui.dialog() as dialog, ui.card().classes("w-[500px]"):
                             ui.label("Token Created").classes("text-xl font-bold mb-2")
                             ui.label(
@@ -746,6 +767,23 @@ def tokens_page():
                             ).classes("text-sm text-grey-7 mb-4")
                             token_input = ui.input(value=token).classes("w-full font-mono")
                             token_input.props("readonly")
+                            ui.label("MCP Configuration (OpenCode format)").classes(
+                                "text-sm font-bold mt-4 mb-2"
+                            )
+                            mcp_config = f'''{{
+  "ainstruct": {{
+    "type": "remote",
+    "url": "{mcp_url}",
+    "headers": {{
+      "Authorization": "Bearer {token}"
+    }},
+    "enabled": true
+  }}
+}}'''
+                            mcp_input = ui.textarea(value=mcp_config).classes(
+                                "w-full font-mono text-sm"
+                            )
+                            mcp_input.props("readonly rows=8")
                             with ui.row().classes("w-full justify-end gap-2"):
                                 ui.button(
                                     "Copy",

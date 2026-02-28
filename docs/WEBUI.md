@@ -1,5 +1,7 @@
 # WebUI Documentation
 
+> **Notice**: Always deploy latest changes to the dev instance so it is ready for user testing.
+
 ## Overview
 
 The WebUI is a user dashboard for AI Document Memory, built with [NiceGUI](https://nicegui.io/) (a Python UI framework that renders to the browser). It provides a web interface for managing collections, documents, and API tokens.

@@ -1,3 +1,10 @@
+## [3.10.1](https://github.com/mbabic84/ainstruct-mcp/compare/v3.10.0...v3.10.1) (2026-02-28)
+
+
+### Bug Fixes
+
+* resolve tokens page CAT dropdown issues and api response field ([c642397](https://github.com/mbabic84/ainstruct-mcp/commit/c6423975a79b81ed1b20be10ee533d10be647cf3))
+
 # [3.10.0](https://github.com/mbabic84/ainstruct-mcp/compare/v3.9.0...v3.10.0) (2026-02-27)
 
 

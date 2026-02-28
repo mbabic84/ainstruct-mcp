@@ -1,3 +1,10 @@
+# [3.13.0](https://github.com/mbabic84/ainstruct-mcp/compare/v3.12.1...v3.13.0) (2026-02-28)
+
+
+### Features
+
+* **web-ui:** add MCP config snippet to token creation modal ([8301edb](https://github.com/mbabic84/ainstruct-mcp/commit/8301edb6ce46bc76cf764703cf40c886daa9b867))
+
 ## [3.12.1](https://github.com/mbabic84/ainstruct-mcp/compare/v3.12.0...v3.12.1) (2026-02-28)
 
 

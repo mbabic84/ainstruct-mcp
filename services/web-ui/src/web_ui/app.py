@@ -112,22 +112,57 @@ def render_page(content_fn):
 
 @ui.page("/login")
 def login_page():
-    username_input = ui.input("Username").classes("w-full")
-    password_input = ui.input("Password", password=True, password_toggle_button=True).classes(
-        "w-full"
-    )
-    error_label = ui.label("").classes("text-red-500")
-
     def try_login():
+        if not username_input.value:
+            error_label.set_text("Username is required")
+            return
+        if not password_input.value:
+            error_label.set_text("Password is required")
+            return
+
         success, error = login_user(username_input.value, password_input.value)
         if success:
+            if remember_me_checkbox.value:
+                app.storage.user["remember_me"] = True
             ui.navigate.to("/dashboard")
         else:
             error_label.set_text(error)
 
-    ui.button("Login", on_click=try_login).classes("w-full")
-    ui.label("Don't have an account?").classes("mt-4")
-    ui.button("Register", on_click=lambda: ui.navigate.to("/register")).props("flat color=primary")
+    with ui.column().classes("w-full h-screen justify-center items-center"):
+        with ui.card().classes("w-full max-w-md p-8"):
+            ui.label("Welcome Back").classes("text-2xl font-bold text-center w-full mb-6")
+
+            username_input = (
+                ui.input(
+                    "Username",
+                    placeholder="Enter your username",
+                )
+                .classes("w-full")
+                .on("keydown.enter", try_login)
+            )
+
+            password_input = (
+                ui.input(
+                    "Password",
+                    password=True,
+                    password_toggle_button=True,
+                    placeholder="Enter your password",
+                )
+                .classes("w-full")
+                .on("keydown.enter", try_login)
+            )
+
+            remember_me_checkbox = ui.checkbox("Remember me").classes("mt-2")
+
+            error_label = ui.label("").classes("text-red-500 text-center w-full mt-2")
+
+            ui.button("Login", on_click=try_login).classes("w-full mt-4").props("color=primary")
+
+            with ui.row().classes("w-full justify-center gap-2 mt-4"):
+                ui.label("Don't have an account?")
+                ui.button("Register", on_click=lambda: ui.navigate.to("/register")).props(
+                    "flat color=primary"
+                )
 
 
 @ui.page("/")

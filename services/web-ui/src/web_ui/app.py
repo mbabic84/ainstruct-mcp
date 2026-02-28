@@ -1,8 +1,9 @@
-import asyncio
 import os
 from datetime import datetime
 
 from nicegui import app, ui
+
+from web_ui.api_client import API_HOSTNAME, ApiClient
 
 ui.add_css(
     """
@@ -12,8 +13,6 @@ body, html { margin: 0; padding: 0; }
 """,
     shared=True,
 )
-
-from web_ui.api_client import API_HOSTNAME, ApiClient
 
 api_client = ApiClient(hostname=API_HOSTNAME)
 

@@ -116,16 +116,16 @@ class ApiClient:
         document_type: str | None = None,
         metadata: dict | None = None,
     ) -> httpx.Response:
-        json: dict = {}
+        body: dict = {}
         if title is not None:
-            json["title"] = title
+            body["title"] = title
         if content is not None:
-            json["content"] = content
+            body["content"] = content
         if document_type is not None:
-            json["document_type"] = document_type
+            body["document_type"] = document_type
         if metadata is not None:
-            json["metadata"] = metadata
-        return self._request("PATCH", f"/api/v1/documents/{document_id}", json=json)
+            body["metadata"] = metadata
+        return self._request("PATCH", f"/api/v1/documents/{document_id}", json=body)
 
     def delete_document(self, document_id: str) -> httpx.Response:
         return self._request("DELETE", f"/api/v1/documents/{document_id}")
@@ -134,10 +134,10 @@ class ApiClient:
         return self._request("GET", "/api/v1/auth/pat")
 
     def create_pat(self, label: str, expires_in_days: int | None = None) -> httpx.Response:
-        json: dict = {"label": label}
+        body: dict = {"label": label}
         if expires_in_days is not None:
-            json["expires_in_days"] = expires_in_days
-        return self._request("POST", "/api/v1/auth/pat", json=json)
+            body["expires_in_days"] = expires_in_days
+        return self._request("POST", "/api/v1/auth/pat", json=body)
 
     def revoke_pat(self, pat_id: str) -> httpx.Response:
         return self._request("DELETE", f"/api/v1/auth/pat/{pat_id}")
@@ -158,14 +158,14 @@ class ApiClient:
         permission: str = "read_write",
         expires_in_days: int | None = None,
     ) -> httpx.Response:
-        json: dict = {
+        body: dict = {
             "label": label,
             "collection_id": collection_id,
             "permission": permission,
         }
         if expires_in_days is not None:
-            json["expires_in_days"] = expires_in_days
-        return self._request("POST", "/api/v1/auth/cat", json=json)
+            body["expires_in_days"] = expires_in_days
+        return self._request("POST", "/api/v1/auth/cat", json=body)
 
     def revoke_cat(self, cat_id: str) -> httpx.Response:
         return self._request("DELETE", f"/api/v1/auth/cat/{cat_id}")
@@ -190,18 +190,18 @@ class ApiClient:
         is_active: bool | None = None,
         is_superuser: bool | None = None,
     ) -> httpx.Response:
-        json: dict = {}
+        body: dict = {}
         if email is not None:
-            json["email"] = email
+            body["email"] = email
         if username is not None:
-            json["username"] = username
+            body["username"] = username
         if password is not None:
-            json["password"] = password
+            body["password"] = password
         if is_active is not None:
-            json["is_active"] = is_active
+            body["is_active"] = is_active
         if is_superuser is not None:
-            json["is_superuser"] = is_superuser
-        return self._request("PATCH", f"/api/v1/admin/users/{user_id}", json=json)
+            body["is_superuser"] = is_superuser
+        return self._request("PATCH", f"/api/v1/admin/users/{user_id}", json=body)
 
     def delete_user(self, user_id: str) -> httpx.Response:
         return self._request("DELETE", f"/api/v1/admin/users/{user_id}")

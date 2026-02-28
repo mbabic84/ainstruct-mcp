@@ -25,12 +25,17 @@ def is_admin():
 def require_auth():
     if not is_logged_in():
         ui.navigate.to("/login")
+        return False
+    return True
 
 
 def require_admin():
-    require_auth()
+    if not require_auth():
+        return False
     if not is_admin():
         ui.navigate.to("/dashboard")
+        return False
+    return True
 
 
 async def logout():
@@ -125,6 +130,14 @@ def login_page():
     ui.button("Register", on_click=lambda: ui.navigate.to("/register")).props("flat color=primary")
 
 
+@ui.page("/")
+def index_page():
+    if is_logged_in():
+        ui.navigate.to("/dashboard")
+    else:
+        ui.navigate.to("/login")
+
+
 @ui.page("/register")
 def register_page():
     username_input = ui.input("Username").classes("w-full")
@@ -158,7 +171,8 @@ def register_page():
 
 @ui.page("/dashboard")
 def dashboard_page():
-    require_auth()
+    if not require_auth():
+        return
 
     def content():
         user = get_user()
@@ -196,7 +210,8 @@ def dashboard_page():
 
 @ui.page("/collections")
 def collections_page():
-    require_auth()
+    if not require_auth():
+        return
 
     def content():
         ui.label("Collections").classes("text-2xl font-bold")
@@ -272,18 +287,15 @@ def collections_page():
                             else:
                                 ui.notify(f"Error: {response.text}", type="negative")
 
-                    ui.table(columns=columns, rows=rows, row_key="id").classes(
-                        "w-full"
-                    ).on_row_click(
-                        lambda e: ui.navigate.to(f"/documents?collection={e.args['id']}")
-                    ).add_slot(
+                    table = ui.table(columns=columns, rows=rows, row_key="id").classes("w-full")
+                    table.add_slot(
                         "body-cell-actions",
                         """
                         <q-td :props="props">
                             <q-btn flat round color="negative" icon="delete" @click.stop="$emit('row-click', props.row)" />
                         </q-td>
                     """,
-                    ).on_row_click(handle_delete)
+                    )
             else:
                 ui.label("No collections yet. Create one above!")
         else:
@@ -293,8 +305,9 @@ def collections_page():
 
 
 @ui.page("/documents")
-def documents_page():
-    require_auth()
+def documents_page(collection_id: str | None = None):
+    if not require_auth():
+        return
 
     def content():
         ui.label("Documents").classes("text-2xl font-bold")
@@ -305,19 +318,22 @@ def documents_page():
             if collection_response.status_code == 200
             else []
         )
-        collection_options = [{"label": "All Collections", "value": ""}] + [
-            {"label": c["name"], "value": c["id"]} for c in collections
-        ]
+        collection_options = {"__all__": "All Collections"}
+        collection_options.update({c["id"]: c["name"] for c in collections})
+
+        initial_value = collection_id if collection_id else "__all__"
 
         selected_collection = ui.select(
             label="Filter by Collection",
             options=collection_options,
-            value="",
+            value=initial_value,
         ).classes("w-full mb-4")
-        selected_collection.on_value_change(lambda _: ui.navigate.reload())
+        selected_collection.on_value_change(
+            lambda e: ui.navigate.to(f"/documents?collection_id={e.value}")
+        )
 
         params = {}
-        if selected_collection.value:
+        if selected_collection.value and selected_collection.value != "__all__":
             params["collection_id"] = selected_collection.value
 
         response = api_client.list_documents(**params)
@@ -375,16 +391,15 @@ def documents_page():
                         doc = e.args
                         ui.navigate.to(f"/documents/{doc['id']}/edit")
 
-                    ui.table(columns=columns, rows=rows, row_key="id").classes(
-                        "w-full"
-                    ).on_row_click(handle_edit).add_slot(
+                    table = ui.table(columns=columns, rows=rows, row_key="id").classes("w-full")
+                    table.add_slot(
                         "body-cell-actions",
                         """
                         <q-td :props="props">
                             <q-btn flat round color="negative" icon="delete" @click.stop="$emit('row-click', props.row)" />
                         </q-td>
                     """,
-                    ).on_row_click(handle_delete)
+                    )
             else:
                 ui.label("No documents yet.")
         else:
@@ -395,7 +410,8 @@ def documents_page():
 
 @ui.page("/documents/{doc_id}/edit")
 def document_edit_page(doc_id: str):
-    require_auth()
+    if not require_auth():
+        return
 
     def content():
         response = api_client.get_document(doc_id)
@@ -408,8 +424,8 @@ def document_edit_page(doc_id: str):
 
         title_input = ui.input("Title", value=doc["title"]).classes("w-full")
         doc_type_input = ui.select(
-            "Document Type",
             options=["markdown", "text", "html"],
+            label="Document Type",
             value=doc["document_type"],
         ).classes("w-full")
         content_input = ui.textarea("Content", value=doc.get("content", "")).classes("w-full h-64")
@@ -437,7 +453,8 @@ def document_edit_page(doc_id: str):
 
 @ui.page("/tokens")
 def tokens_page():
-    require_auth()
+    if not require_auth():
+        return
 
     def content():
         with ui.tabs().classes("w-full") as tabs:
@@ -558,13 +575,11 @@ def tokens_page():
                                 "w-full"
                             ).add_slot(
                                 "body-cell-actions",
-                                """
-                                <q-td :props="props">
+                                """<q-td :props="props">
                                     <q-btn flat round color="warning" icon="refresh" @click.stop="$emit('row-click', props.row)" />
                                     <q-btn flat round color="negative" icon="delete" @click.stop="$emit('row-click', props.row)" />
-                                </q-td>
-                            """,
-                            ).on_row_click(lambda e: rotate_pat(e))
+                                </q-td>""",
+                            )
                     else:
                         ui.label("No PATs yet.")
                 else:
@@ -574,20 +589,17 @@ def tokens_page():
                 ui.label("Collection Access Tokens").classes("text-xl font-bold mb-4")
 
                 cat_label = ui.input("Token Label").classes("w-full")
-                collection_options = [
-                    {"label": c["name"], "value": c["id"]}
-                    for c in api_client.list_collections().json().get("collections", [])
-                ]
+                collection_list = api_client.list_collections().json().get("collections", [])
+                collection_options = {"__all__": "All Collections"}
+                collection_options.update({c["id"]: c["name"] for c in collection_list})
                 cat_collection = ui.select(
-                    "Collection",
+                    label="Collection",
                     options=collection_options,
+                    value="__all__",
                 ).classes("w-full")
                 cat_permission = ui.select(
-                    "Permission",
-                    options=[
-                        {"label": "Read", "value": "read"},
-                        {"label": "Read/Write", "value": "read_write"},
-                    ],
+                    options={"read": "Read", "read_write": "Read/Write"},
+                    label="Permission",
                     value="read_write",
                 ).classes("w-full")
                 cat_expires = ui.input("Expires in (days, optional)").classes("w-full")
@@ -600,10 +612,20 @@ def tokens_page():
                         except ValueError:
                             ui.notify("Invalid expires value", type="negative")
                             return
+
+                    def _val(x):
+                        if isinstance(x, dict):
+                            return x.get("value")
+                        return x
+
+                    collection_id = _val(cat_collection.value)
+                    if collection_id == "__all__":
+                        collection_id = None
+                    permission_id = _val(cat_permission.value) or "read"
                     response = api_client.create_cat(
                         cat_label.value,
-                        cat_collection.value,
-                        cat_permission.value,
+                        collection_id,
+                        permission_id,
                         expires_days,
                     )
                     if response.status_code == 201:
@@ -711,13 +733,11 @@ def tokens_page():
                                 "w-full"
                             ).add_slot(
                                 "body-cell-actions",
-                                """
-                                <q-td :props="props">
+                                """<q-td :props="props">
                                     <q-btn flat round color="warning" icon="refresh" @click.stop="$emit('row-click', props.row)" />
                                     <q-btn flat round color="negative" icon="delete" @click.stop="$emit('row-click', props.row)" />
-                                </q-td>
-                            """,
-                            ).on_row_click(lambda e: rotate_cat(e))
+                                </q-td>""",
+                            )
                     else:
                         ui.label("No CATs yet.")
                 else:
@@ -726,128 +746,11 @@ def tokens_page():
     render_page(content)
 
 
-@ui.page("/admin")
-def admin_page():
-    require_admin()
-
-    def content():
-        ui.label("User Management").classes("text-2xl font-bold")
-
-        response = api_client.list_users()
-        if response.status_code == 200:
-            users_data = response.json()
-            users = users_data.get("users", [])
-            if users:
-                with ui.card().classes("w-full"):
-                    columns = [
-                        {
-                            "name": "username",
-                            "label": "Username",
-                            "field": "username",
-                            "align": "left",
-                        },
-                        {"name": "email", "label": "Email", "field": "email", "align": "left"},
-                        {
-                            "name": "is_active",
-                            "label": "Active",
-                            "field": "is_active",
-                            "align": "left",
-                        },
-                        {
-                            "name": "is_superuser",
-                            "label": "Admin",
-                            "field": "is_superuser",
-                            "align": "left",
-                        },
-                        {
-                            "name": "created_at",
-                            "label": "Created",
-                            "field": "created_at",
-                            "align": "left",
-                        },
-                        {
-                            "name": "actions",
-                            "label": "Actions",
-                            "field": "actions",
-                            "align": "center",
-                        },
-                    ]
-                    rows = []
-                    current_user = get_user()
-                    for u in users:
-                        rows.append(
-                            {
-                                "username": u["username"],
-                                "email": u["email"],
-                                "is_active": "Yes" if u.get("is_active") else "No",
-                                "is_superuser": "Yes" if u.get("is_superuser") else "No",
-                                "created_at": datetime.fromisoformat(
-                                    u["created_at"].replace("Z", "+00:00")
-                                ).strftime("%Y-%m-%d"),
-                                "id": u["id"],
-                                "is_current": u["id"] == current_user["id"],
-                            }
-                        )
-
-                    def toggle_active(e):
-                        user_id = e.args["id"]
-                        current = e.args["is_active"] == "Yes"
-                        response = api_client.update_user(user_id, is_active=not current)
-                        if response.status_code == 200:
-                            ui.notify("User updated")
-                            ui.navigate.reload()
-                        else:
-                            ui.notify(f"Error: {response.text}", type="negative")
-
-                    def toggle_admin(e):
-                        user_id = e.args["id"]
-                        current = e.args["is_superuser"] == "Yes"
-                        response = api_client.update_user(user_id, is_superuser=not current)
-                        if response.status_code == 200:
-                            ui.notify("User updated")
-                            ui.navigate.reload()
-                        else:
-                            ui.notify(f"Error: {response.text}", type="negative")
-
-                    def delete_user(e):
-                        user_id = e.args["id"]
-                        if e.args["is_current"]:
-                            ui.notify("Cannot delete yourself", type="negative")
-                            return
-                        if ui.confirm(
-                            f"Are you sure you want to delete user {e.args['username']}?"
-                        ):
-                            response = api_client.delete_user(user_id)
-                            if response.status_code == 200:
-                                ui.notify("User deleted")
-                                ui.navigate.reload()
-                            else:
-                                ui.notify(f"Error: {response.text}", type="negative")
-
-                    table = ui.table(columns=columns, rows=rows, row_key="id").classes("w-full")
-                    table.add_slot(
-                        "body-cell-actions",
-                        """
-                        <q-td :props="props">
-                            <q-btn flat round color="primary" icon="toggle_on" @click.stop="$emit('row-click', props.row)" />
-                            <q-btn flat round color="secondary" icon="admin_panel_settings" @click.stop="$emit('row-click', props.row)" />
-                            <q-btn flat round color="negative" icon="delete" @click.stop="$emit('row-click', props.row)" />
-                        </q-td>
-                    """,
-                    )
-                    table.on_row_click(lambda e: toggle_active(e))
-            else:
-                ui.label("No users found.")
-        else:
-            ui.notify(f"Error loading users: {response.text}", type="negative")
-
-    render_page(content)
-
-
 def main():
+    port = int(os.environ.get("PORT", 8080))
     ui.run(
         title="AI Document Memory - Dashboard",
-        port=8080,
+        port=port,
         reload=False,
         show=False,
         storage_secret="ainstruct-mcp-secret-key",

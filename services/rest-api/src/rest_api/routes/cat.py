@@ -42,7 +42,10 @@ async def create_cat(
     if collection["user_id"] != user.user_id and not user.is_superuser:
         raise HTTPException(
             status_code=status.HTTP_403_FORBIDDEN,
-            detail={"code": "FORBIDDEN", "message": "Cannot create CAT for another user's collection"},
+            detail={
+                "code": "FORBIDDEN",
+                "message": "Cannot create CAT for another user's collection",
+            },
         )
 
     perm = ModelPermission.READ_WRITE if body.permission == "read_write" else ModelPermission.READ
@@ -98,7 +101,9 @@ async def list_cats(
             label=c["label"],
             collection_id=c["collection_id"],
             collection_name=c.get("collection_name"),
-            permission="read_write" if c.get("permission") == ModelPermission.READ_WRITE else "read",
+            permission="read_write"
+            if c.get("permission") == ModelPermission.READ_WRITE
+            else "read",
             created_at=c["created_at"],
             expires_at=c.get("expires_at"),
             is_active=c["is_active"],
@@ -106,7 +111,7 @@ async def list_cats(
         for c in cats
     ]
 
-    return CatListResponse(keys=items)
+    return CatListResponse(tokens=items)
 
 
 @router.delete(
@@ -185,7 +190,9 @@ async def rotate_cat(
         token=new_token,
         collection_id=new_cat["collection_id"],
         collection_name=collection["name"] if collection else None,
-        permission="read_write" if new_cat.get("permission") == ModelPermission.READ_WRITE else "read",
+        permission="read_write"
+        if new_cat.get("permission") == ModelPermission.READ_WRITE
+        else "read",
         created_at=new_cat["created_at"],
         expires_at=new_cat.get("expires_at"),
         is_active=new_cat["is_active"],

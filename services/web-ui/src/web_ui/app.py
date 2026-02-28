@@ -5,6 +5,15 @@ from nicegui import app, ui
 
 from web_ui.api_client import API_HOSTNAME, ApiClient
 
+ui.add_css(
+    """
+body, html { margin: 0; padding: 0; }
+.q-page-container { margin: 0 !important; padding: 0 !important; }
+.q-layout { margin: 0 !important; }
+""",
+    shared=True,
+)
+
 api_client = ApiClient(hostname=API_HOSTNAME)
 
 
@@ -99,7 +108,7 @@ async def register_user(username: str, email: str, password: str) -> tuple[bool,
 
 
 def render_nav():
-    with ui.row().classes("w-full justify-between items-center"):
+    with ui.row().classes("w-full justify-between items-center p-2"):
         with ui.row().classes("items-center gap-4"):
             ui.label("AI Document Memory").classes("text-xl font-bold")
         with ui.row().classes("items-center gap-4"):
@@ -126,6 +135,7 @@ def render_page(content_fn):
 
 @ui.page("/login")
 def login_page():
+
     async def try_login():
         if not username_input.value:
             error_label.set_text("Username is required")
@@ -189,15 +199,19 @@ def index_page():
 
 @ui.page("/register")
 def register_page():
-    username_input = ui.input("Username").classes("w-full")
-    email_input = ui.input("Email").classes("w-full")
-    password_input = ui.input("Password", password=True, password_toggle_button=True).classes(
-        "w-full"
-    )
-    confirm_password_input = ui.input(
-        "Confirm Password", password=True, password_toggle_button=True
-    ).classes("w-full")
-    error_label = ui.label("").classes("text-red-500")
+    with ui.column().classes("w-full h-screen justify-center items-center"):
+        with ui.card().classes("w-full max-w-md p-8"):
+            ui.label("Register").classes("text-2xl font-bold text-center w-full mb-6")
+
+            username_input = ui.input("Username").classes("w-full")
+            email_input = ui.input("Email").classes("w-full")
+            password_input = ui.input(
+                "Password", password=True, password_toggle_button=True
+            ).classes("w-full")
+            confirm_password_input = ui.input(
+                "Confirm Password", password=True, password_toggle_button=True
+            ).classes("w-full")
+            error_label = ui.label("").classes("text-red-500")
 
     async def try_register():
         if password_input.value != confirm_password_input.value:
@@ -220,6 +234,7 @@ def register_page():
 
 @ui.page("/dashboard")
 def dashboard_page():
+
     if not require_auth():
         return
 
@@ -259,6 +274,7 @@ def dashboard_page():
 
 @ui.page("/collections")
 def collections_page():
+
     if not require_auth():
         return
 
@@ -355,6 +371,7 @@ def collections_page():
 
 @ui.page("/documents")
 def documents_page(collection_id: str | None = None):
+
     if not require_auth():
         return
 
@@ -459,6 +476,7 @@ def documents_page(collection_id: str | None = None):
 
 @ui.page("/documents/{doc_id}/edit")
 def document_edit_page(doc_id: str):
+
     if not require_auth():
         return
 
@@ -502,6 +520,7 @@ def document_edit_page(doc_id: str):
 
 @ui.page("/tokens")
 def tokens_page():
+
     if not require_auth():
         return
 
@@ -803,6 +822,7 @@ def main():
         reload=False,
         show=False,
         storage_secret="ainstruct-mcp-secret-key",
+        dark=True,
     )
 
 

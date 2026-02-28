@@ -52,7 +52,8 @@ opencode.*
 .copilot
 
 # Deploy
-deploy/
+deploy/prod/
+deploy/dev/
 
 # Deploy keys
 deploy_key

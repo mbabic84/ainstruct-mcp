@@ -547,10 +547,27 @@ def tokens_page():
                     response = api_client.create_pat(pat_label.value, expires_days)
                     if response.status_code == 201:
                         data = response.json()
-                        ui.notify(f"Token created: {data.get('token', 'N/A')}")
+                        token = data.get("token", "N/A")
+                        with ui.dialog() as dialog, ui.card().classes("w-[500px]"):
+                            ui.label("Token Created").classes("text-xl font-bold mb-2")
+                            ui.label(
+                                "Please copy your token now. You won't be able to see it again!"
+                            ).classes("text-sm text-grey-7 mb-4")
+                            token_input = ui.input(value=token).classes("w-full font-mono")
+                            token_input.props("readonly")
+                            with ui.row().classes("w-full justify-end gap-2"):
+                                ui.button(
+                                    "Copy",
+                                    on_click=lambda: ui.navigate.to(
+                                        f"javascript:navigator.clipboard.writeText('{token}')"
+                                    ),
+                                ).props("flat")
+                                ui.button(
+                                    "Close", on_click=lambda: [dialog.close(), ui.navigate.reload()]
+                                ).props("color=primary")
+                        dialog.open()
                         pat_label.set_value("")
                         pat_expires.set_value("")
-                        ui.navigate.reload()
                     else:
                         ui.notify(f"Error: {response.text}", type="negative")
 
@@ -634,8 +651,31 @@ def tokens_page():
                                 response = api_client.rotate_pat(pat_id)
                                 if response.status_code == 200:
                                     data = response.json()
-                                    ui.notify(f"New token: {data.get('token', 'N/A')}")
-                                    ui.navigate.reload()
+                                    token = data.get("token", "N/A")
+                                    with ui.dialog() as dialog, ui.card().classes("w-[500px]"):
+                                        ui.label("Token Rotated").classes("text-xl font-bold mb-2")
+                                        ui.label(
+                                            "Please copy your new token now. You won't be able to see it again!"
+                                        ).classes("text-sm text-grey-7 mb-4")
+                                        token_input = ui.input(value=token).classes(
+                                            "w-full font-mono"
+                                        )
+                                        token_input.props("readonly")
+                                        with ui.row().classes("w-full justify-end gap-2"):
+                                            ui.button(
+                                                "Copy",
+                                                on_click=lambda: ui.navigate.to(
+                                                    f"javascript:navigator.clipboard.writeText('{token}')"
+                                                ),
+                                            ).props("flat")
+                                            ui.button(
+                                                "Close",
+                                                on_click=lambda: [
+                                                    dialog.close(),
+                                                    ui.navigate.reload(),
+                                                ],
+                                            ).props("color=primary")
+                                    dialog.open()
                                 else:
                                     ui.notify(f"Error: {response.text}", type="negative")
 
@@ -698,10 +738,27 @@ def tokens_page():
                     )
                     if response.status_code == 201:
                         data = response.json()
-                        ui.notify(f"Token created: {data.get('token', 'N/A')}")
+                        token = data.get("token", "N/A")
+                        with ui.dialog() as dialog, ui.card().classes("w-[500px]"):
+                            ui.label("Token Created").classes("text-xl font-bold mb-2")
+                            ui.label(
+                                "Please copy your token now. You won't be able to see it again!"
+                            ).classes("text-sm text-grey-7 mb-4")
+                            token_input = ui.input(value=token).classes("w-full font-mono")
+                            token_input.props("readonly")
+                            with ui.row().classes("w-full justify-end gap-2"):
+                                ui.button(
+                                    "Copy",
+                                    on_click=lambda: ui.navigate.to(
+                                        f"javascript:navigator.clipboard.writeText('{token}')"
+                                    ),
+                                ).props("flat")
+                                ui.button(
+                                    "Close", on_click=lambda: [dialog.close(), ui.navigate.reload()]
+                                ).props("color=primary")
+                        dialog.open()
                         cat_label.set_value("")
                         cat_expires.set_value("")
-                        ui.navigate.reload()
                     else:
                         ui.notify(f"Error: {response.text}", type="negative")
 
@@ -792,8 +849,31 @@ def tokens_page():
                                 response = api_client.rotate_cat(cat_id)
                                 if response.status_code == 200:
                                     data = response.json()
-                                    ui.notify(f"New token: {data.get('token', 'N/A')}")
-                                    ui.navigate.reload()
+                                    token = data.get("token", "N/A")
+                                    with ui.dialog() as dialog, ui.card().classes("w-[500px]"):
+                                        ui.label("Token Rotated").classes("text-xl font-bold mb-2")
+                                        ui.label(
+                                            "Please copy your new token now. You won't be able to see it again!"
+                                        ).classes("text-sm text-grey-7 mb-4")
+                                        token_input = ui.input(value=token).classes(
+                                            "w-full font-mono"
+                                        )
+                                        token_input.props("readonly")
+                                        with ui.row().classes("w-full justify-end gap-2"):
+                                            ui.button(
+                                                "Copy",
+                                                on_click=lambda: ui.navigate.to(
+                                                    f"javascript:navigator.clipboard.writeText('{token}')"
+                                                ),
+                                            ).props("flat")
+                                            ui.button(
+                                                "Close",
+                                                on_click=lambda: [
+                                                    dialog.close(),
+                                                    ui.navigate.reload(),
+                                                ],
+                                            ).props("color=primary")
+                                    dialog.open()
                                 else:
                                     ui.notify(f"Error: {response.text}", type="negative")
 

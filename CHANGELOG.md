@@ -1,3 +1,10 @@
+## [3.12.1](https://github.com/mbabic84/ainstruct-mcp/compare/v3.12.0...v3.12.1) (2026-02-28)
+
+
+### Bug Fixes
+
+* **web-ui:** show token in modal dialog after creation/rotation ([f0c3f7a](https://github.com/mbabic84/ainstruct-mcp/commit/f0c3f7a8b01535ccdc69d804161be9d9e7994829))
+
 # [3.12.0](https://github.com/mbabic84/ainstruct-mcp/compare/v3.11.1...v3.12.0) (2026-02-28)
 
 

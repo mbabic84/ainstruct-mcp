@@ -3,11 +3,23 @@ from datetime import datetime
 
 from nicegui import app, ui
 
-from web_ui.api_client import ApiClient
+from web_ui.api_client import API_HOSTNAME, ApiClient
 
-API_BASE_URL = os.environ.get("API_BASE_URL", "http://localhost:8000")
+api_client = ApiClient(hostname=API_HOSTNAME)
 
-api_client = ApiClient(base_url=API_BASE_URL)
+
+def update_storage_tokens(access_token: str, refresh_token: str):
+    app.storage.user["access_token"] = access_token
+    app.storage.user["refresh_token"] = refresh_token
+
+
+async def init_client():
+    if not api_client.hostname:
+        origin = await ui.run_javascript("window.location.origin")
+        api_client.set_cached_origin(origin)
+
+
+api_client.set_token_refresh_callback(update_storage_tokens)
 
 
 def get_user():
@@ -44,7 +56,8 @@ async def logout():
     ui.navigate.to("/login")
 
 
-def login_user(username: str, password: str) -> tuple[bool, str]:
+async def login_user(username: str, password: str) -> tuple[bool, str]:
+    await init_client()
     response = api_client.login(username, password)
     if response.status_code == 200:
         data = response.json()
@@ -67,7 +80,8 @@ def login_user(username: str, password: str) -> tuple[bool, str]:
         return False, f"Login failed: {response.status_code}"
 
 
-def register_user(username: str, email: str, password: str) -> tuple[bool, str]:
+async def register_user(username: str, email: str, password: str) -> tuple[bool, str]:
+    await init_client()
     response = api_client.register(username, email, password)
     if response.status_code == 201:
         return True, ""
@@ -112,7 +126,7 @@ def render_page(content_fn):
 
 @ui.page("/login")
 def login_page():
-    def try_login():
+    async def try_login():
         if not username_input.value:
             error_label.set_text("Username is required")
             return
@@ -120,7 +134,7 @@ def login_page():
             error_label.set_text("Password is required")
             return
 
-        success, error = login_user(username_input.value, password_input.value)
+        success, error = await login_user(username_input.value, password_input.value)
         if success:
             if remember_me_checkbox.value:
                 app.storage.user["remember_me"] = True
@@ -185,12 +199,12 @@ def register_page():
     ).classes("w-full")
     error_label = ui.label("").classes("text-red-500")
 
-    def try_register():
+    async def try_register():
         if password_input.value != confirm_password_input.value:
             error_label.set_text("Passwords do not match")
             return
 
-        success, error = register_user(
+        success, error = await register_user(
             username_input.value, email_input.value, password_input.value
         )
         if success:

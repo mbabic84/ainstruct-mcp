@@ -1,16 +1,49 @@
+import os
+from collections.abc import Callable
+
 import httpx
+
+API_HOSTNAME = os.environ.get("API_HOSTNAME")
 
 
 class ApiClient:
-    def __init__(self, base_url: str = "http://localhost:8000"):
-        self.base_url = base_url
+    _cached_origin: str | None = None
+
+    def __init__(self, hostname: str | None = None):
+        self._hostname = hostname or API_HOSTNAME
         self._client = httpx.Client(timeout=30.0)
         self.access_token: str | None = None
         self.refresh_token: str | None = None
+        self._on_token_refresh: Callable[[str, str], None] | None = None
+
+    @classmethod
+    def set_cached_origin(cls, origin: str):
+        cls._cached_origin = origin
+
+    @property
+    def hostname(self) -> str | None:
+        return self._hostname
+
+    @hostname.setter
+    def hostname(self, value: str | None):
+        self._hostname = value
+
+    def _get_url(self, path: str) -> str:
+        if self._hostname:
+            return f"{self._hostname}{path}"
+        if self._cached_origin:
+            return f"{self._cached_origin}{path}"
+        raise RuntimeError(
+            "API_HOSTNAME not set and browser origin not available. "
+            "Ensure the page has loaded before making API calls."
+        )
 
     def set_tokens(self, access_token: str, refresh_token: str):
         self.access_token = access_token
         self.refresh_token = refresh_token
+
+    def set_token_refresh_callback(self, callback: Callable[[str, str], None]):
+        self._on_token_refresh = callback
 
     def clear_tokens(self):
         self.access_token = None
@@ -22,21 +55,38 @@ class ApiClient:
             headers["Authorization"] = f"Bearer {self.access_token}"
         return headers
 
+    def _try_refresh_token(self) -> bool:
+        if not self.refresh_token:
+            return False
+        response = self.refresh(self.refresh_token)
+        if response.status_code == 200:
+            data = response.json()
+            self.set_tokens(data["access_token"], data["refresh_token"])
+            if self._on_token_refresh:
+                self._on_token_refresh(data["access_token"], data["refresh_token"])
+            return True
+        return False
+
     def _request(
         self,
         method: str,
         path: str,
         json: dict | None = None,
         params: dict | None = None,
+        _retry: bool = False,
     ) -> httpx.Response:
-        url = f"{self.base_url}{path}"
-        return self._client.request(
+        url = self._get_url(path)
+        response = self._client.request(
             method=method,
             url=url,
             json=json,
             params=params,
             headers=self._get_headers(),
         )
+        if response.status_code == 401 and not _retry:
+            if self._try_refresh_token():
+                return self._request(method, path, json, params, _retry=True)
+        return response
 
     def register(self, username: str, email: str, password: str) -> httpx.Response:
         return self._request(

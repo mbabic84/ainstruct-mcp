@@ -1,6 +1,6 @@
 # WebUI Documentation
 
-> **Notice**: Always deploy latest changes to the dev instance so it is ready for user testing.
+> **Notice**: Always run `./scripts/test.sh` before deploying to the dev instance. Always deploy latest changes so it is ready for user testing.
 
 ## Overview
 
@@ -192,11 +192,15 @@ The app will start on port 8080 by default.
 
 ### Docker Deployment
 
-See [WEBUI_TESTING.md](./WEBUI_TESTING.md) for DEV environment details.
+1. **Run tests first**:
+```bash
+./scripts/test.sh
+```
 
+2. **Deploy to dev**:
 ```bash
 cd deploy/dev
-docker compose up -d web_ui
+docker compose up -d --build web_ui
 ```
 
 ### Key Environment Variables

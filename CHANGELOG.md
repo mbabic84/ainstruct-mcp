@@ -1,3 +1,15 @@
+# [3.12.0](https://github.com/mbabic84/ainstruct-mcp/compare/v3.11.1...v3.12.0) (2026-02-28)
+
+
+### Bug Fixes
+
+* **web-ui:** fix lint errors in app.py ([0fee976](https://github.com/mbabic84/ainstruct-mcp/commit/0fee9761aaba455b1d28e0886cec146379773184))
+
+
+### Features
+
+* **web-ui:** add dark mode support ([b313762](https://github.com/mbabic84/ainstruct-mcp/commit/b313762be7509491024d7fd286c561e315d061eb))
+
 ## [3.11.1](https://github.com/mbabic84/ainstruct-mcp/compare/v3.11.0...v3.11.1) (2026-02-28)
 
 

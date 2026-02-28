@@ -1,5 +1,4 @@
 import os
-from collections.abc import Callable
 
 import httpx
 
@@ -14,7 +13,6 @@ class ApiClient:
         self._client = httpx.Client(timeout=30.0)
         self.access_token: str | None = None
         self.refresh_token: str | None = None
-        self._on_token_refresh: Callable[[str, str], None] | None = None
 
     @classmethod
     def set_cached_origin(cls, origin: str):
@@ -42,9 +40,6 @@ class ApiClient:
         self.access_token = access_token
         self.refresh_token = refresh_token
 
-    def set_token_refresh_callback(self, callback: Callable[[str, str], None]):
-        self._on_token_refresh = callback
-
     def clear_tokens(self):
         self.access_token = None
         self.refresh_token = None
@@ -54,18 +49,6 @@ class ApiClient:
         if self.access_token:
             headers["Authorization"] = f"Bearer {self.access_token}"
         return headers
-
-    def _try_refresh_token(self) -> bool:
-        if not self.refresh_token:
-            return False
-        response = self.refresh(self.refresh_token)
-        if response.status_code == 200:
-            data = response.json()
-            self.set_tokens(data["access_token"], data["refresh_token"])
-            if self._on_token_refresh:
-                self._on_token_refresh(data["access_token"], data["refresh_token"])
-            return True
-        return False
 
     def _request(
         self,
@@ -83,9 +66,6 @@ class ApiClient:
             params=params,
             headers=self._get_headers(),
         )
-        if response.status_code == 401 and not _retry:
-            if self._try_refresh_token():
-                return self._request(method, path, json, params, _retry=True)
         return response
 
     def register(self, username: str, email: str, password: str) -> httpx.Response:

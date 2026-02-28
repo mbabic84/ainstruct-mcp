@@ -1,7 +1,7 @@
 import os
 from datetime import datetime
 
-from nicegui import app, ui
+from nicegui import ui
 
 from web_ui.api_client import API_HOSTNAME, ApiClient
 
@@ -14,33 +14,55 @@ body, html { margin: 0; padding: 0; }
     shared=True,
 )
 
+ui.add_head_html(
+    """
+<script>
+function checkAuthRedirect() {
+    const token = localStorage.getItem('access_token');
+    const path = window.location.pathname;
+    if (token && (path === '/login' || path === '/register' || path === '/')) {
+        window.location.href = '/dashboard';
+    }
+}
+window.addEventListener('DOMContentLoaded', checkAuthRedirect);
+</script>
+""",
+    shared=True,
+)
+
 api_client = ApiClient(hostname=API_HOSTNAME)
 
 
-def update_storage_tokens(access_token: str, refresh_token: str):
-    app.storage.user["access_token"] = access_token
-    app.storage.user["refresh_token"] = refresh_token
+async def load_tokens_from_storage():
+    """Load tokens from localStorage on page load."""
+    access_token = await ui.run_javascript("localStorage.getItem('access_token')")
+    refresh_token = await ui.run_javascript("localStorage.getItem('refresh_token')")
+    if access_token:
+        api_client.set_tokens(access_token, refresh_token)
 
 
-async def init_client():
-    if not api_client.hostname:
-        origin = await ui.run_javascript("window.location.origin")
-        api_client.set_cached_origin(origin)
+async def save_tokens_to_storage(access_token: str, refresh_token: str):
+    """Save tokens to localStorage."""
+    await ui.run_javascript(f"localStorage.setItem('access_token', '{access_token}')")
+    await ui.run_javascript(f"localStorage.setItem('refresh_token', '{refresh_token}')")
 
 
-api_client.set_token_refresh_callback(update_storage_tokens)
+async def clear_tokens_from_storage():
+    """Clear tokens from localStorage."""
+    await ui.run_javascript("localStorage.removeItem('access_token')")
+    await ui.run_javascript("localStorage.removeItem('refresh_token')")
 
 
 def get_user():
-    return app.storage.user.get("user")
+    return None
 
 
 def is_logged_in():
-    return bool(app.storage.user.get("access_token"))
+    return bool(api_client.access_token)
 
 
 def is_admin():
-    return app.storage.user.get("user", {}).get("is_superuser", False)
+    return False
 
 
 def require_auth():
@@ -61,26 +83,17 @@ def require_admin():
 
 async def logout():
     api_client.clear_tokens()
-    app.storage.user.clear()
+    await clear_tokens_from_storage()
     ui.navigate.to("/login")
 
 
 async def login_user(username: str, password: str) -> tuple[bool, str]:
-    await init_client()
     response = api_client.login(username, password)
     if response.status_code == 200:
         data = response.json()
         api_client.set_tokens(data["access_token"], data["refresh_token"])
-
-        profile_response = api_client.get_profile()
-        if profile_response.status_code == 200:
-            user_data = profile_response.json()
-            app.storage.user["user"] = user_data
-            app.storage.user["access_token"] = data["access_token"]
-            app.storage.user["refresh_token"] = data["refresh_token"]
-            return True, ""
-        else:
-            return False, "Failed to get user profile"
+        await save_tokens_to_storage(data["access_token"], data["refresh_token"])
+        return True, ""
     elif response.status_code == 401:
         return False, "Invalid username or password"
     elif response.status_code == 403:
@@ -90,7 +103,6 @@ async def login_user(username: str, password: str) -> tuple[bool, str]:
 
 
 async def register_user(username: str, email: str, password: str) -> tuple[bool, str]:
-    await init_client()
     response = api_client.register(username, email, password)
     if response.status_code == 201:
         return True, ""
@@ -122,7 +134,8 @@ def render_nav():
                 ui.button("Documents", on_click=lambda: ui.navigate.to("/documents")).props("flat")
                 ui.button("Tokens", on_click=lambda: ui.navigate.to("/tokens")).props("flat")
                 user = get_user()
-                ui.label(f"Hello, {user['username']}").classes("text-sm")
+                if user:
+                    ui.label(f"Hello, {user.get('username', 'User')}").classes("text-sm")
                 ui.button("Logout", on_click=logout).props("flat color=negative")
 
 
@@ -146,8 +159,6 @@ def login_page():
 
         success, error = await login_user(username_input.value, password_input.value)
         if success:
-            if remember_me_checkbox.value:
-                app.storage.user["remember_me"] = True
             ui.navigate.to("/dashboard")
         else:
             error_label.set_text(error)
@@ -176,8 +187,6 @@ def login_page():
                 .on("keydown.enter", try_login)
             )
 
-            remember_me_checkbox = ui.checkbox("Remember me").classes("mt-2")
-
             error_label = ui.label("").classes("text-red-500 text-center w-full mt-2")
 
             ui.button("Login", on_click=try_login).classes("w-full mt-4").props("color=primary")
@@ -191,10 +200,7 @@ def login_page():
 
 @ui.page("/")
 def index_page():
-    if is_logged_in():
-        ui.navigate.to("/dashboard")
-    else:
-        ui.navigate.to("/login")
+    ui.navigate.to("/login")
 
 
 @ui.page("/register")
@@ -233,14 +239,18 @@ def register_page():
 
 
 @ui.page("/dashboard")
-def dashboard_page():
+async def dashboard_page():
+    await load_tokens_from_storage()
 
     if not require_auth():
         return
 
     def content():
         user = get_user()
-        ui.label(f"Welcome, {user['username']}!").classes("text-2xl font-bold")
+        if user:
+            ui.label(f"Welcome, {user.get('username', 'User')}!").classes("text-2xl font-bold")
+        else:
+            ui.label("Welcome!").classes("text-2xl font-bold")
 
         with ui.row().classes("w-full gap-4 mt-4"):
             response = api_client.list_collections()
@@ -273,7 +283,8 @@ def dashboard_page():
 
 
 @ui.page("/collections")
-def collections_page():
+async def collections_page():
+    await load_tokens_from_storage()
 
     if not require_auth():
         return
@@ -370,7 +381,8 @@ def collections_page():
 
 
 @ui.page("/documents")
-def documents_page(collection_id: str | None = None):
+async def documents_page(collection_id: str | None = None):
+    await load_tokens_from_storage()
 
     if not require_auth():
         return
@@ -475,7 +487,8 @@ def documents_page(collection_id: str | None = None):
 
 
 @ui.page("/documents/{doc_id}/edit")
-def document_edit_page(doc_id: str):
+async def document_edit_page(doc_id: str):
+    await load_tokens_from_storage()
 
     if not require_auth():
         return
@@ -519,7 +532,8 @@ def document_edit_page(doc_id: str):
 
 
 @ui.page("/tokens")
-def tokens_page():
+async def tokens_page():
+    await load_tokens_from_storage()
 
     if not require_auth():
         return

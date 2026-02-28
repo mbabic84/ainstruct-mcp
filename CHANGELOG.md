@@ -1,3 +1,10 @@
+## [3.11.1](https://github.com/mbabic84/ainstruct-mcp/compare/v3.11.0...v3.11.1) (2026-02-28)
+
+
+### Bug Fixes
+
+* **web-ui:** add automatic token refresh and auto-detect API hostname ([4a965f9](https://github.com/mbabic84/ainstruct-mcp/commit/4a965f9014035209345768ae8b6a3a584b675962))
+
 # [3.11.0](https://github.com/mbabic84/ainstruct-mcp/compare/v3.10.1...v3.11.0) (2026-02-28)
 
 

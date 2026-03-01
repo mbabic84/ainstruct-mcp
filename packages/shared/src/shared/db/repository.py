@@ -755,26 +755,16 @@ class CatRepository:
     async def rotate(self, key_id: str) -> tuple[str, str] | None:
         async with self.async_session() as session:
             result = await session.execute(select(CatModel).where(CatModel.id == key_id))
-            old_key = result.scalar_one_or_none()
-            if not old_key:
+            token = result.scalar_one_or_none()
+            if not token:
                 return None
-
-            old_key.is_active = False
 
             new_key = generate_cat_token()
             key_hash = hash_cat_token(new_key)
+            token.key_hash = key_hash
 
-            new_api_key = CatModel(
-                key_hash=key_hash,
-                label=old_key.label,
-                collection_id=old_key.collection_id,
-                user_id=old_key.user_id,
-                permission=old_key.permission,
-                expires_at=old_key.expires_at,
-            )
-            session.add(new_api_key)
             await session.commit()
-            return new_api_key.id, new_key
+            return token.id, new_key
 
     async def list_by_user(self, user_id: str) -> list[dict]:
         return await self.list_all(user_id=user_id)
@@ -923,25 +913,16 @@ class PatTokenRepository:
             result = await session.execute(
                 select(PatTokenModel).where(PatTokenModel.id == token_id)
             )
-            old_token = result.scalar_one_or_none()
-            if not old_token:
+            token = result.scalar_one_or_none()
+            if not token:
                 return None
-
-            old_token.is_active = False
 
             new_token = generate_pat_token()
             token_hash = hash_pat_token(new_token)
+            token.token_hash = token_hash
 
-            new_pat_token = PatTokenModel(
-                token_hash=token_hash,
-                label=old_token.label,
-                user_id=old_token.user_id,
-                scopes=old_token.scopes,
-                expires_at=old_token.expires_at,
-            )
-            session.add(new_pat_token)
             await session.commit()
-            return new_pat_token.id, new_token
+            return token.id, new_token
 
     async def list_by_user(self, user_id: str) -> list[dict]:
         return await self.list_all(user_id=user_id)

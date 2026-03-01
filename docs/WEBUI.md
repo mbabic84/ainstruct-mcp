@@ -209,6 +209,14 @@ docker compose up -d --build web_ui
 |----------|-------------|
 | `API_HOSTNAME` | REST API URL (e.g., `http://localhost:9001`) |
 
+### Test Credentials
+
+For testing purposes, use the following account:
+
+| Username | Password |
+|----------|----------|
+| `testuser123` | `testpassword123` |
+
 ## Common Patterns
 
 ### Error Handling

@@ -1,3 +1,10 @@
+# [3.15.0](https://github.com/mbabic84/ainstruct-mcp/compare/v3.14.6...v3.15.0) (2026-03-01)
+
+
+### Features
+
+* add admin user management page ([f2ad58d](https://github.com/mbabic84/ainstruct-mcp/commit/f2ad58d0bdf1edddd2e94348d1ec3f4e3983b73a))
+
 ## [3.14.6](https://github.com/mbabic84/ainstruct-mcp/compare/v3.14.5...v3.14.6) (2026-03-01)
 
 

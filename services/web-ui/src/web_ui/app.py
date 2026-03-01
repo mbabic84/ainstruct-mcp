@@ -2,6 +2,7 @@ import os
 from datetime import datetime
 
 from nicegui import ui
+from shared.config import settings
 
 from web_ui.api_client import API_HOSTNAME, ApiClient
 
@@ -1149,7 +1150,7 @@ async def tokens_page():
 
 
 def main():
-    port = int(os.environ.get("PORT", 8080))
+    port = int(os.environ.get("PORT", settings.port))
     ui.run(
         title="AI Document Memory - Dashboard",
         port=port,

@@ -1,3 +1,10 @@
+## [3.14.1](https://github.com/mbabic84/ainstruct-mcp/compare/v3.14.0...v3.14.1) (2026-03-01)
+
+
+### Bug Fixes
+
+* **web-ui:** make PAT/CAT revoke and rotate buttons functional ([616a2d5](https://github.com/mbabic84/ainstruct-mcp/commit/616a2d5afe02ff96eb4848df74cbb60962e61731))
+
 # [3.14.0](https://github.com/mbabic84/ainstruct-mcp/compare/v3.13.0...v3.14.0) (2026-02-28)
 
 

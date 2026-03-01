@@ -1,3 +1,10 @@
+## [3.14.3](https://github.com/mbabic84/ainstruct-mcp/compare/v3.14.2...v3.14.3) (2026-03-01)
+
+
+### Bug Fixes
+
+* unify default port across all services ([c3f031f](https://github.com/mbabic84/ainstruct-mcp/commit/c3f031f998df1a822963dda716e8ad28c80b0637))
+
 ## [3.14.2](https://github.com/mbabic84/ainstruct-mcp/compare/v3.14.1...v3.14.2) (2026-03-01)
 
 

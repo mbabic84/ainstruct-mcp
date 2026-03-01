@@ -1,3 +1,10 @@
+## [3.14.6](https://github.com/mbabic84/ainstruct-mcp/compare/v3.14.5...v3.14.6) (2026-03-01)
+
+
+### Bug Fixes
+
+* count only active tokens on dashboard ([453e3fb](https://github.com/mbabic84/ainstruct-mcp/commit/453e3fbea778a2bf2d0e29dfe376da950fc6489b))
+
 ## [3.14.5](https://github.com/mbabic84/ainstruct-mcp/compare/v3.14.4...v3.14.5) (2026-03-01)
 
 

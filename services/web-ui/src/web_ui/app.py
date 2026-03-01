@@ -89,6 +89,40 @@ ui.add_head_html(
         }
     }
     window.addEventListener('DOMContentLoaded', checkAuthRedirect);
+
+    // Update URL when tab changes on tokens page
+    function setupTabUrlUpdate() {
+        if (window.location.pathname === '/tokens') {
+            const observer = new MutationObserver(function(mutations) {
+                mutations.forEach(function(mutation) {
+                    if (mutation.type === 'childList') {
+                        mutation.addedNodes.forEach(function(node) {
+                            if (node.nodeType === 1) {
+                                const tabs = node.querySelector ? node.querySelector('.q-tab') : null;
+                                if (tabs) {
+                                    const tabButtons = document.querySelectorAll('.q-tab');
+                                    tabButtons.forEach(function(tab) {
+                                        tab.addEventListener('click', function() {
+                                            const isCat = tab.textContent.includes('Collection');
+                                            const newUrl = isCat ? '/tokens?tab=cat' : '/tokens?tab=pat';
+                                            window.history.replaceState({}, '', newUrl);
+                                        });
+                                    });
+                                    observer.disconnect();
+                                }
+                            }
+                        });
+                    }
+                });
+            });
+            observer.observe(document.body, { childList: true, subtree: true });
+        }
+    }
+    if (document.readyState === 'loading') {
+        document.addEventListener('DOMContentLoaded', setupTabUrlUpdate);
+    } else {
+        setupTabUrlUpdate();
+    }
 })();
 </script>
 """,
@@ -640,7 +674,7 @@ async def document_edit_page(doc_id: str):
 
 
 @ui.page("/tokens")
-async def tokens_page():
+async def tokens_page(tab: str = "pat"):
     await load_tokens_from_storage()
 
     if not require_auth():
@@ -651,7 +685,9 @@ async def tokens_page():
             pat_tab = ui.tab("Personal Access Tokens")
             cat_tab = ui.tab("Collection Access Tokens")
 
-        with ui.tab_panels(tabs, value=pat_tab).classes("w-full"):
+        default_tab = cat_tab if tab == "cat" else pat_tab
+
+        with ui.tab_panels(tabs, value=default_tab).classes("w-full"):
             with ui.tab_panel(pat_tab):
                 ui.label("Personal Access Tokens").classes("text-xl font-bold mb-4")
 
@@ -961,7 +997,11 @@ async def tokens_page():
                                     ),
                                 ).props("flat")
                                 ui.button(
-                                    "Close", on_click=lambda: [dialog.close(), ui.navigate.reload()]
+                                    "Close",
+                                    on_click=lambda: [
+                                        dialog.close(),
+                                        ui.navigate.to("/tokens?tab=cat"),
+                                    ],
                                 ).props("color=primary")
                         dialog.open()
                         cat_label.set_value("")
@@ -1069,7 +1109,7 @@ async def tokens_page():
                                 response = api_client.revoke_cat(cat_id)
                                 if response.status_code == 200:
                                     ui.notify("CAT revoked")
-                                    ui.navigate.reload()
+                                    ui.navigate.to("/tokens?tab=cat")
                                 else:
                                     ui.notify(f"Error: {response.text}", type="negative")
 
@@ -1097,7 +1137,6 @@ async def tokens_page():
 
                             def _do_rotate_cat(cat_id):
                                 response = api_client.rotate_cat(cat_id)
-                                response = api_client.rotate_cat(cat_id)
                                 if response.status_code == 200:
                                     data = response.json()
                                     token = data.get("token", "N/A")
@@ -1121,7 +1160,7 @@ async def tokens_page():
                                                 "Close",
                                                 on_click=lambda: [
                                                     dialog.close(),
-                                                    ui.navigate.reload(),
+                                                    ui.navigate.to("/tokens?tab=cat"),
                                                 ],
                                             ).props("color=primary")
                                     dialog.open()

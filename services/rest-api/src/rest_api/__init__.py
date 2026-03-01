@@ -1,6 +1,7 @@
 """
 Entry point for running REST API as a standalone service.
 """
+
 import os
 
 import uvicorn
@@ -11,7 +12,7 @@ from rest_api.app import create_app
 
 def main():
     app = create_app()
-    port = int(os.getenv("PORT", "8000"))
+    port = int(os.getenv("PORT", str(settings.port)))
 
     uvicorn.run(
         app,

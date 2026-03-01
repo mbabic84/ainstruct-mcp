@@ -724,6 +724,8 @@ async def tokens_page():
                             ]
                             rows = []
                             for p in pats:
+                                if not p.get("is_active"):
+                                    continue
                                 expires = p.get("expires_at")
                                 if expires:
                                     expires = datetime.fromisoformat(
@@ -744,16 +746,57 @@ async def tokens_page():
 
                             def revoke_pat(e):
                                 pat_id = e.args["id"]
-                                if ui.confirm("Are you sure you want to revoke this PAT?"):
-                                    response = api_client.revoke_pat(pat_id)
-                                    if response.status_code == 200:
-                                        ui.notify("PAT revoked")
-                                        ui.navigate.reload()
-                                    else:
-                                        ui.notify(f"Error: {response.text}", type="negative")
+                                pat_label = e.args.get("label", "this PAT")
+                                with ui.dialog() as dialog, ui.card():
+                                    ui.label(f"Are you sure you want to revoke '{pat_label}'?")
+                                    ui.label("This action cannot be undone.").classes(
+                                        "text-sm text-grey-7"
+                                    )
+                                    with ui.row().classes("w-full justify-end gap-2"):
+                                        ui.button(
+                                            "Cancel",
+                                            on_click=dialog.close,
+                                        ).props("flat")
+                                        ui.button(
+                                            "Revoke",
+                                            on_click=lambda: [
+                                                dialog.close(),
+                                                _do_revoke_pat(pat_id),
+                                            ],
+                                        ).props("color=negative")
+                                dialog.open()
+
+                            def _do_revoke_pat(pat_id):
+                                response = api_client.revoke_pat(pat_id)
+                                if response.status_code == 200:
+                                    ui.notify("PAT revoked")
+                                    ui.navigate.reload()
+                                else:
+                                    ui.notify(f"Error: {response.text}", type="negative")
 
                             def rotate_pat(e):
                                 pat_id = e.args["id"]
+                                pat_label = e.args.get("label", "this PAT")
+                                with ui.dialog() as dialog, ui.card():
+                                    ui.label(f"Are you sure you want to rotate '{pat_label}'?")
+                                    ui.label(
+                                        "A new token will be generated and the old one will be invalidated."
+                                    ).classes("text-sm text-grey-7")
+                                    with ui.row().classes("w-full justify-end gap-2"):
+                                        ui.button(
+                                            "Cancel",
+                                            on_click=dialog.close,
+                                        ).props("flat")
+                                        ui.button(
+                                            "Rotate",
+                                            on_click=lambda: [
+                                                dialog.close(),
+                                                _do_rotate_pat(pat_id),
+                                            ],
+                                        ).props("color=warning")
+                                dialog.open()
+
+                            def _do_rotate_pat(pat_id):
                                 response = api_client.rotate_pat(pat_id)
                                 if response.status_code == 200:
                                     data = response.json()
@@ -785,13 +828,17 @@ async def tokens_page():
                                 else:
                                     ui.notify(f"Error: {response.text}", type="negative")
 
-                            ui.table(columns=columns, rows=rows, row_key="id").classes(
-                                "w-full"
-                            ).add_slot(
+                            pat_table = (
+                                ui.table(columns=columns, rows=rows, row_key="id")
+                                .classes("w-full")
+                                .on("rotate-click", rotate_pat)
+                                .on("revoke-click", revoke_pat)
+                            )
+                            pat_table.add_slot(
                                 "body-cell-actions",
                                 """<q-td :props="props">
-                                    <q-btn flat round color="warning" icon="refresh" @click.stop="$emit('row-click', props.row)" />
-                                    <q-btn flat round color="negative" icon="delete" @click.stop="$emit('row-click', props.row)" />
+                                    <q-btn flat round color="warning" icon="refresh" @click.stop="$parent.$emit('rotate-click', props.row)" />
+                                    <q-btn flat round color="negative" icon="delete" @click.stop="$parent.$emit('revoke-click', props.row)" />
                                 </q-td>""",
                             )
                     else:
@@ -940,6 +987,8 @@ async def tokens_page():
                             ]
                             rows = []
                             for c in cats:
+                                if not c.get("is_active"):
+                                    continue
                                 expires = c.get("expires_at")
                                 if expires:
                                     expires = datetime.fromisoformat(
@@ -961,16 +1010,58 @@ async def tokens_page():
 
                             def revoke_cat(e):
                                 cat_id = e.args["id"]
-                                if ui.confirm("Are you sure you want to revoke this CAT?"):
-                                    response = api_client.revoke_cat(cat_id)
-                                    if response.status_code == 200:
-                                        ui.notify("CAT revoked")
-                                        ui.navigate.reload()
-                                    else:
-                                        ui.notify(f"Error: {response.text}", type="negative")
+                                cat_label = e.args.get("label", "this CAT")
+                                with ui.dialog() as dialog, ui.card():
+                                    ui.label(f"Are you sure you want to revoke '{cat_label}'?")
+                                    ui.label("This action cannot be undone.").classes(
+                                        "text-sm text-grey-7"
+                                    )
+                                    with ui.row().classes("w-full justify-end gap-2"):
+                                        ui.button(
+                                            "Cancel",
+                                            on_click=dialog.close,
+                                        ).props("flat")
+                                        ui.button(
+                                            "Revoke",
+                                            on_click=lambda: [
+                                                dialog.close(),
+                                                _do_revoke_cat(cat_id),
+                                            ],
+                                        ).props("color=negative")
+                                dialog.open()
+
+                            def _do_revoke_cat(cat_id):
+                                response = api_client.revoke_cat(cat_id)
+                                if response.status_code == 200:
+                                    ui.notify("CAT revoked")
+                                    ui.navigate.reload()
+                                else:
+                                    ui.notify(f"Error: {response.text}", type="negative")
 
                             def rotate_cat(e):
                                 cat_id = e.args["id"]
+                                cat_label = e.args.get("label", "this CAT")
+                                with ui.dialog() as dialog, ui.card():
+                                    ui.label(f"Are you sure you want to rotate '{cat_label}'?")
+                                    ui.label(
+                                        "A new token will be generated and the old one will be invalidated."
+                                    ).classes("text-sm text-grey-7")
+                                    with ui.row().classes("w-full justify-end gap-2"):
+                                        ui.button(
+                                            "Cancel",
+                                            on_click=dialog.close,
+                                        ).props("flat")
+                                        ui.button(
+                                            "Rotate",
+                                            on_click=lambda: [
+                                                dialog.close(),
+                                                _do_rotate_cat(cat_id),
+                                            ],
+                                        ).props("color=warning")
+                                dialog.open()
+
+                            def _do_rotate_cat(cat_id):
+                                response = api_client.rotate_cat(cat_id)
                                 response = api_client.rotate_cat(cat_id)
                                 if response.status_code == 200:
                                     data = response.json()
@@ -1002,13 +1093,17 @@ async def tokens_page():
                                 else:
                                     ui.notify(f"Error: {response.text}", type="negative")
 
-                            ui.table(columns=columns, rows=rows, row_key="id").classes(
-                                "w-full"
-                            ).add_slot(
+                            cat_table = (
+                                ui.table(columns=columns, rows=rows, row_key="id")
+                                .classes("w-full")
+                                .on("rotate-click", rotate_cat)
+                                .on("revoke-click", revoke_cat)
+                            )
+                            cat_table.add_slot(
                                 "body-cell-actions",
                                 """<q-td :props="props">
-                                    <q-btn flat round color="warning" icon="refresh" @click.stop="$emit('row-click', props.row)" />
-                                    <q-btn flat round color="negative" icon="delete" @click.stop="$emit('row-click', props.row)" />
+                                    <q-btn flat round color="warning" icon="refresh" @click.stop="$parent.$emit('rotate-click', props.row)" />
+                                    <q-btn flat round color="negative" icon="delete" @click.stop="$parent.$emit('revoke-click', props.row)" />
                                 </q-td>""",
                             )
                     else:

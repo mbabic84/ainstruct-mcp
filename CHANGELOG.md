@@ -1,3 +1,10 @@
+## [3.14.2](https://github.com/mbabic84/ainstruct-mcp/compare/v3.14.1...v3.14.2) (2026-03-01)
+
+
+### Bug Fixes
+
+* **web-ui:** fix register page layout and auto-detect API origin ([3d0cdf2](https://github.com/mbabic84/ainstruct-mcp/commit/3d0cdf27caff1f87ba7df908dc01f69029448a5b))
+
 ## [3.14.1](https://github.com/mbabic84/ainstruct-mcp/compare/v3.14.0...v3.14.1) (2026-03-01)
 
 

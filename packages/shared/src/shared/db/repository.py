@@ -500,16 +500,34 @@ class CollectionRepository:
                 select(CollectionModel).where(CollectionModel.user_id == user_id)
             )
             collections = result.scalars().all()
-            return [
-                {
-                    "id": c.id,
-                    "name": c.name,
-                    "qdrant_collection": c.qdrant_collection,
-                    "user_id": c.user_id,
-                    "created_at": c.created_at,
-                }
-                for c in collections
-            ]
+
+            items = []
+            for c in collections:
+                doc_count_result = await session.execute(
+                    select(func.count(DocumentModel.id)).where(DocumentModel.collection_id == c.id)
+                )
+                doc_count = doc_count_result.scalar() or 0
+
+                key_count_result = await session.execute(
+                    select(func.count(CatModel.id)).where(
+                        CatModel.collection_id == c.id,
+                        CatModel.is_active.is_(True),
+                    )
+                )
+                cat_count = key_count_result.scalar() or 0
+
+                items.append(
+                    {
+                        "id": c.id,
+                        "name": c.name,
+                        "qdrant_collection": c.qdrant_collection,
+                        "user_id": c.user_id,
+                        "document_count": doc_count,
+                        "cat_count": cat_count,
+                        "created_at": c.created_at,
+                    }
+                )
+            return items
 
     async def delete(self, collection_id: str) -> bool:
         async with self.async_session() as session:

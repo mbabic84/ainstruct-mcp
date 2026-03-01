@@ -1,4 +1,3 @@
-
 from fastapi import APIRouter, HTTPException, status
 from shared.db import get_collection_repository
 
@@ -58,8 +57,8 @@ async def list_collections(
         CollectionListItem(
             id=c["id"],
             name=c["name"],
-            document_count=0,
-            cat_count=0,
+            document_count=c.get("document_count", 0),
+            cat_count=c.get("cat_count", 0),
             created_at=c["created_at"],
         )
         for c in collections

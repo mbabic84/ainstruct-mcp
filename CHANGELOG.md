@@ -1,3 +1,10 @@
+## [3.14.4](https://github.com/mbabic84/ainstruct-mcp/compare/v3.14.3...v3.14.4) (2026-03-01)
+
+
+### Bug Fixes
+
+* return actual document and CAT counts in list_collections endpoint ([623d7ea](https://github.com/mbabic84/ainstruct-mcp/commit/623d7ea4c562ce0bd1cb0f4689c145209540b078))
+
 ## [3.14.3](https://github.com/mbabic84/ainstruct-mcp/compare/v3.14.2...v3.14.3) (2026-03-01)
 
 

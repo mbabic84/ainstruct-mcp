@@ -97,8 +97,18 @@ ui.add_head_html(
 api_client = ApiClient(hostname=API_HOSTNAME)
 
 
+async def set_api_origin():
+    """Set API origin from browser's current location (for cases where API_HOSTNAME is not set)."""
+    origin = await ui.run_javascript("window.location.origin")
+    if origin:
+        ApiClient.set_cached_origin(origin)
+
+
 async def load_tokens_from_storage():
     """Load tokens from localStorage on page load and refresh if needed."""
+    # Set API origin from browser's current location
+    await set_api_origin()
+
     # First load tokens from localStorage
     access_token = await ui.run_javascript("localStorage.getItem('access_token')")
     refresh_token = await ui.run_javascript("localStorage.getItem('refresh_token')")
@@ -221,6 +231,8 @@ def render_page(content_fn):
 
 @ui.page("/login")
 def login_page():
+    # Set API origin from browser on page load
+    ui.timer(0.1, set_api_origin, once=True)
 
     async def try_login():
         if not username_input.value:
@@ -278,37 +290,59 @@ def index_page():
 
 @ui.page("/register")
 def register_page():
+    # Set API origin from browser on page load
+    ui.timer(0.1, set_api_origin, once=True)
+
     with ui.column().classes("w-full h-screen justify-center items-center"):
         with ui.card().classes("w-full max-w-md p-8"):
             ui.label("Register").classes("text-2xl font-bold text-center w-full mb-6")
 
-            username_input = ui.input("Username").classes("w-full")
-            email_input = ui.input("Email").classes("w-full")
+            username_input = ui.input("Username", placeholder="Enter your username").classes(
+                "w-full"
+            )
+            email_input = ui.input("Email", placeholder="Enter your email").classes("w-full")
             password_input = ui.input(
-                "Password", password=True, password_toggle_button=True
+                "Password",
+                password=True,
+                password_toggle_button=True,
+                placeholder="Enter your password",
             ).classes("w-full")
             confirm_password_input = ui.input(
-                "Confirm Password", password=True, password_toggle_button=True
+                "Confirm Password",
+                password=True,
+                password_toggle_button=True,
+                placeholder="Confirm your password",
             ).classes("w-full")
-            error_label = ui.label("").classes("text-red-500")
+            error_label = ui.label("").classes("text-red-500 text-center w-full mt-2")
 
-    async def try_register():
-        if password_input.value != confirm_password_input.value:
-            error_label.set_text("Passwords do not match")
-            return
+            async def try_register():
+                if password_input.value != confirm_password_input.value:
+                    error_label.set_text("Passwords do not match")
+                    return
 
-        success, error = await register_user(
-            username_input.value, email_input.value, password_input.value
-        )
-        if success:
-            ui.notify("Registration successful! Please login.")
-            ui.navigate.to("/login")
-        else:
-            error_label.set_text(error)
+                success, error = await register_user(
+                    username_input.value, email_input.value, password_input.value
+                )
+                if success:
+                    ui.notify("Registration successful! Please login.")
+                    ui.navigate.to("/login")
+                else:
+                    error_label.set_text(error)
 
-    ui.button("Register", on_click=try_register).classes("w-full")
-    ui.label("Already have an account?").classes("mt-4")
-    ui.button("Login", on_click=lambda: ui.navigate.to("/login")).props("flat color=primary")
+            username_input.on("keydown.enter", try_register)
+            email_input.on("keydown.enter", try_register)
+            password_input.on("keydown.enter", try_register)
+            confirm_password_input.on("keydown.enter", try_register)
+
+            ui.button("Register", on_click=try_register).classes("w-full mt-4").props(
+                "color=primary"
+            )
+
+            with ui.row().classes("w-full justify-center gap-2 mt-4"):
+                ui.label("Already have an account?")
+                ui.button("Login", on_click=lambda: ui.navigate.to("/login")).props(
+                    "flat color=primary"
+                )
 
 
 @ui.page("/dashboard")

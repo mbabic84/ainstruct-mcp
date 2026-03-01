@@ -1,3 +1,10 @@
+## [3.14.5](https://github.com/mbabic84/ainstruct-mcp/compare/v3.14.4...v3.14.5) (2026-03-01)
+
+
+### Bug Fixes
+
+* preserve tab state on tokens page using query parameters ([05d7f05](https://github.com/mbabic84/ainstruct-mcp/commit/05d7f05eb24f1b9a8a6868c7b7f52c501162a7d9))
+
 ## [3.14.4](https://github.com/mbabic84/ainstruct-mcp/compare/v3.14.3...v3.14.4) (2026-03-01)
 
 

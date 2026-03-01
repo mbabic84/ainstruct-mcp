@@ -203,6 +203,8 @@ cd deploy/dev
 docker compose up -d --build web_ui
 ```
 
+**Dev Instance URL**: https://ainstruct-dev.kralicinora.cz
+
 ### Key Environment Variables
 
 | Variable | Description |

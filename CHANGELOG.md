@@ -1,3 +1,10 @@
+# [4.1.0](https://github.com/mbabic84/ainstruct-mcp/compare/v4.0.0...v4.1.0) (2026-03-02)
+
+
+### Features
+
+* add collection name to documents table ([03759ec](https://github.com/mbabic84/ainstruct-mcp/commit/03759ec05fffac40b6a44c731f2686d4960ff4fb))
+
 # [4.0.0](https://github.com/mbabic84/ainstruct-mcp/compare/v3.15.2...v4.0.0) (2026-03-02)
 
 

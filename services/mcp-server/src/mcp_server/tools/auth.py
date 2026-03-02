@@ -78,6 +78,42 @@ def is_jwt_token(token: str) -> bool:
     return len(parts) == 3
 
 
+async def _load_user_collections():
+    from mcp_server.tools.context import (
+        get_cat_info,
+        get_pat_info,
+        get_user_info,
+    )
+
+    user_info = get_user_info()
+    pat_info = get_pat_info()
+    cat_info = get_cat_info()
+
+    if cat_info:
+        return
+
+    from shared.db.repository import get_collection_repository
+
+    collection_repo = get_collection_repository()
+
+    user_id = None
+    if user_info:
+        user_id = user_info.get("id")
+    elif pat_info:
+        user_id = pat_info.get("user_id")
+
+    if user_id:
+        user_collections = await collection_repo.list_by_user(user_id)
+        if user_info:
+            from mcp_server.tools.context import set_user_collections
+
+            set_user_collections(user_collections)
+        elif pat_info:
+            from mcp_server.tools.context import set_pat_collections
+
+            set_pat_collections(user_collections)
+
+
 # Auth type constants
 class AuthLevel:
     NONE = "none"  # No auth required (public)
@@ -226,6 +262,8 @@ class AuthMiddleware(Middleware):
                 raise ValueError("Invalid API key")
             set_cat_info(cat_info)
             set_auth_type("api_key")
+
+        await _load_user_collections()
 
         try:
             return await call_next(context)

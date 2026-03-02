@@ -6,6 +6,12 @@ cat_context: ContextVar[dict | None] = ContextVar("cat_context", default=None)
 user_context: ContextVar[dict | None] = ContextVar("user_context", default=None)
 auth_type_context: ContextVar[str | None] = ContextVar("auth_type_context", default=None)
 pat_context: ContextVar[dict | None] = ContextVar("pat_context", default=None)
+user_collections_context: ContextVar[list[dict] | None] = ContextVar(
+    "user_collections_context", default=None
+)
+pat_collections_context: ContextVar[list[dict] | None] = ContextVar(
+    "pat_collections_context", default=None
+)
 
 
 def set_pat_info(info: dict):
@@ -42,6 +48,22 @@ def get_user_info() -> dict | None:
 
 def clear_user_info():
     user_context.set(None)
+
+
+def set_user_collections(collections: list[dict]):
+    user_collections_context.set(collections)
+
+
+def get_user_collections() -> list[dict]:
+    return user_collections_context.get() or []
+
+
+def set_pat_collections(collections: list[dict]):
+    pat_collections_context.set(collections)
+
+
+def get_pat_collections() -> list[dict]:
+    return pat_collections_context.get() or []
 
 
 def set_auth_type(auth_type: str):
@@ -119,22 +141,17 @@ def has_write_permission() -> bool:
 
 def get_collection_repository():
     from shared.db.repository import get_collection_repository as _get_collection_repo
+
     return _get_collection_repo()
 
 
 def get_auth_context() -> dict:
-    import asyncio
-
     user_info = get_user_info()
     cat_info = get_cat_info()
     pat_info = get_pat_info()
 
     if user_info:
-        collection_repo = get_collection_repository()
-        user_id = user_info.get("id")
-        user_collections = asyncio.get_event_loop().run_until_complete(
-            collection_repo.list_by_user(user_id)
-        ) if user_id else []
+        user_collections = get_user_collections()
 
         return {
             "id": user_info.get("id"),
@@ -150,11 +167,7 @@ def get_auth_context() -> dict:
         }
 
     if pat_info:
-        collection_repo = get_collection_repository()
-        user_id = pat_info.get("user_id")
-        user_collections = asyncio.get_event_loop().run_until_complete(
-            collection_repo.list_by_user(user_id)
-        ) if user_id else []
+        pat_collections = get_pat_collections()
 
         return {
             "id": pat_info.get("id"),
@@ -165,8 +178,8 @@ def get_auth_context() -> dict:
             "is_admin": pat_info.get("is_superuser", False),
             "is_superuser": pat_info.get("is_superuser", False),
             "auth_type": "pat",
-            "collection_ids": [c["id"] for c in user_collections],
-            "qdrant_collections": [c["qdrant_collection"] for c in user_collections],
+            "collection_ids": [c["id"] for c in pat_collections],
+            "qdrant_collections": [c["qdrant_collection"] for c in pat_collections],
         }
 
     if cat_info:
@@ -194,3 +207,5 @@ def clear_all_auth():
     clear_user_info()
     clear_pat_info()
     clear_auth_type()
+    user_collections_context.set(None)
+    pat_collections_context.set(None)

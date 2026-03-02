@@ -21,10 +21,11 @@ class QdrantService:
         )
         self.collection_name = collection_name
         self.is_admin = is_admin
-        if collection_name and not is_admin:
-            self._ensure_collection()
+        self._collection_initialized = False
 
     async def _ensure_collection(self):
+        if self._collection_initialized or self.is_admin:
+            return
         collections_response = await self.client.get_collections()
         collections = collections_response.collections
         collection_names = [c.name for c in collections]
@@ -37,6 +38,7 @@ class QdrantService:
                     distance=Distance.COSINE,
                 ),
             )
+        self._collection_initialized = True
 
     async def get_all_collections(self) -> list[str]:
         collections_response = await self.client.get_collections()
@@ -50,6 +52,8 @@ class QdrantService:
     ):
         if self.is_admin:
             raise ValueError("Admin cannot upsert to all collections")
+
+        await self._ensure_collection()
 
         points = [
             PointStruct(
@@ -178,9 +182,7 @@ class QdrantService:
     ) -> list[dict]:
         all_results = []
         for coll in collection_names:
-            results = await self._search_collection(
-                coll, query_vector, limit, filter_document_id
-            )
+            results = await self._search_collection(coll, query_vector, limit, filter_document_id)
             all_results.extend(results)
         all_results.sort(key=lambda x: x["score"], reverse=True)
         return all_results[:limit]

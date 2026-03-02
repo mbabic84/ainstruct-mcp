@@ -71,7 +71,7 @@ class TestStoreDocumentWithRealServices:
                 collection_id=mock_pat_info["collection_ids"][0],
             )
         )
-        mock_doc_repo.update_qdrant_point_id = AsyncMock()
+        mock_doc_repo.update_qdrant_point_ids = AsyncMock()
 
         mock_qdrant = MagicMock()
         mock_qdrant.collection_name = mock_pat_info["qdrant_collections"][0]
@@ -132,7 +132,7 @@ class TestStoreDocumentWithRealServices:
                 collection_id=mock_cat_info["collection_id"],
             )
         )
-        mock_doc_repo.update_qdrant_point_id = AsyncMock()
+        mock_doc_repo.update_qdrant_point_ids = AsyncMock()
 
         mock_qdrant = MagicMock()
         mock_qdrant.collection_name = mock_cat_info["qdrant_collection"]
@@ -198,7 +198,7 @@ class TestStoreDocumentWithRealServices:
         mock_doc_repo.create = AsyncMock(
             return_value=MagicMock(id="doc-col-789", collection_id="specific-collection")
         )
-        mock_doc_repo.update_qdrant_point_id = AsyncMock()
+        mock_doc_repo.update_qdrant_point_ids = AsyncMock()
 
         mock_qdrant = MagicMock()
         mock_qdrant.upsert_chunks = AsyncMock(return_value=["point-1"])

@@ -137,7 +137,7 @@ class DocumentRepository:
             await session.commit()
             return True
 
-    async def update_qdrant_point_id(self, doc_id: str, point_ids: list[str]):
+    async def update_qdrant_point_ids(self, doc_id: str, point_ids: list[str]):
         async with self.async_session() as session:
             query = select(DocumentModel).where(DocumentModel.id == doc_id)
             if self.collection_id:
@@ -146,7 +146,7 @@ class DocumentRepository:
             result = await session.execute(query)
             db_doc = result.scalar_one_or_none()
             if db_doc:
-                db_doc.qdrant_point_id = ",".join(point_ids)
+                db_doc.qdrant_point_ids = point_ids
                 await session.commit()
 
     async def update_collection_id(self, doc_id: str, new_collection_id: str) -> bool:

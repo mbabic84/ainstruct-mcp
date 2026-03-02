@@ -576,6 +576,12 @@ async def documents_page(collection_id: str | None = None):
                     columns = [
                         {"name": "title", "label": "Title", "field": "title", "align": "left"},
                         {
+                            "name": "collection_name",
+                            "label": "Collection",
+                            "field": "collection_name",
+                            "align": "left",
+                        },
+                        {
                             "name": "document_type",
                             "label": "Type",
                             "field": "document_type",
@@ -599,6 +605,7 @@ async def documents_page(collection_id: str | None = None):
                         rows.append(
                             {
                                 "title": d["title"],
+                                "collection_name": d.get("collection_name", ""),
                                 "document_type": d["document_type"],
                                 "created_at": datetime.fromisoformat(
                                     d["created_at"].replace("Z", "+00:00")

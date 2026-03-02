@@ -53,7 +53,10 @@ async def store_document(
     if collection["user_id"] != user.user_id and not user.is_superuser:
         raise HTTPException(
             status_code=status.HTTP_403_FORBIDDEN,
-            detail={"code": "FORBIDDEN", "message": "Cannot store document in another user's collection"},
+            detail={
+                "code": "FORBIDDEN",
+                "message": "Cannot store document in another user's collection",
+            },
         )
 
     doc_repo = get_document_repository()
@@ -133,11 +136,15 @@ async def list_documents(
         documents = await doc_repo.list_all_for_user(user.user_id, limit, offset)
         total = len(documents)
 
+    collections = await collection_repo.list_by_user(user.user_id)
+    collection_map = {c["id"]: c["name"] for c in collections}
+
     items = [
         DocumentListItem(
             id=d.id,
             title=d.title,
             collection_id=d.collection_id,
+            collection_name=collection_map.get(d.collection_id),
             document_type=d.document_type,
             created_at=d.created_at,
             updated_at=d.updated_at,

@@ -31,7 +31,9 @@ async def store_document(input_data: StoreDocumentInput) -> StoreDocumentOutput:
         raise ValueError("Not authenticated")
 
     if not has_write_permission():
-        raise ValueError("Insufficient permissions: read_write permission required to store documents")
+        raise ValueError(
+            "Insufficient permissions: read_write permission required to store documents"
+        )
 
     auth_type = auth.get("auth_type")
 
@@ -59,13 +61,15 @@ async def store_document(input_data: StoreDocumentInput) -> StoreDocumentOutput:
     embedding_service = get_embedding_service()
     chunking_service = get_chunking_service()
 
-    doc = await doc_repo.create(DocumentCreate(
-        collection_id=collection_id,
-        title=input_data.title,
-        content=input_data.content,
-        document_type=input_data.document_type,
-        doc_metadata=input_data.doc_metadata,
-    ))
+    doc = await doc_repo.create(
+        DocumentCreate(
+            collection_id=collection_id,
+            title=input_data.title,
+            content=input_data.content,
+            document_type=input_data.document_type,
+            doc_metadata=input_data.doc_metadata,
+        )
+    )
 
     chunks = chunking_service.chunk_markdown(input_data.content, input_data.title)
 
@@ -156,14 +160,16 @@ async def search_documents(input_data: SearchDocumentsInput) -> SearchDocumentsO
     total_tokens = 0
 
     for r in results:
-        search_results.append(SearchResultItem(
-            document_id=r["document_id"],
-            title=r["title"],
-            chunk_index=r["chunk_index"],
-            content=r["content"],
-            score=r["score"],
-            collection=r.get("collection"),
-        ))
+        search_results.append(
+            SearchResultItem(
+                document_id=r["document_id"],
+                title=r["title"],
+                chunk_index=r["chunk_index"],
+                content=r["content"],
+                score=r["score"],
+                collection=r.get("collection"),
+            )
+        )
         total_tokens += r.get("token_count", 0)
 
         if total_tokens >= input_data.max_tokens:
@@ -179,7 +185,9 @@ async def search_documents(input_data: SearchDocumentsInput) -> SearchDocumentsO
                 formatted_parts.append(f"*Collection: {item.collection}*\n\n")
             seen_titles.add(item.title)
 
-        formatted_parts.append(f"### Section {item.chunk_index + 1} (relevance: {item.score:.2f})\n\n")
+        formatted_parts.append(
+            f"### Section {item.chunk_index + 1} (relevance: {item.score:.2f})\n\n"
+        )
         formatted_parts.append(item.content)
         formatted_parts.append("\n\n---\n\n")
 
@@ -268,7 +276,9 @@ async def list_documents(input_data: ListDocumentsInput) -> ListDocumentsOutput:
         docs = await doc_repo.list_all(limit=input_data.limit, offset=input_data.offset)
     elif auth_type in ("pat", "jwt") and user_id:
         doc_repo = get_document_repository(None)
-        docs = await doc_repo.list_all_for_user(user_id, limit=input_data.limit, offset=input_data.offset)
+        docs = await doc_repo.list_all_for_user(
+            user_id, limit=input_data.limit, offset=input_data.offset
+        )
     else:
         doc_repo = get_document_repository(str(collection_id) if collection_id else None)
         docs = await doc_repo.list_all(limit=input_data.limit, offset=input_data.offset)
@@ -308,7 +318,9 @@ async def delete_document(input_data: DeleteDocumentInput) -> DeleteDocumentOutp
         raise ValueError("Not authenticated")
 
     if not has_write_permission():
-        raise ValueError("Insufficient permissions: read_write permission required to delete documents")
+        raise ValueError(
+            "Insufficient permissions: read_write permission required to delete documents"
+        )
 
     is_admin = auth.get("is_admin", False) or auth.get("is_superuser", False)
     user_id = auth.get("user_id")
@@ -387,7 +399,9 @@ async def update_document(input_data: UpdateDocumentInput) -> UpdateDocumentOutp
         raise ValueError("Not authenticated")
 
     if not has_write_permission():
-        raise ValueError("Insufficient permissions: read_write permission required to update documents")
+        raise ValueError(
+            "Insufficient permissions: read_write permission required to update documents"
+        )
 
     is_admin = auth.get("is_admin", False) or auth.get("is_superuser", False)
     user_id = auth.get("user_id")
@@ -472,7 +486,9 @@ async def move_document(input_data: MoveDocumentInput) -> MoveDocumentOutput:
         raise ValueError("Not authenticated")
 
     if not has_write_permission():
-        raise ValueError("Insufficient permissions: read_write permission required to move documents")
+        raise ValueError(
+            "Insufficient permissions: read_write permission required to move documents"
+        )
 
     is_admin = auth.get("is_admin", False) or auth.get("is_superuser", False)
     user_id = auth.get("user_id")
@@ -501,6 +517,14 @@ async def move_document(input_data: MoveDocumentInput) -> MoveDocumentOutput:
     if not target_collection:
         raise ValueError("Target collection not found")
 
+    # Look up the actual qdrant_collection names from the database
+    source_collection = await collection_repo.get_by_id(source_collection_id)
+    if not source_collection:
+        raise ValueError("Source collection not found")
+
+    source_qdrant_collection = source_collection.get("qdrant_collection")
+    target_qdrant_collection = target_collection.get("qdrant_collection")
+
     if is_admin:
         pass
     elif auth_type in ("pat", "jwt"):
@@ -509,7 +533,7 @@ async def move_document(input_data: MoveDocumentInput) -> MoveDocumentOutput:
         if auth_type == "jwt" and target_collection["user_id"] != user_id:
             raise ValueError("Target collection not found")
 
-    source_qdrant = get_qdrant_service(source_collection_id)
+    source_qdrant = get_qdrant_service(source_qdrant_collection)
     await source_qdrant.delete_by_document_id(input_data.document_id)
 
     embedding_service = get_embedding_service()
@@ -521,7 +545,7 @@ async def move_document(input_data: MoveDocumentInput) -> MoveDocumentOutput:
         texts = [c["content"] for c in chunks]
         embeddings = await embedding_service.embed_texts(texts)
 
-        target_qdrant = get_qdrant_service(input_data.target_collection_id)
+        target_qdrant = get_qdrant_service(target_qdrant_collection)
 
         chunks_with_meta = [
             {

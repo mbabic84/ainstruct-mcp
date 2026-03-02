@@ -1,3 +1,10 @@
+## [3.15.2](https://github.com/mbabic84/ainstruct-mcp/compare/v3.15.1...v3.15.2) (2026-03-02)
+
+
+### Bug Fixes
+
+* resolve store_document_tool failures with PAT and CAT tokens ([539e021](https://github.com/mbabic84/ainstruct-mcp/commit/539e0215bf6c2f9d4067290c244fb4b6aa7c9b6e))
+
 ## [3.15.1](https://github.com/mbabic84/ainstruct-mcp/compare/v3.15.0...v3.15.1) (2026-03-02)
 
 

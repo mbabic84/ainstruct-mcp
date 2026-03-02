@@ -1,3 +1,11 @@
+## [3.15.1](https://github.com/mbabic84/ainstruct-mcp/compare/v3.15.0...v3.15.1) (2026-03-02)
+
+
+### Bug Fixes
+
+* MCP auth for CAT/PAT tokens with stateless HTTP ([b3bf872](https://github.com/mbabic84/ainstruct-mcp/commit/b3bf87229af91a20e39b46c82264885fcd51c06c))
+* move_document to use qdrant_collection names instead of collection IDs ([c284e31](https://github.com/mbabic84/ainstruct-mcp/commit/c284e3153bbb58398651ff4ccc92436a8aa974f9))
+
 # [3.15.0](https://github.com/mbabic84/ainstruct-mcp/compare/v3.14.6...v3.15.0) (2026-03-01)
 
 

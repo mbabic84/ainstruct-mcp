@@ -114,6 +114,7 @@ class DocumentListItem(BaseModel):
     id: str
     title: str
     collection_id: str
+    collection_name: str | None = None
     document_type: str
     created_at: datetime
     updated_at: datetime | None = None

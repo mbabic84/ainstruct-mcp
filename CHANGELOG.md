@@ -1,3 +1,15 @@
+# [4.0.0](https://github.com/mbabic84/ainstruct-mcp/compare/v3.15.2...v4.0.0) (2026-03-02)
+
+
+### Bug Fixes
+
+* change qdrant_point_id to qdrant_point_ids as UUID array ([e7de77b](https://github.com/mbabic84/ainstruct-mcp/commit/e7de77b014d128fabb0786c51492253f27b06be2))
+
+
+### BREAKING CHANGES
+
+* qdrant_point_id column renamed to qdrant_point_ids
+
 ## [3.15.2](https://github.com/mbabic84/ainstruct-mcp/compare/v3.15.1...v3.15.2) (2026-03-02)
 
 

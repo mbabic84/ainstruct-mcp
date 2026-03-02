@@ -8,6 +8,7 @@ from enum import StrEnum
 
 from pydantic import BaseModel, EmailStr
 from sqlalchemy import JSON, Boolean, DateTime, ForeignKey, String, Text
+from sqlalchemy.dialects.postgresql import ARRAY
 from sqlalchemy.ext.asyncio import AsyncAttrs, create_async_engine
 from sqlalchemy.orm import DeclarativeBase, Mapped, mapped_column, relationship
 
@@ -32,31 +33,47 @@ class CollectionModel(Base):
 
     id: Mapped[str] = mapped_column(String(36), primary_key=True, default=lambda: str(uuid.uuid4()))
     name: Mapped[str] = mapped_column(String(100), nullable=False)
-    qdrant_collection: Mapped[str] = mapped_column(String(100), nullable=False, default=lambda: str(uuid.uuid4()))
-    user_id: Mapped[str] = mapped_column(String(36), ForeignKey("users.id"), nullable=False, index=True)
+    qdrant_collection: Mapped[str] = mapped_column(
+        String(100), nullable=False, default=lambda: str(uuid.uuid4())
+    )
+    user_id: Mapped[str] = mapped_column(
+        String(36), ForeignKey("users.id"), nullable=False, index=True
+    )
     created_at: Mapped[datetime] = mapped_column(DateTime, default=datetime.utcnow)
-    updated_at: Mapped[datetime] = mapped_column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
+    updated_at: Mapped[datetime] = mapped_column(
+        DateTime, default=datetime.utcnow, onupdate=datetime.utcnow
+    )
 
     user: Mapped[UserModel] = relationship("UserModel", back_populates="collections")
-    cats: Mapped[list[CatModel]] = relationship("CatModel", back_populates="collection", cascade="all, delete-orphan")
-    documents: Mapped[list[DocumentModel]] = relationship("DocumentModel", back_populates="collection", cascade="all, delete-orphan")
+    cats: Mapped[list[CatModel]] = relationship(
+        "CatModel", back_populates="collection", cascade="all, delete-orphan"
+    )
+    documents: Mapped[list[DocumentModel]] = relationship(
+        "DocumentModel", back_populates="collection", cascade="all, delete-orphan"
+    )
 
 
 class DocumentModel(Base):
     __tablename__ = "documents"
 
     id: Mapped[str] = mapped_column(String(36), primary_key=True, default=lambda: str(uuid.uuid4()))
-    collection_id: Mapped[str] = mapped_column(String(36), ForeignKey("collections.id"), nullable=False, index=True)
+    collection_id: Mapped[str] = mapped_column(
+        String(36), ForeignKey("collections.id"), nullable=False, index=True
+    )
     title: Mapped[str] = mapped_column(String(500), nullable=False)
     content: Mapped[str] = mapped_column(Text, nullable=False)
     content_hash: Mapped[str] = mapped_column(String(64), nullable=False, index=True)
     document_type: Mapped[str] = mapped_column(String(20), default="markdown")
     created_at: Mapped[datetime] = mapped_column(DateTime, default=datetime.utcnow)
-    updated_at: Mapped[datetime] = mapped_column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
+    updated_at: Mapped[datetime] = mapped_column(
+        DateTime, default=datetime.utcnow, onupdate=datetime.utcnow
+    )
     doc_metadata: Mapped[dict] = mapped_column(JSON, default=dict)
-    qdrant_point_id: Mapped[str | None] = mapped_column(String(36), nullable=True)
+    qdrant_point_ids: Mapped[list[str] | None] = mapped_column(ARRAY(String), nullable=True)
 
-    collection: Mapped[CollectionModel] = relationship("CollectionModel", back_populates="documents")
+    collection: Mapped[CollectionModel] = relationship(
+        "CollectionModel", back_populates="documents"
+    )
 
 
 class UserModel(Base):
@@ -69,11 +86,19 @@ class UserModel(Base):
     is_active: Mapped[bool] = mapped_column(Boolean, default=True)
     is_superuser: Mapped[bool] = mapped_column(Boolean, default=False)
     created_at: Mapped[datetime] = mapped_column(DateTime, default=datetime.utcnow)
-    updated_at: Mapped[datetime] = mapped_column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
+    updated_at: Mapped[datetime] = mapped_column(
+        DateTime, default=datetime.utcnow, onupdate=datetime.utcnow
+    )
 
-    collections: Mapped[list[CollectionModel]] = relationship("CollectionModel", back_populates="user", cascade="all, delete-orphan")
-    cats: Mapped[list[CatModel]] = relationship("CatModel", back_populates="user", cascade="all, delete-orphan")
-    pat_tokens: Mapped[list[PatTokenModel]] = relationship("PatTokenModel", back_populates="user", cascade="all, delete-orphan")
+    collections: Mapped[list[CollectionModel]] = relationship(
+        "CollectionModel", back_populates="user", cascade="all, delete-orphan"
+    )
+    cats: Mapped[list[CatModel]] = relationship(
+        "CatModel", back_populates="user", cascade="all, delete-orphan"
+    )
+    pat_tokens: Mapped[list[PatTokenModel]] = relationship(
+        "PatTokenModel", back_populates="user", cascade="all, delete-orphan"
+    )
 
 
 class CatModel(Base):
@@ -82,12 +107,18 @@ class CatModel(Base):
     id: Mapped[str] = mapped_column(String(36), primary_key=True, default=lambda: str(uuid.uuid4()))
     key_hash: Mapped[str] = mapped_column(String(64), nullable=False, unique=True, index=True)
     label: Mapped[str] = mapped_column(String(100), nullable=False)
-    collection_id: Mapped[str] = mapped_column(String(36), ForeignKey("collections.id"), nullable=False, index=True)
-    permission: Mapped[str] = mapped_column(String(20), nullable=False, default=Permission.READ_WRITE.value)
+    collection_id: Mapped[str] = mapped_column(
+        String(36), ForeignKey("collections.id"), nullable=False, index=True
+    )
+    permission: Mapped[str] = mapped_column(
+        String(20), nullable=False, default=Permission.READ_WRITE.value
+    )
     created_at: Mapped[datetime] = mapped_column(DateTime, default=datetime.utcnow)
     last_used: Mapped[datetime | None] = mapped_column(DateTime, nullable=True)
     is_active: Mapped[bool] = mapped_column(Boolean, default=True)
-    user_id: Mapped[str | None] = mapped_column(String(36), ForeignKey("users.id"), nullable=True, index=True)
+    user_id: Mapped[str | None] = mapped_column(
+        String(36), ForeignKey("users.id"), nullable=True, index=True
+    )
     expires_at: Mapped[datetime | None] = mapped_column(DateTime, nullable=True)
 
     user: Mapped[UserModel | None] = relationship("UserModel", back_populates="cats")
@@ -100,7 +131,9 @@ class PatTokenModel(Base):
     id: Mapped[str] = mapped_column(String(36), primary_key=True, default=lambda: str(uuid.uuid4()))
     token_hash: Mapped[str] = mapped_column(String(64), nullable=False, unique=True, index=True)
     label: Mapped[str] = mapped_column(String(100), nullable=False)
-    user_id: Mapped[str] = mapped_column(String(36), ForeignKey("users.id"), nullable=False, index=True)
+    user_id: Mapped[str] = mapped_column(
+        String(36), ForeignKey("users.id"), nullable=False, index=True
+    )
     scopes: Mapped[str] = mapped_column(String(100), nullable=False, default="")
     expires_at: Mapped[datetime | None] = mapped_column(DateTime, nullable=True)
     last_used: Mapped[datetime | None] = mapped_column(DateTime, nullable=True)
@@ -297,7 +330,11 @@ def hash_pat_token(token: str) -> str:
 def parse_scopes(scopes_str: str) -> list[Scope]:
     if not scopes_str:
         return [Scope.READ]
-    return [Scope(s.strip()) for s in scopes_str.split(",") if s.strip() in [scope.value for scope in Scope]]
+    return [
+        Scope(s.strip())
+        for s in scopes_str.split(",")
+        if s.strip() in [scope.value for scope in Scope]
+    ]
 
 
 def scopes_to_str(scopes: list[Scope]) -> str:

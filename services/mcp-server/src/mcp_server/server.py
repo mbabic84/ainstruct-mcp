@@ -66,7 +66,7 @@ async def db_migrations_lifespan(server):
         command.upgrade(alembic_cfg, "head")
         log.info("Migrations applied successfully!")
     except Exception as e:
-        log.error(f"Migration failed: {e}")
+        log.error(f"Migration failed: {e}", exc_info=True)
         raise
     yield {}
 

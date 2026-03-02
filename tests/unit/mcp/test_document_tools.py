@@ -50,7 +50,7 @@ class TestStoreDocumentWithCatToken:
                 collection_id=mock_cat_info["collection_id"],
             )
         )
-        mock_doc_repo.update_qdrant_point_id = AsyncMock()
+        mock_doc_repo.update_qdrant_point_ids = AsyncMock()
 
         # Create async mock for qdrant service
         mock_qdrant = MagicMock()
@@ -127,7 +127,7 @@ class TestStoreDocumentWithCatToken:
                 collection_id=mock_cat_info["collection_id"],
             )
         )
-        mock_doc_repo.update_qdrant_point_id = AsyncMock()
+        mock_doc_repo.update_qdrant_point_ids = AsyncMock()
 
         mock_embedding_service = MagicMock()
         mock_embedding_service.embed_texts = AsyncMock(return_value=[[0.1] * 384])
@@ -243,7 +243,7 @@ class TestMoveDocumentWithCatToken:
             )
         )
         mock_doc_repo.update_collection_id = AsyncMock()
-        mock_doc_repo.update_qdrant_point_id = AsyncMock()
+        mock_doc_repo.update_qdrant_point_ids = AsyncMock()
 
         mock_embedding_service = MagicMock()
         mock_embedding_service.embed_texts = AsyncMock(return_value=[[0.1] * 384])

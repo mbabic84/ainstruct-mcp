@@ -89,7 +89,7 @@ async def store_document(input_data: StoreDocumentInput) -> StoreDocumentOutput:
         ]
 
         point_ids = await qdrant.upsert_chunks(chunks_with_meta, embeddings)
-        await doc_repo.update_qdrant_point_id(doc.id, point_ids)
+        await doc_repo.update_qdrant_point_ids(doc.id, point_ids)
 
     total_tokens = sum(c["token_count"] for c in chunks)
 
@@ -468,7 +468,7 @@ async def update_document(input_data: UpdateDocumentInput) -> UpdateDocumentOutp
                 point_ids = await q.upsert_chunks(chunks_with_meta, embeddings)
         else:
             point_ids = await qdrant.upsert_chunks(chunks_with_meta, embeddings)
-        await doc_repo.update_qdrant_point_id(updated_doc.id, point_ids)
+        await doc_repo.update_qdrant_point_ids(updated_doc.id, point_ids)
 
     total_tokens = sum(c["token_count"] for c in chunks)
 
@@ -559,7 +559,7 @@ async def move_document(input_data: MoveDocumentInput) -> MoveDocumentOutput:
         ]
 
         point_ids = await target_qdrant.upsert_chunks(chunks_with_meta, embeddings)
-        await doc_repo.update_qdrant_point_id(input_data.document_id, point_ids)
+        await doc_repo.update_qdrant_point_ids(input_data.document_id, point_ids)
 
     await doc_repo.update_collection_id(input_data.document_id, input_data.target_collection_id)
 

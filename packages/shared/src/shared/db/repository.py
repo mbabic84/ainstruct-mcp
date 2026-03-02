@@ -859,9 +859,11 @@ class PatTokenRepository:
         user_id: str,
         scopes: list[str],
         expires_in_days: int | None = None,
+        token: str | None = None,
     ) -> tuple[str, str]:
         async with self.async_session() as session:
-            token = generate_pat_token()
+            if token is None:
+                token = generate_pat_token()
             token_hash = hash_pat_token(token)
 
             expires_at = None

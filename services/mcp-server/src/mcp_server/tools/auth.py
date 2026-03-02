@@ -2,7 +2,7 @@ import hashlib
 from collections.abc import Callable
 
 from fastmcp import FastMCP
-from fastmcp.server.dependencies import get_http_headers
+from fastmcp.server.dependencies import get_http_headers, get_http_request
 from fastmcp.server.middleware import Middleware, MiddlewareContext
 from shared.config import settings
 from shared.db import get_cat_repository
@@ -191,6 +191,15 @@ class AuthMiddleware(Middleware):
             except Exception:
                 pass
 
+        # Approach 3: Try get_http_request (works with stateless streamable-http)
+        if not auth_header:
+            try:
+                request = get_http_request()
+                if request:
+                    auth_header = request.headers.get("Authorization")
+            except Exception:
+                pass
+
         if not auth_header or not auth_header.startswith("Bearer "):
             raise ValueError("Missing or invalid Authorization header")
 
@@ -249,6 +258,15 @@ class AuthMiddleware(Middleware):
                     request_ctx = fastmcp_ctx.request_context
                     if request_ctx and hasattr(request_ctx, "request"):
                         auth_header = request_ctx.request.headers.get("Authorization")
+            except Exception:
+                pass
+
+        # Approach 3: Try get_http_request (works with stateless streamable-http)
+        if not auth_header:
+            try:
+                request = get_http_request()
+                if request:
+                    auth_header = request.headers.get("Authorization")
             except Exception:
                 pass
 

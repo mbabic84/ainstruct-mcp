@@ -1,4 +1,3 @@
-
 from fastapi import APIRouter, HTTPException, status
 from shared.db import get_pat_token_repository, get_user_repository
 from shared.db.models import generate_pat_token
@@ -46,6 +45,7 @@ async def create_pat(
         user_id=user.user_id,
         scopes=["read", "write"],
         expires_in_days=body.expires_in_days,
+        token=token,
     )
 
     pat = await pat_repo.get_by_id(pat_id)

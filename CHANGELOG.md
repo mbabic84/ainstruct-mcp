@@ -1,3 +1,10 @@
+## [4.2.2](https://github.com/mbabic84/ainstruct-mcp/compare/v4.2.1...v4.2.2) (2026-03-06)
+
+
+### Bug Fixes
+
+* hide /health endpoint from OpenAPI schema ([318321e](https://github.com/mbabic84/ainstruct-mcp/commit/318321ea2d961857e9b6a8925c8b9ba8cff6bbd6))
+
 ## [4.2.1](https://github.com/mbabic84/ainstruct-mcp/compare/v4.2.0...v4.2.1) (2026-03-06)
 
 

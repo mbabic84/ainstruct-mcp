@@ -1,3 +1,10 @@
+# [4.3.0](https://github.com/mbabic84/ainstruct-mcp/compare/v4.2.4...v4.3.0) (2026-03-06)
+
+
+### Features
+
+* **web-ui:** migrate to NiceGUI v3.8.0 ([595d7f4](https://github.com/mbabic84/ainstruct-mcp/commit/595d7f461df896d55501fc6ec5b04ada45c9cffe))
+
 ## [4.2.4](https://github.com/mbabic84/ainstruct-mcp/compare/v4.2.3...v4.2.4) (2026-03-06)
 
 

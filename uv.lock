@@ -28,7 +28,7 @@ requires-dist = [
 
 [[package]]
 name = "ainstruct-mcp-workspace"
-version = "4.2.4"
+version = "4.3.0"
 source = { virtual = "." }
 
 [package.dev-dependencies]
@@ -119,7 +119,7 @@ dependencies = [
 requires-dist = [
     { name = "ainstruct-shared", editable = "packages/shared" },
     { name = "httpx", specifier = ">=0.28.0" },
-    { name = "nicegui", specifier = ">=2.0.0" },
+    { name = "nicegui", specifier = ">=3.8.0,<4.0.0" },
 ]
 
 [[package]]

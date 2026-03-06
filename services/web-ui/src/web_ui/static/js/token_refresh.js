@@ -1,5 +1,4 @@
 (function() {
-    let isRefreshing = false;
     let refreshPromise = null;
 
     window.__getTokenExpiry = function() {
@@ -14,39 +13,62 @@
     }
 
     async function refreshToken() {
-        const refreshToken = localStorage.getItem('refresh_token');
-        if (!refreshToken) {
-            return null;
+        if (refreshPromise) {
+            console.log('Token refresh already in progress, joining...');
+            return refreshPromise;
         }
 
-        try {
-            const response = await fetch('/api/v1/auth/refresh', {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ refresh_token: refreshToken })
-            });
-
-            if (response.ok) {
-                const data = await response.json();
-                localStorage.setItem('access_token', data.access_token);
-                localStorage.setItem('refresh_token', data.refresh_token);
-                return data.access_token;
+        console.log('Starting token refresh...');
+        refreshPromise = (async () => {
+            const refreshToken = localStorage.getItem('refresh_token');
+            if (!refreshToken) {
+                console.log('No refresh token found in storage');
+                return null;
             }
-        } catch (e) {
-            console.error('Token refresh failed:', e);
-        }
-        return null;
+
+            try {
+                const response = await fetch('/api/v1/auth/refresh', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ refresh_token: refreshToken })
+                });
+
+                if (response.ok) {
+                    const data = await response.json();
+                    console.log('Token refresh successful');
+                    localStorage.setItem('access_token', data.access_token);
+                    localStorage.setItem('refresh_token', data.refresh_token);
+                    return data.access_token;
+                } else {
+                    console.warn('Token refresh failed:', response.status);
+                    if (response.status === 401 || response.status === 403) {
+                        localStorage.removeItem('access_token');
+                        localStorage.removeItem('refresh_token');
+                    }
+                    return null;
+                }
+            } catch (e) {
+                console.error('Token refresh network error:', e);
+                return null;
+            } finally {
+                refreshPromise = null;
+            }
+        })();
+
+        return refreshPromise;
     }
 
     window.__forceRefreshToken = async function() {
         const expiry = window.__getTokenExpiry();
         const now = Date.now();
-        const buffer = 5 * 60 * 1000;
+        const buffer = 5 * 60 * 1000; // 5 minutes
 
         if (expiry && now < expiry - buffer) {
+            console.log('Token still valid, expiry:', new Date(expiry).toISOString());
             return localStorage.getItem('access_token');
         }
 
+        console.log('Token expired or expiring soon, forcing refresh...');
         return await refreshToken();
     };
 
@@ -56,6 +78,16 @@
 
     function checkAuthRedirect() {
         const token = localStorage.getItem('access_token');
+        const expiry = window.__getTokenExpiry();
+        
+        // If token is expired, clear it
+        if (token && expiry && Date.now() > expiry) {
+            console.log('Token expired on load, clearing storage');
+            localStorage.removeItem('access_token');
+            localStorage.removeItem('refresh_token');
+            return;
+        }
+
         const path = window.location.pathname;
         if (token && (path === '/login' || path === '/register' || path === '/')) {
             window.location.href = '/dashboard';

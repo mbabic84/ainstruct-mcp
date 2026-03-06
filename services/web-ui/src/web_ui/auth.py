@@ -18,22 +18,36 @@ async def load_tokens_from_storage():
     await set_api_origin()
 
     try:
+        # Load tokens from storage
         access_token = await ui.run_javascript("localStorage.getItem('access_token')")
         refresh_token = await ui.run_javascript("localStorage.getItem('refresh_token')")
+
         if access_token:
             api_client.set_tokens(access_token, refresh_token)
 
-        await ui.run_javascript("window.__forceRefreshToken()")
+        # Force refresh and wait for the result to avoid race conditions
+        refreshed_token = await ui.run_javascript("window.__forceRefreshToken()")
 
-        access_token = await ui.run_javascript("localStorage.getItem('access_token')")
-        if access_token:
-            api_client.set_tokens(access_token, refresh_token)
+        if refreshed_token:
+            # Refresh token might have been updated as well
+            latest_refresh_token = await ui.run_javascript("localStorage.getItem('refresh_token')")
+            api_client.set_tokens(refreshed_token, latest_refresh_token)
+
             profile_response = api_client.get_profile()
             if profile_response.status_code == 200:
                 profile = profile_response.json()
                 app.storage.user["is_superuser"] = profile.get("is_superuser", False)
+            elif profile_response.status_code == 401:
+                # If profile fails after refresh, tokens are likely invalid
+                await logout()
+        elif access_token:
+            # We had an access token but refresh failed (expired refresh token)
+            await logout()
+
     except TimeoutError:
         pass
+    except Exception as e:
+        print(f"Error loading tokens: {e}")
 
 
 async def save_tokens_to_storage(access_token: str, refresh_token: str):

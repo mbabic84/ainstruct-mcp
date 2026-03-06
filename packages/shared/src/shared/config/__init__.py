@@ -16,11 +16,8 @@ class Settings(BaseSettings):
     embedding_model: str = "Qwen/Qwen3-Embedding-8B"
     embedding_dimensions: int = 4096
 
-    # When set to true, use mock embeddings (deterministic hash-based vectors)
-    # This is useful for testing without external API calls
     use_mock_embeddings: bool = False
 
-    api_keys: str = ""
     admin_api_key: str = ""
 
     db_path: str = "./data/documents.db"
@@ -45,16 +42,7 @@ class Settings(BaseSettings):
     jwt_access_token_expire_minutes: int = 30
     jwt_refresh_token_expire_days: int = 7
 
-    api_key_default_expiry_days: int | None = None
-
-    pat_default_expiry_days: int = 90
-    pat_max_expiry_days: int = 365
-
-    @property
-    def api_keys_list(self) -> list[str]:
-        if not self.api_keys:
-            return []
-        return [k.strip() for k in self.api_keys.split(",") if k.strip()]
+    cat_default_expiry_days: int | None = None
 
 
 settings = Settings()

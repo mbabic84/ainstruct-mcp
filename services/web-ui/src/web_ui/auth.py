@@ -6,38 +6,50 @@ api_client = ApiClient(hostname=API_HOSTNAME)
 
 
 async def set_api_origin():
-    origin = await ui.run_javascript("window.location.origin")
-    if origin:
-        ApiClient.set_cached_origin(origin)
+    try:
+        origin = await ui.run_javascript("window.location.origin")
+        if origin:
+            ApiClient.set_cached_origin(origin)
+    except TimeoutError:
+        pass
 
 
 async def load_tokens_from_storage():
     await set_api_origin()
 
-    access_token = await ui.run_javascript("localStorage.getItem('access_token')")
-    refresh_token = await ui.run_javascript("localStorage.getItem('refresh_token')")
-    if access_token:
-        api_client.set_tokens(access_token, refresh_token)
+    try:
+        access_token = await ui.run_javascript("localStorage.getItem('access_token')")
+        refresh_token = await ui.run_javascript("localStorage.getItem('refresh_token')")
+        if access_token:
+            api_client.set_tokens(access_token, refresh_token)
 
-    await ui.run_javascript("window.__forceRefreshToken()")
+        await ui.run_javascript("window.__forceRefreshToken()")
 
-    access_token = await ui.run_javascript("localStorage.getItem('access_token')")
-    if access_token:
-        api_client.set_tokens(access_token, refresh_token)
-        profile_response = api_client.get_profile()
-        if profile_response.status_code == 200:
-            profile = profile_response.json()
-            app.storage.user["is_superuser"] = profile.get("is_superuser", False)
+        access_token = await ui.run_javascript("localStorage.getItem('access_token')")
+        if access_token:
+            api_client.set_tokens(access_token, refresh_token)
+            profile_response = api_client.get_profile()
+            if profile_response.status_code == 200:
+                profile = profile_response.json()
+                app.storage.user["is_superuser"] = profile.get("is_superuser", False)
+    except TimeoutError:
+        pass
 
 
 async def save_tokens_to_storage(access_token: str, refresh_token: str):
-    await ui.run_javascript(f"localStorage.setItem('access_token', '{access_token}')")
-    await ui.run_javascript(f"localStorage.setItem('refresh_token', '{refresh_token}')")
+    try:
+        await ui.run_javascript(f"localStorage.setItem('access_token', '{access_token}')")
+        await ui.run_javascript(f"localStorage.setItem('refresh_token', '{refresh_token}')")
+    except TimeoutError:
+        pass
 
 
 async def clear_tokens_from_storage():
-    await ui.run_javascript("localStorage.removeItem('access_token')")
-    await ui.run_javascript("localStorage.removeItem('refresh_token')")
+    try:
+        await ui.run_javascript("localStorage.removeItem('access_token')")
+        await ui.run_javascript("localStorage.removeItem('refresh_token')")
+    except TimeoutError:
+        pass
 
 
 def get_user():

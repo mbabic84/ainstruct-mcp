@@ -1,3 +1,5 @@
+import logging
+
 from fastapi import APIRouter, HTTPException, Query, status
 from shared.db import get_collection_repository
 from shared.db.models import DocumentCreate
@@ -22,6 +24,8 @@ from rest_api.schemas import (
     SearchResponse,
     SearchResultItem,
 )
+
+logger = logging.getLogger(__name__)
 
 router = APIRouter(prefix="/documents", tags=["Documents"])
 
@@ -130,11 +134,11 @@ async def list_documents(
                 status_code=status.HTTP_403_FORBIDDEN,
                 detail={"code": "FORBIDDEN", "message": "Cannot access another user's collection"},
             )
-        documents = await doc_repo.list_all_for_user(user.user_id, limit, offset)
+        documents = await doc_repo.list_by_collection(user.user_id, collection_id, limit, offset)
         total = await doc_repo.count_by_collection(collection_id)
     else:
         documents = await doc_repo.list_all_for_user(user.user_id, limit, offset)
-        total = len(documents)
+        total = await doc_repo.count_by_user(user.user_id)
 
     collections = await collection_repo.list_by_user(user.user_id)
     collection_map = {collection["collection_id"]: collection["name"] for collection in collections}
@@ -373,11 +377,15 @@ async def search_documents(
         if not collection:
             continue
 
-        qdrant_service = get_qdrant_service(collection["qdrant_collection"])
-        results = await qdrant_service.search(
-            query_vector=query_vector,
-            limit=body.max_results,
-        )
+        try:
+            qdrant_service = get_qdrant_service(collection["qdrant_collection"])
+            results = await qdrant_service.search(
+                query_vector=query_vector,
+                limit=body.max_results,
+            )
+        except Exception as e:
+            logger.warning(f"Search failed for collection {coll_id}: {e}")
+            continue
 
         for r in results:
             r["collection"] = collection_names.get(coll_id, "unknown")

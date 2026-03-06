@@ -216,6 +216,7 @@ async def delete_user(
         401: {"model": ErrorResponse, "description": "Invalid admin API key"},
         503: {"model": ErrorResponse, "description": "Admin API key not configured"},
     },
+    dependencies=[],
 )
 async def promote_user(
     user_id: str,

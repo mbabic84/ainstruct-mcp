@@ -84,7 +84,7 @@ class ApiClient:
                     ui.run_javascript(
                         f"localStorage.setItem('refresh_token', '{data['refresh_token']}')"
                     )
-                except:
+                except Exception:
                     pass
 
                 # Retry original request with new token

@@ -167,10 +167,10 @@ class DocumentRepository:
     async def update(
         self,
         doc_id: str,
-        title: str,
-        content: str,
-        document_type: str,
-        doc_metadata: dict,
+        title: str | None = None,
+        content: str | None = None,
+        document_type: str | None = None,
+        doc_metadata: dict | None = None,
     ) -> DocumentResponse | None:
         async with self.async_session() as session:
             query = select(DocumentModel).where(DocumentModel.id == doc_id)
@@ -182,13 +182,15 @@ class DocumentRepository:
             if not db_doc:
                 return None
 
-            content_hash = compute_content_hash(content)
-
-            db_doc.title = title
-            db_doc.content = content
-            db_doc.content_hash = content_hash
-            db_doc.document_type = document_type
-            db_doc.doc_metadata = doc_metadata
+            if title is not None:
+                db_doc.title = title
+            if content is not None:
+                db_doc.content = content
+                db_doc.content_hash = compute_content_hash(content)
+            if document_type is not None:
+                db_doc.document_type = document_type
+            if doc_metadata is not None:
+                db_doc.doc_metadata = doc_metadata
 
             await session.commit()
             await session.refresh(db_doc)
@@ -484,7 +486,7 @@ class CollectionRepository:
             key_count = key_count_result.scalar() or 0
 
             return {
-                "id": collection.id,
+                "collection_id": collection.id,
                 "name": collection.name,
                 "qdrant_collection": collection.qdrant_collection,
                 "user_id": collection.user_id,
@@ -518,7 +520,7 @@ class CollectionRepository:
 
                 items.append(
                     {
-                        "id": c.id,
+                        "collection_id": c.id,
                         "name": c.name,
                         "qdrant_collection": c.qdrant_collection,
                         "user_id": c.user_id,
@@ -574,6 +576,7 @@ class CollectionRepository:
                 document_count=doc_count,
                 cat_count=key_count,
                 created_at=collection.created_at,
+                updated_at=collection.updated_at,
             )
 
     async def get_document_count(self, collection_id: str) -> int:

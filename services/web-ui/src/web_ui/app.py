@@ -502,7 +502,7 @@ async def collections_page():
                                 "created_at": datetime.fromisoformat(
                                     c["created_at"].replace("Z", "+00:00")
                                 ).strftime("%Y-%m-%d"),
-                                "id": c["id"],
+                                "id": c["collection_id"],
                             }
                         )
 
@@ -567,7 +567,7 @@ async def documents_page(collection_id: str | None = None):
             else []
         )
         collection_options = {"__all__": "All Collections"}
-        collection_options.update({c["id"]: c["name"] for c in collections})
+        collection_options.update({c["collection_id"]: c["name"] for c in collections})
 
         initial_value = collection_id if collection_id else "__all__"
 
@@ -863,7 +863,7 @@ async def tokens_page(tab: str = "pat"):
                                             p["created_at"].replace("Z", "+00:00")
                                         ).strftime("%Y-%m-%d"),
                                         "expires_at": expires or "Never",
-                                        "id": p["id"],
+                                        "id": p["pat_id"],
                                     }
                                 )
 
@@ -975,7 +975,7 @@ async def tokens_page(tab: str = "pat"):
                 cat_label = ui.input("Token Label").classes("w-full")
                 collection_list = api_client.list_collections().json().get("collections", [])
                 collection_options = {"__all__": "All Collections"}
-                collection_options.update({c["id"]: c["name"] for c in collection_list})
+                collection_options.update({c["collection_id"]: c["name"] for c in collection_list})
                 cat_collection = ui.select(
                     label="Collection",
                     options=collection_options,
@@ -1131,7 +1131,7 @@ async def tokens_page(tab: str = "pat"):
                                             c["created_at"].replace("Z", "+00:00")
                                         ).strftime("%Y-%m-%d"),
                                         "expires_at": expires or "Never",
-                                        "id": c["id"],
+                                        "id": c["cat_id"],
                                     }
                                 )
 

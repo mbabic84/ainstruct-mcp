@@ -74,7 +74,7 @@ async def store_document(
     document = await doc_repo.create(doc_create)
 
     chunks = chunking_service.chunk_markdown(body.content, body.title)
-    token_count = sum(c.get("token_count", 0) for c in chunks)
+    token_count = sum(chunk.get("token_count", 0) for chunk in chunks)
 
     chunk_data = [
         {
@@ -137,7 +137,7 @@ async def list_documents(
         total = len(documents)
 
     collections = await collection_repo.list_by_user(user.user_id)
-    collection_map = {c["id"]: c["name"] for c in collections}
+    collection_map = {collection["collection_id"]: collection["name"] for collection in collections}
 
     items = [
         DocumentListItem(
@@ -263,7 +263,7 @@ async def update_document(
             for i, c in enumerate(chunks)
         ]
 
-        texts = [c.get("content", "") for c in chunks]
+        texts = [chunk.get("content", "") for chunk in chunks]
         vectors = await embedding_service.embed_texts(texts)
 
         if collection:
@@ -350,11 +350,13 @@ async def search_documents(
                 detail={"code": "FORBIDDEN", "message": "Cannot search another user's collection"},
             )
         collection_ids = [body.collection_id]
-        collection_names = {collection["id"]: collection["name"]}
+        collection_names = {collection["collection_id"]: collection["name"]}
     else:
         collections = await collection_repo.list_by_user(user.user_id)
-        collection_ids = [c["id"] for c in collections]
-        collection_names = {c["id"]: c["name"] for c in collections}
+        collection_ids = [collection["collection_id"] for collection in collections]
+        collection_names = {
+            collection["collection_id"]: collection["name"] for collection in collections
+        }
         if not collection_ids:
             return SearchResponse(
                 results=[],

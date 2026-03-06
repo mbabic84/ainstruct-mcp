@@ -68,7 +68,7 @@ async def list_collections() -> list[CollectionListResponse]:
 
     return [
         CollectionListResponse(
-            id=collection["id"],
+            id=collection["collection_id"],
             name=collection["name"],
             created_at=collection["created_at"],
         )
@@ -100,7 +100,7 @@ async def get_collection(input_data: GetCollectionInput) -> CollectionResponse:
         raise ValueError("Collection not found")
 
     return CollectionResponse(
-        id=collection["id"],
+        id=collection["collection_id"],
         name=collection["name"],
         document_count=collection["document_count"],
         cat_count=collection["cat_count"],

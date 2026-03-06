@@ -34,7 +34,7 @@ async def create_collection(
     )
 
     return CollectionResponse(
-        id=collection.id,
+        collection_id=collection.id,
         name=collection.name,
         document_count=0,
         cat_count=0,
@@ -56,13 +56,13 @@ async def list_collections(
 
     items = [
         CollectionListItem(
-            collection_id=c["collection_id"],
-            name=c["name"],
-            document_count=c.get("document_count", 0),
-            cat_count=c.get("cat_count", 0),
-            created_at=c["created_at"],
+            collection_id=collection["collection_id"],
+            name=collection["name"],
+            document_count=collection.get("document_count", 0),
+            cat_count=collection.get("cat_count", 0),
+            created_at=collection["created_at"],
         )
-        for c in collections
+        for collection in collections
     ]
 
     return CollectionListResponse(collections=items)
@@ -96,7 +96,7 @@ async def get_collection(
         )
 
     return CollectionResponse(
-        id=collection["id"],
+        collection_id=collection["collection_id"],
         name=collection["name"],
         document_count=collection.get("document_count", 0),
         cat_count=collection.get("cat_count", 0),
@@ -142,7 +142,7 @@ async def rename_collection(
         )
 
     return CollectionResponse(
-        id=updated.id,
+        collection_id=updated.id,
         name=updated.name,
         document_count=updated.document_count,
         cat_count=updated.cat_count,

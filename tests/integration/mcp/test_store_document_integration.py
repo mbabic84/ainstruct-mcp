@@ -58,7 +58,7 @@ class TestStoreDocumentWithRealServices:
         set_pat_collections(
             [
                 {
-                    "id": "647a8ef8-6c09-4653-9fd1-eec82cef5775",
+                    "collection_id": "647a8ef8-6c09-4653-9fd1-eec82cef5775",
                     "qdrant_collection": "43dc7b04-5aaf-4420-baa9-dc9cf41b35f4",
                 }
             ]
@@ -188,7 +188,7 @@ class TestStoreDocumentWithRealServices:
         set_pat_collections(
             [
                 {
-                    "id": "specific-collection",
+                    "collection_id": "specific-collection",
                     "qdrant_collection": "43dc7b04-5aaf-4420-baa9-dc9cf41b35f4",
                 }
             ]

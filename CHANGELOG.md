@@ -1,3 +1,10 @@
+## [4.5.2](https://github.com/mbabic84/ainstruct-mcp/compare/v4.5.1...v4.5.2) (2026-03-06)
+
+
+### Bug Fixes
+
+* **web-ui:** editor now replaces viewer in document dialog instead of appearing alongside it ([4893833](https://github.com/mbabic84/ainstruct-mcp/commit/4893833f9fd1d2891c68ce958ad027b3a91eccc9))
+
 ## [4.5.1](https://github.com/mbabic84/ainstruct-mcp/compare/v4.5.0...v4.5.1) (2026-03-06)
 
 

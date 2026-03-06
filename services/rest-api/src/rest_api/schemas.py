@@ -61,7 +61,7 @@ class CollectionCreate(BaseModel):
 
 
 class CollectionResponse(BaseModel):
-    id: str
+    collection_id: str
     name: str
     document_count: int = 0
     cat_count: int = 0
@@ -72,7 +72,7 @@ class CollectionResponse(BaseModel):
 
 
 class CollectionListItem(BaseModel):
-    id: str
+    collection_id: str
     name: str
     document_count: int = 0
     cat_count: int = 0
@@ -184,7 +184,7 @@ class CatCreate(BaseModel):
 
 
 class CatResponse(BaseModel):
-    id: str
+    cat_id: str
     label: str
     token: str | None = None
     collection_id: str
@@ -198,7 +198,7 @@ class CatResponse(BaseModel):
 
 
 class CatListItem(BaseModel):
-    id: str
+    cat_id: str
     label: str
     collection_id: str
     collection_name: str
@@ -221,7 +221,7 @@ class PatCreate(BaseModel):
 
 
 class PatResponse(BaseModel):
-    id: str
+    pat_id: str
     label: str
     token: str | None = None
     user_id: str
@@ -235,7 +235,7 @@ class PatResponse(BaseModel):
 
 
 class PatListItem(BaseModel):
-    id: str
+    pat_id: str
     label: str
     user_id: str
     scopes: list[str]
@@ -252,7 +252,7 @@ class PatListResponse(BaseModel):
 
 
 class UserListItem(BaseModel):
-    id: str
+    user_id: str
     email: str
     username: str
     is_active: bool

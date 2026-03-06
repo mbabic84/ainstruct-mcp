@@ -56,7 +56,7 @@ async def create_pat(
         )
 
     return PatResponse(
-        id=pat["id"],
+        pat_id=pat["pat_id"],
         label=pat["label"],
         token=token,
         user_id=pat["user_id"],
@@ -81,7 +81,7 @@ async def list_pats(
 
     tokens = [
         PatListItem(
-            id=pat["id"],
+            pat_id=pat["pat_id"],
             label=pat["label"],
             user_id=pat["user_id"],
             scopes=pat["scopes"],
@@ -166,7 +166,7 @@ async def rotate_pat(
         )
 
     return PatResponse(
-        id=new_pat["id"],
+        pat_id=new_pat["pat_id"],
         label=new_pat["label"],
         token=new_token,
         user_id=new_pat["user_id"],

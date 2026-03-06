@@ -1,5 +1,6 @@
 from fastapi import APIRouter, HTTPException, status
 from shared.db import get_collection_repository
+from shared.db.qdrant import get_qdrant_service
 
 from rest_api.deps import DbDep, UserDep
 from rest_api.schemas import (
@@ -55,7 +56,7 @@ async def list_collections(
 
     items = [
         CollectionListItem(
-            id=c["id"],
+            collection_id=c["collection_id"],
             name=c["name"],
             document_count=c.get("document_count", 0),
             cat_count=c.get("cat_count", 0),
@@ -188,5 +189,19 @@ async def delete_collection(
             },
         )
 
+    # Delete Qdrant collection first (rollback if this fails)
+    qdrant_service = get_qdrant_service(collection["qdrant_collection"])
+    try:
+        await qdrant_service.delete_collection(collection["qdrant_collection"])
+    except Exception as e:
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail={
+                "code": "QDRANT_DELETE_FAILED",
+                "message": f"Failed to delete collection from vector store: {e}",
+            },
+        )
+
+    # Then delete the database record (only if Qdrant succeeded)
     await collection_repo.delete(collection_id)
     return MessageResponse(message="Collection deleted successfully")

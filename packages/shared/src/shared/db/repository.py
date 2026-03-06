@@ -241,7 +241,7 @@ class DocumentRepository:
 
             return [
                 DocumentResponse(
-                    id=d.id,
+                    document_id=d.id,
                     collection_id=d.collection_id,
                     title=d.title,
                     content=d.content,

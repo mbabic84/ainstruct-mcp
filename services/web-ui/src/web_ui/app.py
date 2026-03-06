@@ -506,6 +506,10 @@ async def collections_page():
                             }
                         )
 
+                    def handle_view(e):
+                        collection_id = e.args[1]["id"]
+                        ui.navigate.to(f"/documents?collection_id={collection_id}")
+
                     def handle_delete(e):
                         collection_id = e.args["id"]
                         collection_name = e.args.get("name", "this collection")
@@ -532,13 +536,14 @@ async def collections_page():
                     table = (
                         ui.table(columns=columns, rows=rows, row_key="id")
                         .classes("w-full")
-                        .on("row-click", handle_delete)
+                        .on("rowClick", handle_view)
+                        .on("row-delete", handle_delete)
                     )
                     table.add_slot(
                         "body-cell-actions",
                         """
                         <q-td :props="props">
-                            <q-btn flat round color="negative" icon="delete" @click.stop="$parent.$emit('row-click', props.row)" />
+                            <q-btn flat round color="negative" icon="delete" @click.stop="$parent.$emit('row-delete', props.row)" />
                         </q-td>
                     """,
                     )
@@ -632,9 +637,13 @@ async def documents_page(collection_id: str | None = None):
                             }
                         )
 
+                    def handle_edit(e):
+                        doc_id = e.args[1]["id"]
+                        ui.navigate.to(f"/documents/{doc_id}/edit")
+
                     def handle_delete(e):
-                        doc_id = e.args["id"]
-                        doc_title = e.args.get("title", "this document")
+                        doc_id = e.args[0]["id"]
+                        doc_title = e.args[0].get("title", "this document")
                         with ui.dialog() as dialog, ui.card():
                             ui.label(f"Delete '{doc_title}'?").classes("text-lg font-bold")
                             ui.label("This action cannot be undone.").classes("text-sm text-grey-7")
@@ -655,20 +664,17 @@ async def documents_page(collection_id: str | None = None):
 
                         dialog.open()
 
-                    def handle_edit(e):
-                        doc = e.args
-                        ui.navigate.to(f"/documents/{doc['id']}/edit")
-
                     table = (
                         ui.table(columns=columns, rows=rows, row_key="id")
                         .classes("w-full")
-                        .on("row-click", handle_delete)
+                        .on("rowClick", handle_edit)
+                        .on("row-delete", handle_delete)
                     )
                     table.add_slot(
                         "body-cell-actions",
                         """
                         <q-td :props="props">
-                            <q-btn flat round color="negative" icon="delete" @click.stop="$parent.$emit('row-click', props.row)" />
+                            <q-btn flat round color="negative" icon="delete" @click.stop="$parent.$emit('row-delete', props.row)" />
                         </q-td>
                     """,
                     )

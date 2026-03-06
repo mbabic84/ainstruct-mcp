@@ -1,6 +1,8 @@
+import logging
 import uuid
 
 from qdrant_client import AsyncQdrantClient
+from qdrant_client.http.exceptions import UnexpectedResponse
 from qdrant_client.models import (
     Distance,
     FieldCondition,
@@ -11,6 +13,8 @@ from qdrant_client.models import (
 )
 
 from shared.config import settings
+
+logger = logging.getLogger(__name__)
 
 
 class QdrantService:
@@ -44,6 +48,14 @@ class QdrantService:
         collections_response = await self.client.get_collections()
         collections = collections_response.collections
         return [c.name for c in collections]
+
+    async def collection_exists(self, collection_name: str) -> bool:
+        """Check if a collection exists in Qdrant."""
+        try:
+            await self.client.collection_exists(collection_name)
+            return True
+        except UnexpectedResponse:
+            return False
 
     async def upsert_chunks(
         self,
@@ -147,17 +159,33 @@ class QdrantService:
             await self._delete_from_collection(self.collection_name, document_id)
 
     async def _delete_from_collection(self, collection_name: str, document_id: str):
-        await self.client.delete(
-            collection_name=collection_name,
-            points_selector=Filter(
-                must=[
-                    FieldCondition(
-                        key="document_id",
-                        match=MatchValue(value=document_id),
-                    )
-                ]
-            ),
-        )
+        existing_collections = await self.get_all_collections()
+        if collection_name not in existing_collections:
+            logger.warning(
+                "Collection '%s' not found in Qdrant (exists in database but not in Qdrant). "
+                "Skipping document deletion.",
+                collection_name,
+            )
+            return
+        try:
+            await self.client.delete(
+                collection_name=collection_name,
+                points_selector=Filter(
+                    must=[
+                        FieldCondition(
+                            key="document_id",
+                            match=MatchValue(value=document_id),
+                        )
+                    ]
+                ),
+            )
+        except UnexpectedResponse as e:
+            logger.warning(
+                "Failed to delete document '%s' from collection '%s': %s",
+                document_id,
+                collection_name,
+                e,
+            )
 
     async def delete_by_point_ids(self, point_ids: list[str]):
         if self.is_admin:
@@ -173,6 +201,17 @@ class QdrantService:
             points_selector=PointIdsList(points=list(point_ids)),
         )
 
+    async def delete_collection(self, collection_name: str) -> None:
+        """Delete an entire Qdrant collection.
+
+        Args:
+            collection_name: The name of the Qdrant collection to delete
+
+        Raises:
+            Exception: If deletion fails (caller should handle and prevent Postgres deletion)
+        """
+        await self.client.delete_collection(collection_name=collection_name)
+
     async def search_multi(
         self,
         collection_names: list[str],
@@ -181,9 +220,42 @@ class QdrantService:
         filter_document_id: str | None = None,
     ) -> list[dict]:
         all_results = []
+        existing_collections = await self.get_all_collections()
         for coll in collection_names:
-            results = await self._search_collection(coll, query_vector, limit, filter_document_id)
-            all_results.extend(results)
+            if coll not in existing_collections:
+                logger.warning(
+                    "Collection '%s' not found in Qdrant (exists in database but not in Qdrant). "
+                    "Creating collection.",
+                    coll,
+                )
+                try:
+                    await self.client.create_collection(
+                        collection_name=coll,
+                        vectors_config=VectorParams(
+                            size=settings.embedding_dimensions,
+                            distance=Distance.COSINE,
+                        ),
+                    )
+                    existing_collections.append(coll)
+                except Exception as e:
+                    logger.warning(
+                        "Failed to create collection '%s': %s",
+                        coll,
+                        e,
+                    )
+                    continue
+            try:
+                results = await self._search_collection(
+                    coll, query_vector, limit, filter_document_id
+                )
+                all_results.extend(results)
+            except UnexpectedResponse as e:
+                logger.warning(
+                    "Failed to search collection '%s': %s",
+                    coll,
+                    e,
+                )
+                continue
         all_results.sort(key=lambda x: x["score"], reverse=True)
         return all_results[:limit]
 

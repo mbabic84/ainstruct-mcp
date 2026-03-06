@@ -8,7 +8,7 @@ from shared.config import settings
 from shared.db import get_cat_repository
 from shared.db.models import Permission, Scope
 from shared.services import get_auth_service
-from shared.services.auth_service import is_pat_token, verify_pat_token
+from shared.services.auth_service import is_pat_token as _is_pat_token
 
 from mcp_server.tools.context import (
     clear_all_auth,
@@ -30,7 +30,7 @@ async def verify_cat_token(cat_token: str) -> dict | None:
 
     if cat_token == settings.admin_api_key:
         return {
-            "id": "admin",
+            "cat_id": "admin",
             "label": "admin",
             "collection_id": None,
             "qdrant_collection": None,
@@ -39,19 +39,21 @@ async def verify_cat_token(cat_token: str) -> dict | None:
         }
 
     repo = get_cat_repository()
+    result = await repo.validate(cat_token)
+    return result
 
-    for valid_key in settings.api_keys_list:
-        if valid_key == cat_token:
-            return {
-                "id": f"env_{hashlib.sha256(cat_token.encode()).hexdigest()[:8]}",
-                "label": "env",
-                "collection_id": None,
-                "qdrant_collection": _key_to_collection(cat_token),
-                "is_admin": False,
-                "permission": Permission.READ_WRITE,
-            }
 
-    return await repo.validate(cat_token)
+async def verify_pat_token(token: str) -> dict | None:
+    if not token:
+        return None
+
+    from shared.services.auth_service import verify_pat_token as _verify_pat_token
+
+    return await _verify_pat_token(token)
+
+
+def is_pat_token(token: str) -> bool:
+    return _is_pat_token(token)
 
 
 async def verify_jwt_token(token: str) -> dict | None:
@@ -65,7 +67,7 @@ async def verify_jwt_token(token: str) -> dict | None:
         return None
 
     return {
-        "id": payload.get("sub"),
+        "user_id": payload.get("sub"),
         "username": payload.get("username"),
         "email": payload.get("email"),
         "is_superuser": payload.get("is_superuser", False),
@@ -98,7 +100,7 @@ async def _load_user_collections():
 
     user_id = None
     if user_info:
-        user_id = user_info.get("id")
+        user_id = user_info.get("user_id")
     elif pat_info:
         user_id = pat_info.get("user_id")
 
@@ -118,7 +120,7 @@ async def _load_user_collections():
 class AuthLevel:
     NONE = "none"  # No auth required (public)
     JWT_OR_PAT = "jwt_or_pat"  # JWT or PAT token required
-    API_KEY = "api_key"  # API key OR JWT/PAT (documents)
+    CAT = "cat"  # CAT token OR JWT/PAT (documents)
     ADMIN = "admin"  # JWT or PAT + admin scope
 
 
@@ -168,7 +170,7 @@ def get_tool_auth_level(tool_name: str) -> str:
     if tool_name in ADMIN_TOOLS:
         return AuthLevel.ADMIN
     if tool_name in DOCUMENT_TOOLS:
-        return AuthLevel.API_KEY
+        return AuthLevel.CAT
     if tool_name in KEY_PAT_TOOLS:
         return AuthLevel.JWT_OR_PAT
     if tool_name in USER_COLLECTION_TOOLS:
@@ -259,9 +261,9 @@ class AuthMiddleware(Middleware):
         else:
             cat_info = await verify_cat_token(token)
             if not cat_info:
-                raise ValueError("Invalid API key")
+                raise ValueError("Invalid CAT token")
             set_cat_info(cat_info)
-            set_auth_type("api_key")
+            set_auth_type("cat")
 
         await _load_user_collections()
 
@@ -332,7 +334,7 @@ class AuthMiddleware(Middleware):
         else:
             cat_info = await verify_cat_token(token)
             if cat_info:
-                auth_level = AuthLevel.API_KEY
+                auth_level = AuthLevel.CAT
 
         # Service admin (admin_api_key): only allow update_user_tool
         if cat_info and cat_info.get("is_admin"):
@@ -357,8 +359,8 @@ class AuthMiddleware(Middleware):
                     return True
                 return False
 
-            # Document tools: API key or JWT/PAT works
-            if required == AuthLevel.API_KEY:
+            # Document tools: CAT token or JWT/PAT works
+            if required == AuthLevel.CAT:
                 return True
 
             # JWT/PAT tools: require valid JWT or PAT

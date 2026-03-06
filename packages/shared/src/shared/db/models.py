@@ -231,7 +231,7 @@ class CatCreate(BaseModel):
 
 
 class CatResponse(BaseModel):
-    id: str
+    cat_id: str
     label: str
     key: str | None = None
     collection_id: str
@@ -244,7 +244,7 @@ class CatResponse(BaseModel):
 
 
 class CatListResponse(BaseModel):
-    id: str
+    cat_id: str
     label: str
     collection_id: str
     collection_name: str
@@ -261,7 +261,7 @@ class PatTokenCreate(BaseModel):
 
 
 class PatTokenResponse(BaseModel):
-    id: str
+    pat_id: str
     label: str
     token: str | None = None
     user_id: str
@@ -273,7 +273,7 @@ class PatTokenResponse(BaseModel):
 
 
 class PatTokenListResponse(BaseModel):
-    id: str
+    pat_id: str
     label: str
     user_id: str
     scopes: list[Scope]

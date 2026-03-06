@@ -66,7 +66,7 @@ async def create_cat(
         )
 
     return CatResponse(
-        id=cat["id"],
+        cat_id=cat["cat_id"],
         label=cat["label"],
         token=token,
         collection_id=cat["collection_id"],
@@ -97,7 +97,7 @@ async def list_cats(
 
     items = [
         CatListItem(
-            id=c["id"],
+            cat_id=c["cat_id"],
             label=c["label"],
             collection_id=c["collection_id"],
             collection_name=c.get("collection_name"),
@@ -185,7 +185,7 @@ async def rotate_cat(
     collection = await collection_repo.get_by_id(new_cat["collection_id"])
 
     return CatResponse(
-        id=new_cat["id"],
+        cat_id=new_cat["cat_id"],
         label=new_cat["label"],
         token=new_token,
         collection_id=new_cat["collection_id"],

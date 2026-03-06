@@ -81,7 +81,7 @@ def clear_auth_type():
 def get_current_user_id() -> str | None:
     user_info = get_user_info()
     if user_info:
-        return user_info.get("id")
+        return user_info.get("user_id")
     cat_info = get_cat_info()
     if cat_info:
         return cat_info.get("user_id")
@@ -154,8 +154,7 @@ def get_auth_context() -> dict:
         user_collections = get_user_collections()
 
         return {
-            "id": user_info.get("id"),
-            "user_id": user_info.get("id"),
+            "user_id": user_info.get("user_id"),
             "username": user_info.get("username"),
             "email": user_info.get("email"),
             "scopes": user_info.get("scopes", []),
@@ -170,7 +169,7 @@ def get_auth_context() -> dict:
         pat_collections = get_pat_collections()
 
         return {
-            "id": pat_info.get("id"),
+            "pat_id": pat_info.get("pat_id"),
             "user_id": pat_info.get("user_id"),
             "username": pat_info.get("username"),
             "email": pat_info.get("email"),
@@ -184,7 +183,7 @@ def get_auth_context() -> dict:
 
     if cat_info:
         return {
-            "id": cat_info.get("id"),
+            "cat_id": cat_info.get("cat_id"),
             "user_id": cat_info.get("user_id"),
             "collection_id": cat_info.get("collection_id"),
             "collection_name": cat_info.get("collection_name"),

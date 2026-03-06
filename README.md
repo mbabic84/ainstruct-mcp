@@ -49,7 +49,6 @@ cp .env.example .env
 2. Edit `.env` with your credentials:
 - `POSTGRES_PASSWORD` - Required for PostgreSQL
 - `OPENROUTER_API_KEY` - Get from https://openrouter.ai
-- `API_KEYS` - Comma-separated list of allowed API keys
 - `ADMIN_API_KEY` - Admin authentication key
 
 3. Start the server:
@@ -266,7 +265,6 @@ All environment variables are used by both the MCP Server and REST API unless ot
 
 | Variable | Default | Required | Description |
 |----------|---------|----------|-------------|
-| `API_KEYS` | - | Yes | Comma-separated list of allowed API keys (for MCP client auth) |
 | `ADMIN_API_KEY` | - | Yes | Admin authentication key |
 | `JWT_SECRET_KEY` | `change-this-secret-in-production` | Yes | Secret key for JWT token signing |
 | `JWT_ALGORITHM` | `HS256` | No | JWT signing algorithm |

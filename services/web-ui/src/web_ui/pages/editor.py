@@ -69,7 +69,7 @@ async def editor_page(doc_id: str):
         # set inline styles on the CM DOM elements after mount.
         editor = ui.codemirror(current_doc["content"]).classes("w-full border min-h-[300px]")
         editor.style("height: auto")
-        editor.theme = "dark"
+        editor.theme = "vscodeDark"
         editor.line_wrapping = True
         editor.bind_value(current_doc, "content")
 

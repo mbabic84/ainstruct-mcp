@@ -1,9 +1,8 @@
-from datetime import datetime
-
 from nicegui import APIRouter, ui
 
 from web_ui.auth import load_tokens_from_storage, require_admin
 from web_ui.components import render_page
+from web_ui.utils import format_date, handle_api_error
 
 router = APIRouter(prefix="")
 
@@ -48,21 +47,17 @@ async def admin_page(offset: int = 0):
 
         async def toggle_active(user_id: int, current_active: bool):
             response = api_client.update_user(str(user_id), is_active=not current_active)
-            if response.status_code == 200:
+            if handle_api_error(response, "Failed to update user"):
                 ui.notify(f"User {'activated' if not current_active else 'deactivated'}")
                 ui.navigate.reload()
-            else:
-                ui.notify(f"Error: {response.text}", type="negative")
 
         async def toggle_superuser(user_id: int, current_superuser: bool):
             response = api_client.update_user(str(user_id), is_superuser=not current_superuser)
-            if response.status_code == 200:
+            if handle_api_error(response, "Failed to update user"):
                 ui.notify(
                     f"User {'promoted to' if not current_superuser else 'demoted from'} superuser"
                 )
                 ui.navigate.reload()
-            else:
-                ui.notify(f"Error: {response.text}", type="negative")
 
         columns = [
             {"name": "username", "label": "Username", "field": "username", "align": "left"},
@@ -87,21 +82,14 @@ async def admin_page(offset: int = 0):
             user_count_label.set_text(f"Total users: {total}")
 
             for u in users:
-                is_active = u.get("is_active", True)
-                is_superuser = u.get("is_superuser", False)
-                created = u.get("created_at", "")
-                if created:
-                    created = datetime.fromisoformat(created.replace("Z", "+00:00")).strftime(
-                        "%Y-%m-%d"
-                    )
                 rows.append(
                     {
                         "id": u["user_id"],
                         "username": u["username"],
                         "email": u.get("email", ""),
-                        "is_active": is_active,
-                        "is_superuser": is_superuser,
-                        "created_at": created,
+                        "is_active": u.get("is_active", True),
+                        "is_superuser": u.get("is_superuser", False),
+                        "created_at": format_date(u.get("created_at")),
                     }
                 )
 

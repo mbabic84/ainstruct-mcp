@@ -93,12 +93,12 @@ async def documents_page(collection_id: str | None = None):
                         )
 
                     async def handle_view(e):
-                        doc_id = e.args[1]["id"]
+                        doc_id = e.args["id"]
                         ui.navigate.to(f"/viewer/{doc_id}")
 
-                    def handle_delete(e):
-                        doc_id = e.args[0]["id"]
-                        doc_title = e.args[0].get("title", "this document")
+                    async def handle_delete(e):
+                        doc_id = e.args["id"]
+                        doc_title = e.args.get("title", "this document")
 
                         async def do_delete():
                             response = api_client.delete_document(doc_id)
@@ -106,7 +106,7 @@ async def documents_page(collection_id: str | None = None):
                                 ui.notify("Document deleted")
                                 ui.navigate.reload()
 
-                        confirm_action(
+                        await confirm_action(
                             f"Delete '{doc_title}'?",
                             "This action cannot be undone.",
                             do_delete,

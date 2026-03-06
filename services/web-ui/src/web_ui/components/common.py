@@ -1,3 +1,5 @@
+import asyncio
+
 from nicegui import ui
 
 
@@ -9,6 +11,13 @@ async def confirm_action(
     confirm_label: str = "Confirm",
     color: str = "negative",
 ):
+    async def handle_confirm():
+        dialog.close()
+        if asyncio.iscoroutinefunction(on_confirm):
+            await on_confirm()
+        else:
+            on_confirm()
+
     with ui.dialog() as dialog, ui.card():
         ui.label(title).classes("text-lg font-bold")
         ui.label(message).classes("text-sm text-grey-7")
@@ -16,7 +25,7 @@ async def confirm_action(
             ui.button(cancel_label, on_click=dialog.close).props("flat")
             ui.button(
                 confirm_label,
-                on_click=lambda: [dialog.close(), on_confirm()],
+                on_click=handle_confirm,
             ).props(f"color={color}")
     dialog.open()
 

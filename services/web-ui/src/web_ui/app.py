@@ -12,24 +12,6 @@ from web_ui.pages import (
     tokens_router,
 )
 
-ui.add_css(
-    """
-body, html { margin: 0; padding: 0; }
-.q-page-container { margin: 0 !important; padding: 0 !important; }
-.q-layout { margin: 0 !important; }
-""",
-    shared=True,
-)
-
-js_path = os.path.join(os.path.dirname(__file__), "static", "js", "token_refresh.js")
-with open(js_path) as f:
-    token_refresh_js = f.read()
-
-ui.add_head_html(
-    f"<script>{token_refresh_js}</script>",
-    shared=True,
-)
-
 
 @ui.page("/")
 def index_page():
@@ -51,7 +33,7 @@ def main():
         port=port,
         reload=False,
         show=False,
-        storage_secret="ainstruct-mcp-secret-key",
+        storage_secret=settings.jwt_secret_key,
         dark=True,
     )
 

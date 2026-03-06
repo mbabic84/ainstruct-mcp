@@ -1,3 +1,15 @@
+# [4.2.0](https://github.com/mbabic84/ainstruct-mcp/compare/v4.1.0...v4.2.0) (2026-03-06)
+
+
+### Bug Fixes
+
+* resolve PAT token authentication issues and rename API key to CAT ([4f6edab](https://github.com/mbabic84/ainstruct-mcp/commit/4f6edab547f728979ea98c93bbf0f34aa045798c)), closes [#72](https://github.com/mbabic84/ainstruct-mcp/issues/72) [#72](https://github.com/mbabic84/ainstruct-mcp/issues/72)
+
+
+### Features
+
+* **web-ui:** add confirmation dialogs for delete actions ([ba0f734](https://github.com/mbabic84/ainstruct-mcp/commit/ba0f7345f088a38ec91109dd87e126e4eedc9555))
+
 # [4.1.0](https://github.com/mbabic84/ainstruct-mcp/compare/v4.0.0...v4.1.0) (2026-03-02)
 
 

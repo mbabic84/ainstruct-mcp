@@ -2,12 +2,22 @@
 Entry point for running REST API as a standalone service.
 """
 
+import logging
 import os
 
 import uvicorn
 from shared.config import settings
 
 from rest_api.app import create_app
+
+
+class HealthEndpointFilter(logging.Filter):
+    def filter(self, record: logging.LogRecord) -> bool:
+        return "/health" not in record.getMessage()
+
+
+uvicorn_access_logger = logging.getLogger("uvicorn.access")
+uvicorn_access_logger.addFilter(HealthEndpointFilter())
 
 
 def main():

@@ -2,7 +2,7 @@ from nicegui import APIRouter, ui
 
 from web_ui.auth import load_tokens_from_storage, require_auth
 from web_ui.components import render_page
-from web_ui.components.common import add_table_actions, confirm_action, document_dialog
+from web_ui.components.common import add_table_actions, confirm_action
 from web_ui.utils import format_date, handle_api_error
 
 router = APIRouter(prefix="")
@@ -92,11 +92,9 @@ async def documents_page(collection_id: str | None = None):
                             }
                         )
 
-                    async def handle_edit(e):
+                    async def handle_view(e):
                         doc_id = e.args[1]["id"]
-                        if await document_dialog(doc_id, api_client):
-                            # Refresh documents list
-                            ui.navigate.reload()
+                        ui.navigate.to(f"/viewer/{doc_id}")
 
                     def handle_delete(e):
                         doc_id = e.args[0]["id"]
@@ -119,7 +117,7 @@ async def documents_page(collection_id: str | None = None):
                     table = (
                         ui.table(columns=columns, rows=rows, row_key="id")
                         .classes("w-full")
-                        .on("rowClick", handle_edit)
+                        .on("rowClick", handle_view)
                         .on("row-delete", handle_delete)
                     )
                     add_table_actions(

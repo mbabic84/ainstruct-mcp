@@ -18,6 +18,15 @@ class CancelledErrorFilter(logging.Filter):
 
 
 def main():
+    log_level = os.getenv("LOG_LEVEL", "info").upper()
+    level = getattr(logging, log_level, logging.INFO)
+    logging.basicConfig(
+        level=level,
+        format="%(asctime)s - %(name)s - %(levelname)s - %(message)s",
+    )
+    # Disable uvicorn's default handlers to prevent overriding our config
+    logging.getLogger("uvicorn").handlers = []
+    logging.getLogger("uvicorn.access").handlers = []
     logging.getLogger().addFilter(CancelledErrorFilter())
 
     db_dir = os.path.dirname(settings.db_path)

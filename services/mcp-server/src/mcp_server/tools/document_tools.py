@@ -494,7 +494,7 @@ async def move_document(input_data: MoveDocumentInput) -> MoveDocumentOutput:
     user_id = auth.get("user_id")
     auth_type = auth.get("auth_type")
     collection_id = auth.get("collection_id")
-    qdrant_collections = auth.get("qdrant_collections", [])
+    collection_ids = auth.get("collection_ids", [])
 
     if is_admin:
         doc_repo = get_document_repository(None)
@@ -528,7 +528,7 @@ async def move_document(input_data: MoveDocumentInput) -> MoveDocumentOutput:
     if is_admin:
         pass
     elif auth_type in ("pat", "jwt"):
-        if auth_type == "pat" and input_data.target_collection_id not in qdrant_collections:
+        if auth_type == "pat" and input_data.target_collection_id not in collection_ids:
             raise ValueError("Target collection not found or access denied")
         if auth_type == "jwt" and target_collection["user_id"] != user_id:
             raise ValueError("Target collection not found")

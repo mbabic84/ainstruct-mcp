@@ -1,6 +1,7 @@
 from pydantic import BaseModel
 from shared.db import get_collection_repository
 from shared.db.models import CollectionListResponse, CollectionResponse
+from shared.db.qdrant import get_qdrant_service
 
 from mcp_server.tools.context import get_current_user_id, get_pat_info, get_user_info
 
@@ -53,7 +54,7 @@ async def list_collections() -> list[CollectionListResponse]:
         raise ValueError("JWT or PAT authentication required")
 
     if user_info:
-        user_id = user_info.get("id")
+        user_id = user_info.get("user_id")
     elif pat_info:
         user_id = pat_info.get("user_id")
     else:
@@ -67,18 +68,27 @@ async def list_collections() -> list[CollectionListResponse]:
 
     return [
         CollectionListResponse(
-            id=c["id"],
-            name=c["name"],
-            created_at=c["created_at"],
+            id=collection["id"],
+            name=collection["name"],
+            created_at=collection["created_at"],
         )
-        for c in collections
+        for collection in collections
     ]
 
 
 async def get_collection(input_data: GetCollectionInput) -> CollectionResponse:
+    user_id = get_current_user_id()
+    if not user_id:
+        raise ValueError("JWT or PAT authentication required")
+
     user_info = get_user_info()
-    if not user_info:
-        raise ValueError("JWT authentication required")
+    pat_info = get_pat_info()
+
+    is_superuser = False
+    if user_info:
+        is_superuser = user_info.get("is_superuser", False)
+    elif pat_info:
+        is_superuser = pat_info.get("is_superuser", False)
 
     repo = get_collection_repository()
     collection = await repo.get_by_id(input_data.collection_id)
@@ -86,7 +96,7 @@ async def get_collection(input_data: GetCollectionInput) -> CollectionResponse:
     if not collection:
         raise ValueError("Collection not found")
 
-    if collection["user_id"] != user_info.get("id") and not user_info.get("is_superuser"):
+    if collection["user_id"] != user_id and not is_superuser:
         raise ValueError("Collection not found")
 
     return CollectionResponse(
@@ -99,9 +109,18 @@ async def get_collection(input_data: GetCollectionInput) -> CollectionResponse:
 
 
 async def delete_collection(input_data: DeleteCollectionInput) -> dict:
+    user_id = get_current_user_id()
+    if not user_id:
+        raise ValueError("JWT or PAT authentication required")
+
     user_info = get_user_info()
-    if not user_info:
-        raise ValueError("JWT authentication required")
+    pat_info = get_pat_info()
+
+    is_superuser = False
+    if user_info:
+        is_superuser = user_info.get("is_superuser", False)
+    elif pat_info:
+        is_superuser = pat_info.get("is_superuser", False)
 
     repo = get_collection_repository()
     collection = await repo.get_by_id(input_data.collection_id)
@@ -109,12 +128,22 @@ async def delete_collection(input_data: DeleteCollectionInput) -> dict:
     if not collection:
         raise ValueError("Collection not found")
 
-    if collection["user_id"] != user_info.get("id") and not user_info.get("is_superuser"):
+    if collection["user_id"] != user_id and not is_superuser:
         raise ValueError("Collection not found")
 
     if collection["cat_count"] > 0:
-        raise ValueError("Cannot delete collection with active CAT tokens. Revoke all CAT tokens first.")
+        raise ValueError(
+            "Cannot delete collection with active CAT tokens. Revoke all CAT tokens first."
+        )
 
+    # Delete Qdrant collection first (rollback if this fails)
+    qdrant_service = get_qdrant_service(collection["qdrant_collection"])
+    try:
+        await qdrant_service.delete_collection(collection["qdrant_collection"])
+    except Exception as e:
+        return {"success": False, "error": f"Failed to delete collection from vector store: {e}"}
+
+    # Then delete the database record (only if Qdrant succeeded)
     success = await repo.delete(input_data.collection_id)
     if not success:
         raise ValueError("Failed to delete collection")
@@ -123,9 +152,18 @@ async def delete_collection(input_data: DeleteCollectionInput) -> dict:
 
 
 async def rename_collection(input_data: RenameCollectionInput) -> CollectionResponse:
+    user_id = get_current_user_id()
+    if not user_id:
+        raise ValueError("JWT or PAT authentication required")
+
     user_info = get_user_info()
-    if not user_info:
-        raise ValueError("JWT authentication required")
+    pat_info = get_pat_info()
+
+    is_superuser = False
+    if user_info:
+        is_superuser = user_info.get("is_superuser", False)
+    elif pat_info:
+        is_superuser = pat_info.get("is_superuser", False)
 
     name = input_data.name.strip()
     if not name:
@@ -140,7 +178,7 @@ async def rename_collection(input_data: RenameCollectionInput) -> CollectionResp
     if not collection:
         raise ValueError("Collection not found")
 
-    if collection["user_id"] != user_info.get("id") and not user_info.get("is_superuser"):
+    if collection["user_id"] != user_id and not is_superuser:
         raise ValueError("Collection not found")
 
     existing = await repo.get_by_name_for_user(collection["user_id"], name)

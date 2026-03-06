@@ -632,31 +632,31 @@ class CatRepository:
                     CatModel.is_active,
                 )
             )
-            api_key = result.scalar_one_or_none()
+            cat_token = result.scalar_one_or_none()
 
-            if api_key:
-                if api_key.expires_at and api_key.expires_at < datetime.utcnow():
+            if cat_token:
+                if cat_token.expires_at and cat_token.expires_at < datetime.utcnow():
                     return None
 
                 collection_result = await session.execute(
-                    select(CollectionModel).where(CollectionModel.id == api_key.collection_id)
+                    select(CollectionModel).where(CollectionModel.id == cat_token.collection_id)
                 )
                 collection = collection_result.scalar_one_or_none()
 
                 if not collection:
                     return None
 
-                api_key.last_used = datetime.utcnow()
+                cat_token.last_used = datetime.utcnow()
                 await session.commit()
 
                 return {
-                    "id": api_key.id,
-                    "label": api_key.label,
-                    "collection_id": api_key.collection_id,
+                    "cat_id": cat_token.id,
+                    "label": cat_token.label,
+                    "collection_id": cat_token.collection_id,
                     "qdrant_collection": collection.qdrant_collection,
                     "collection_name": collection.name,
-                    "user_id": api_key.user_id,
-                    "permission": Permission(api_key.permission),
+                    "user_id": cat_token.user_id,
+                    "permission": Permission(cat_token.permission),
                     "is_admin": False,
                 }
             return None
@@ -664,27 +664,26 @@ class CatRepository:
     async def get_by_id(self, key_id: str) -> dict | None:
         async with self.async_session() as session:
             result = await session.execute(select(CatModel).where(CatModel.id == key_id))
-            api_key = result.scalar_one_or_none()
-            if not api_key:
+            cat_token = result.scalar_one_or_none()
+            if not cat_token:
                 return None
 
             collection_result = await session.execute(
-                select(CollectionModel).where(CollectionModel.id == api_key.collection_id)
+                select(CollectionModel).where(CollectionModel.id == cat_token.collection_id)
             )
             collection = collection_result.scalar_one_or_none()
 
             return {
-                "id": api_key.id,
-                "label": api_key.label,
-                "collection_id": api_key.collection_id,
+                "cat_id": cat_token.id,
+                "label": cat_token.label,
+                "collection_id": cat_token.collection_id,
                 "collection_name": collection.name if collection else None,
-                "qdrant_collection": collection.qdrant_collection if collection else None,
-                "is_active": api_key.is_active,
-                "user_id": api_key.user_id,
-                "permission": Permission(api_key.permission),
-                "expires_at": api_key.expires_at,
-                "created_at": api_key.created_at,
-                "last_used": api_key.last_used,
+                "user_id": cat_token.user_id,
+                "permission": Permission(cat_token.permission),
+                "created_at": cat_token.created_at,
+                "expires_at": cat_token.expires_at,
+                "is_active": cat_token.is_active,
+                "last_used": cat_token.last_used,
             }
 
     async def create(
@@ -702,12 +701,10 @@ class CatRepository:
             expires_at = None
             if expires_in_days is not None:
                 expires_at = datetime.utcnow() + timedelta(days=expires_in_days)
-            elif settings.api_key_default_expiry_days is not None:
-                expires_at = datetime.utcnow() + timedelta(
-                    days=settings.api_key_default_expiry_days
-                )
+            elif settings.cat_default_expiry_days is not None:
+                expires_at = datetime.utcnow() + timedelta(days=settings.cat_default_expiry_days)
 
-            api_key = CatModel(
+            cat_token = CatModel(
                 key_hash=key_hash,
                 label=label,
                 collection_id=collection_id,
@@ -715,9 +712,9 @@ class CatRepository:
                 permission=permission.value,
                 expires_at=expires_at,
             )
-            session.add(api_key)
+            session.add(cat_token)
             await session.commit()
-            return api_key.id, key
+            return cat_token.id, key
 
     async def list_all(self, user_id: str | None = None) -> list[dict]:
         async with self.async_session() as session:
@@ -736,7 +733,7 @@ class CatRepository:
 
                 result_list.append(
                     {
-                        "id": k.id,
+                        "cat_id": k.id,
                         "label": k.label,
                         "collection_id": k.collection_id,
                         "collection_name": collection.name if collection else None,
@@ -825,7 +822,7 @@ class PatTokenRepository:
             await session.commit()
 
             return {
-                "id": pat_token.id,
+                "pat_id": pat_token.id,
                 "label": pat_token.label,
                 "user_id": pat_token.user_id,
                 "scopes": parse_scopes(pat_token.scopes),
@@ -843,7 +840,7 @@ class PatTokenRepository:
             if not pat_token:
                 return None
             return {
-                "id": pat_token.id,
+                "pat_id": pat_token.id,
                 "label": pat_token.label,
                 "user_id": pat_token.user_id,
                 "scopes": parse_scopes(pat_token.scopes),
@@ -892,7 +889,7 @@ class PatTokenRepository:
             tokens = result.scalars().all()
             return [
                 {
-                    "id": t.id,
+                    "pat_id": t.id,
                     "label": t.label,
                     "user_id": t.user_id,
                     "scopes": parse_scopes(t.scopes),

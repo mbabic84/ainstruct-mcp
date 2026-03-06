@@ -37,7 +37,7 @@ async def list_users(
 
     items = [
         UserListItem(
-            id=u.id,
+            user_id=u.id,
             email=u.email,
             username=u.username,
             is_active=u.is_active,
@@ -74,7 +74,7 @@ async def search_users(
 
     items = [
         UserListItem(
-            id=u.id,
+            user_id=u.id,
             email=u.email,
             username=u.username,
             is_active=u.is_active,

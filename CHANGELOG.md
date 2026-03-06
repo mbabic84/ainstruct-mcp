@@ -1,3 +1,10 @@
+# [4.4.0](https://github.com/mbabic84/ainstruct-mcp/compare/v4.3.0...v4.4.0) (2026-03-06)
+
+
+### Features
+
+* **web-ui:** show time in Created column for collections and documents tables ([bab76dc](https://github.com/mbabic84/ainstruct-mcp/commit/bab76dc451a5945bb3fd0d5ac9c69deeddf77f8d))
+
 # [4.3.0](https://github.com/mbabic84/ainstruct-mcp/compare/v4.2.4...v4.3.0) (2026-03-06)
 
 

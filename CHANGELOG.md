@@ -1,3 +1,11 @@
+## [4.2.1](https://github.com/mbabic84/ainstruct-mcp/compare/v4.2.0...v4.2.1) (2026-03-06)
+
+
+### Bug Fixes
+
+* resolve field name mismatches in MCP tools, REST API, and web UI ([50db1eb](https://github.com/mbabic84/ainstruct-mcp/commit/50db1eb87cd5e846dd43a6651690b350b28a672f))
+* update test mock data to use collection_id instead of id ([b6c90f3](https://github.com/mbabic84/ainstruct-mcp/commit/b6c90f37a610240892050eaba6a4491c4e1c3059))
+
 # [4.2.0](https://github.com/mbabic84/ainstruct-mcp/compare/v4.1.0...v4.2.0) (2026-03-06)
 
 

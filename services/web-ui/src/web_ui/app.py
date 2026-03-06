@@ -508,7 +508,18 @@ async def collections_page():
 
                     def handle_delete(e):
                         collection_id = e.args["id"]
-                        if ui.confirm("Are you sure you want to delete this collection?"):
+                        collection_name = e.args.get("name", "this collection")
+                        with ui.dialog() as dialog, ui.card():
+                            ui.label(f"Delete '{collection_name}'?").classes("text-lg font-bold")
+                            ui.label("This action cannot be undone.").classes("text-sm text-grey-7")
+                            with ui.row().classes("w-full justify-end gap-2"):
+                                ui.button("Cancel", on_click=dialog.close).props("flat")
+                                ui.button(
+                                    "Delete",
+                                    on_click=lambda: [dialog.close(), _do_delete(collection_id)],
+                                ).props("color=negative")
+
+                        def _do_delete(collection_id):
                             response = api_client.delete_collection(collection_id)
                             if response.status_code == 200:
                                 ui.notify("Collection deleted")
@@ -516,12 +527,18 @@ async def collections_page():
                             else:
                                 ui.notify(f"Error: {response.text}", type="negative")
 
-                    table = ui.table(columns=columns, rows=rows, row_key="id").classes("w-full")
+                        dialog.open()
+
+                    table = (
+                        ui.table(columns=columns, rows=rows, row_key="id")
+                        .classes("w-full")
+                        .on("row-click", handle_delete)
+                    )
                     table.add_slot(
                         "body-cell-actions",
                         """
                         <q-td :props="props">
-                            <q-btn flat round color="negative" icon="delete" @click.stop="$emit('row-click', props.row)" />
+                            <q-btn flat round color="negative" icon="delete" @click.stop="$parent.$emit('row-click', props.row)" />
                         </q-td>
                     """,
                     )
@@ -617,7 +634,18 @@ async def documents_page(collection_id: str | None = None):
 
                     def handle_delete(e):
                         doc_id = e.args["id"]
-                        if ui.confirm("Are you sure you want to delete this document?"):
+                        doc_title = e.args.get("title", "this document")
+                        with ui.dialog() as dialog, ui.card():
+                            ui.label(f"Delete '{doc_title}'?").classes("text-lg font-bold")
+                            ui.label("This action cannot be undone.").classes("text-sm text-grey-7")
+                            with ui.row().classes("w-full justify-end gap-2"):
+                                ui.button("Cancel", on_click=dialog.close).props("flat")
+                                ui.button(
+                                    "Delete",
+                                    on_click=lambda: [dialog.close(), _do_delete(doc_id)],
+                                ).props("color=negative")
+
+                        def _do_delete(doc_id):
                             response = api_client.delete_document(doc_id)
                             if response.status_code == 200:
                                 ui.notify("Document deleted")
@@ -625,16 +653,22 @@ async def documents_page(collection_id: str | None = None):
                             else:
                                 ui.notify(f"Error: {response.text}", type="negative")
 
+                        dialog.open()
+
                     def handle_edit(e):
                         doc = e.args
                         ui.navigate.to(f"/documents/{doc['id']}/edit")
 
-                    table = ui.table(columns=columns, rows=rows, row_key="id").classes("w-full")
+                    table = (
+                        ui.table(columns=columns, rows=rows, row_key="id")
+                        .classes("w-full")
+                        .on("row-click", handle_delete)
+                    )
                     table.add_slot(
                         "body-cell-actions",
                         """
                         <q-td :props="props">
-                            <q-btn flat round color="negative" icon="delete" @click.stop="$emit('row-click', props.row)" />
+                            <q-btn flat round color="negative" icon="delete" @click.stop="$parent.$emit('row-click', props.row)" />
                         </q-td>
                     """,
                     )

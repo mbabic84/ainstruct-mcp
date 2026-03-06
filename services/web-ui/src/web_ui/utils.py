@@ -4,7 +4,7 @@ from datetime import datetime
 def format_date(iso_str: str | None) -> str:
     if not iso_str:
         return ""
-    return datetime.fromisoformat(iso_str.replace("Z", "+00:00")).strftime("%Y-%m-%d")
+    return datetime.fromisoformat(iso_str.replace("Z", "+00:00")).strftime("%Y-%m-%d %H:%M:%S")
 
 
 def handle_api_error(response, default_msg: str = "An error occurred") -> bool:

@@ -1,3 +1,10 @@
+## [4.5.3](https://github.com/mbabic84/ainstruct-mcp/compare/v4.5.2...v4.5.3) (2026-03-06)
+
+
+### Bug Fixes
+
+* **web-ui:** CodeMirror editor now auto-resizes to content without scrollbar ([5d8e6d4](https://github.com/mbabic84/ainstruct-mcp/commit/5d8e6d49c6d7095c55cc68d8e2911f98f774ad9e))
+
 ## [4.5.2](https://github.com/mbabic84/ainstruct-mcp/compare/v4.5.1...v4.5.2) (2026-03-06)
 
 

@@ -74,56 +74,62 @@ async def document_dialog(doc_id: str, api_client):
                         ui.pre(content).classes("whitespace-pre-wrap w-full font-mono text-sm")
 
         # Editor Section
-        editor_container = ui.column().classes("flex-grow w-full gap-4 mt-4")
-        with editor_container:
-            ui.input("Title").classes("w-full").bind_value(current_doc, "title")
-            ui.select(options=supported_types, label="Document Type").classes("w-full").bind_value(
-                current_doc, "document_type"
-            )
+        editor_scroll = ui.scroll_area().classes("flex-grow w-full mt-4")
+        with editor_scroll:
+            editor_container = ui.column().classes("w-full gap-4")
+            with editor_container:
+                ui.input("Title").classes("w-full").bind_value(current_doc, "title")
+                ui.select(options=supported_types, label="Document Type").classes(
+                    "w-full"
+                ).bind_value(current_doc, "document_type")
 
-            # Use codemirror if available, fallback to textarea
-            try:
-                # We use a container to allow swapping if needed, though here we just try-except
-                content_editor = ui.codemirror(current_doc["content"]).classes(
-                    "w-full flex-grow border"
-                )
-                content_editor.bind_value(current_doc, "content")
-            except Exception:
-                content_editor = ui.textarea("Content").classes("w-full flex-grow").props("filled")
-                content_editor.bind_value(current_doc, "content")
-
-            with ui.row().classes("w-full justify-end gap-2 mt-2"):
-
-                async def save():
-                    resp = api_client.update_document(
-                        doc_id,
-                        title=current_doc["title"],
-                        document_type=current_doc["document_type"],
-                        content=current_doc["content"],
+                # Use codemirror if available, fallback to textarea
+                try:
+                    # We use a container to allow swapping if needed, though here we just try-except
+                    content_editor = ui.codemirror(current_doc["content"]).classes(
+                        "w-full flex-grow border min-h-[400px]"
                     )
-                    if handle_api_error(resp, "Failed to update document"):
-                        ui.notify("Document updated successfully")
-                        state["mode"] = "view"
-                        update_visibility()
-                        update_viewer()
-                        # Signal that we might need to refresh the background table
-                        dialog.submit(True)
+                    content_editor.bind_value(current_doc, "content")
+                except Exception:
+                    content_editor = (
+                        ui.textarea("Content")
+                        .classes("w-full flex-grow min-h-[400px]")
+                        .props("filled")
+                    )
+                    content_editor.bind_value(current_doc, "content")
 
-                ui.button("Save Changes", on_click=save).props("color=primary")
-                ui.button(
-                    "Cancel",
-                    on_click=lambda: [
-                        state.update({"mode": "view"}),
-                        update_visibility(),
-                        update_viewer(),
-                    ],
-                ).props("flat")
+                with ui.row().classes("w-full justify-end gap-2 mt-2"):
+
+                    async def save():
+                        resp = api_client.update_document(
+                            doc_id,
+                            title=current_doc["title"],
+                            document_type=current_doc["document_type"],
+                            content=current_doc["content"],
+                        )
+                        if handle_api_error(resp, "Failed to update document"):
+                            ui.notify("Document updated successfully")
+                            state["mode"] = "view"
+                            update_visibility()
+                            update_viewer()
+                            # Signal that we might need to refresh the background table
+                            dialog.submit(True)
+
+                    ui.button("Save Changes", on_click=save).props("color=primary")
+                    ui.button(
+                        "Cancel",
+                        on_click=lambda: [
+                            state.update({"mode": "view"}),
+                            update_visibility(),
+                            update_viewer(),
+                        ],
+                    ).props("flat")
 
         def update_visibility():
             is_view = state["mode"] == "view"
             viewer_scroll.set_visibility(is_view)
             edit_btn.set_visibility(is_view)
-            editor_container.set_visibility(not is_view)
+            editor_scroll.set_visibility(not is_view)
             view_btn.set_visibility(not is_view)
 
         # Initial render

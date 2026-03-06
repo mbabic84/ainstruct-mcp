@@ -627,7 +627,7 @@ async def documents_page(collection_id: str | None = None):
                                 "created_at": datetime.fromisoformat(
                                     d["created_at"].replace("Z", "+00:00")
                                 ).strftime("%Y-%m-%d"),
-                                "id": d["id"],
+                                "id": d["document_id"],
                                 "content": d.get("content", ""),
                             }
                         )
@@ -1338,7 +1338,7 @@ async def admin_page(offset: int = 0):
                     )
                 rows.append(
                     {
-                        "id": u["id"],
+                        "id": u["user_id"],
                         "username": u["username"],
                         "email": u.get("email", ""),
                         "is_active": is_active,

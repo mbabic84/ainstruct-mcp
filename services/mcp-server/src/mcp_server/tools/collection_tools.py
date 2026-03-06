@@ -68,7 +68,7 @@ async def list_collections() -> list[CollectionListResponse]:
 
     return [
         CollectionListResponse(
-            id=collection["collection_id"],
+            collection_id=collection["collection_id"],
             name=collection["name"],
             created_at=collection["created_at"],
         )
@@ -100,7 +100,7 @@ async def get_collection(input_data: GetCollectionInput) -> CollectionResponse:
         raise ValueError("Collection not found")
 
     return CollectionResponse(
-        id=collection["collection_id"],
+        collection_id=collection["collection_id"],
         name=collection["name"],
         document_count=collection["document_count"],
         cat_count=collection["cat_count"],
@@ -182,7 +182,7 @@ async def rename_collection(input_data: RenameCollectionInput) -> CollectionResp
         raise ValueError("Collection not found")
 
     existing = await repo.get_by_name_for_user(collection["user_id"], name)
-    if existing and existing["id"] != input_data.collection_id:
+    if existing and existing["collection_id"] != input_data.collection_id:
         raise ValueError("Collection with this name already exists")
 
     result = await repo.rename(input_data.collection_id, name)

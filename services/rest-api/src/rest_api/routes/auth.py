@@ -53,7 +53,7 @@ async def register(
     )
 
     return UserResponse(
-        id=user.id,
+        user_id=user.user_id,
         email=user.email,
         username=user.username,
         is_active=user.is_active,
@@ -103,13 +103,13 @@ async def login(
         scopes.append("admin")
 
     access_token = auth_service.create_access_token(
-        user_id=user["id"],
+        user_id=user["user_id"],
         username=user["username"],
         email=user["email"],
         is_superuser=user["is_superuser"],
         scopes=[s for s in scopes],
     )
-    refresh_token = auth_service.create_refresh_token(user_id=user["id"])
+    refresh_token = auth_service.create_refresh_token(user_id=user["user_id"])
 
     return TokenResponse(
         access_token=access_token,
@@ -153,13 +153,13 @@ async def refresh(
         scopes.append("admin")
 
     access_token = auth_service.create_access_token(
-        user_id=user.id,
+        user_id=user.user_id,
         username=user.username,
         email=user.email,
         is_superuser=user.is_superuser,
         scopes=[s for s in scopes],
     )
-    refresh_token = auth_service.create_refresh_token(user_id=user.id)
+    refresh_token = auth_service.create_refresh_token(user_id=user.user_id)
 
     return TokenResponse(
         access_token=access_token,
@@ -186,7 +186,7 @@ async def get_profile(
         )
 
     return UserResponse(
-        id=db_user.id,
+        user_id=db_user.user_id,
         email=db_user.email,
         username=db_user.username,
         is_active=db_user.is_active,

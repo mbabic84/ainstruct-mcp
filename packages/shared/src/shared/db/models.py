@@ -148,7 +148,7 @@ class CollectionCreate(BaseModel):
 
 
 class CollectionResponse(BaseModel):
-    id: str
+    collection_id: str
     name: str
     document_count: int
     cat_count: int
@@ -157,7 +157,7 @@ class CollectionResponse(BaseModel):
 
 
 class CollectionListResponse(BaseModel):
-    id: str
+    collection_id: str
     name: str
     created_at: datetime
 
@@ -171,7 +171,7 @@ class DocumentCreate(BaseModel):
 
 
 class DocumentResponse(BaseModel):
-    id: str
+    document_id: str
     collection_id: str
     title: str
     content: str
@@ -201,7 +201,7 @@ class UserLogin(BaseModel):
 
 
 class UserResponse(BaseModel):
-    id: str
+    user_id: str
     email: str
     username: str
     is_active: bool

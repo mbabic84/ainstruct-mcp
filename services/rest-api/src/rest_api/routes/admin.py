@@ -37,7 +37,7 @@ async def list_users(
 
     items = [
         UserListItem(
-            user_id=u.id,
+            user_id=u.user_id,
             email=u.email,
             username=u.username,
             is_active=u.is_active,
@@ -74,7 +74,7 @@ async def search_users(
 
     items = [
         UserListItem(
-            user_id=u.id,
+            user_id=u.user_id,
             email=u.email,
             username=u.username,
             is_active=u.is_active,
@@ -115,7 +115,7 @@ async def get_user(
     cats = await cat_repo.list_all(user_id)
 
     return UserDetailResponse(
-        id=user.id,
+        user_id=user.user_id,
         email=user.email,
         username=user.username,
         is_active=user.is_active,
@@ -167,7 +167,7 @@ async def update_user(
 
     updated = await user_repo.get_by_id(user_id)
     return UserResponse(
-        id=updated.id,
+        user_id=updated.user_id,
         email=updated.email,
         username=updated.username,
         is_active=updated.is_active,
@@ -198,7 +198,7 @@ async def delete_user(
             detail={"code": "USER_NOT_FOUND", "message": "User not found"},
         )
 
-    if user.id == admin.user_id:
+    if user.user_id == admin.user_id:
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
             detail={"code": "CANNOT_DELETE_SELF", "message": "Cannot delete your own account"},
@@ -236,7 +236,7 @@ async def promote_user(
 
     updated = await user_repo.get_by_id(user_id)
     return UserResponse(
-        id=updated.id,
+        user_id=updated.user_id,
         email=updated.email,
         username=updated.username,
         is_active=updated.is_active,

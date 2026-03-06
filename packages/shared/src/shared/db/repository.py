@@ -46,7 +46,7 @@ class DocumentRepository:
 
             if existing:
                 return DocumentResponse(
-                    id=existing.id,
+                    document_id=existing.id,
                     collection_id=existing.collection_id,
                     title=existing.title,
                     content=existing.content,
@@ -69,7 +69,7 @@ class DocumentRepository:
             await session.refresh(db_doc)
 
             return DocumentResponse(
-                id=db_doc.id,
+                document_id=db_doc.id,
                 collection_id=db_doc.collection_id,
                 title=db_doc.title,
                 content=db_doc.content,
@@ -90,7 +90,7 @@ class DocumentRepository:
             if not db_doc:
                 return None
             return DocumentResponse(
-                id=db_doc.id,
+                document_id=db_doc.id,
                 collection_id=db_doc.collection_id,
                 title=db_doc.title,
                 content=db_doc.content,
@@ -111,7 +111,7 @@ class DocumentRepository:
 
             return [
                 DocumentResponse(
-                    id=d.id,
+                    document_id=d.id,
                     collection_id=d.collection_id,
                     title=d.title,
                     content=d.content,
@@ -196,7 +196,7 @@ class DocumentRepository:
             await session.refresh(db_doc)
 
             return DocumentResponse(
-                id=db_doc.id,
+                document_id=db_doc.id,
                 collection_id=db_doc.collection_id,
                 title=db_doc.title,
                 content=db_doc.content,
@@ -229,7 +229,7 @@ class DocumentRepository:
             if not db_doc:
                 return None
             return DocumentResponse(
-                id=db_doc.id,
+                document_id=db_doc.id,
                 collection_id=db_doc.collection_id,
                 title=db_doc.title,
                 content=db_doc.content,
@@ -255,7 +255,7 @@ class DocumentRepository:
 
             return [
                 DocumentResponse(
-                    id=d.id,
+                    document_id=d.id,
                     collection_id=d.collection_id,
                     title=d.title,
                     content=d.content,
@@ -290,7 +290,7 @@ class UserRepository:
             await session.commit()
             await session.refresh(user)
             return UserResponse(
-                id=user.id,
+                user_id=user.id,
                 email=user.email,
                 username=user.username,
                 is_active=user.is_active,
@@ -305,7 +305,7 @@ class UserRepository:
             if not user:
                 return None
             return UserResponse(
-                id=user.id,
+                user_id=user.id,
                 email=user.email,
                 username=user.username,
                 is_active=user.is_active,
@@ -320,7 +320,7 @@ class UserRepository:
             if not user:
                 return None
             return {
-                "id": user.id,
+                "user_id": user.id,
                 "email": user.email,
                 "username": user.username,
                 "password_hash": user.password_hash,
@@ -336,7 +336,7 @@ class UserRepository:
             if not user:
                 return None
             return UserResponse(
-                id=user.id,
+                user_id=user.id,
                 email=user.email,
                 username=user.username,
                 is_active=user.is_active,
@@ -371,7 +371,7 @@ class UserRepository:
             await session.commit()
             await session.refresh(user)
             return UserResponse(
-                id=user.id,
+                user_id=user.id,
                 email=user.email,
                 username=user.username,
                 is_active=user.is_active,
@@ -395,7 +395,7 @@ class UserRepository:
             users = result.scalars().all()
             return [
                 UserResponse(
-                    id=u.id,
+                    user_id=u.id,
                     email=u.email,
                     username=u.username,
                     is_active=u.is_active,
@@ -422,7 +422,7 @@ class UserRepository:
             users = result.scalars().all()
             return [
                 UserResponse(
-                    id=u.id,
+                    user_id=u.id,
                     email=u.email,
                     username=u.username,
                     is_active=u.is_active,
@@ -454,7 +454,7 @@ class CollectionRepository:
             await session.commit()
             await session.refresh(collection)
             return CollectionResponse(
-                id=collection.id,
+                collection_id=collection.id,
                 name=collection.name,
                 document_count=0,
                 cat_count=0,
@@ -571,7 +571,7 @@ class CollectionRepository:
             key_count = key_count_result.scalar() or 0
 
             return CollectionResponse(
-                id=collection.id,
+                collection_id=collection.id,
                 name=collection.name,
                 document_count=doc_count,
                 cat_count=key_count,
@@ -600,7 +600,7 @@ class CollectionRepository:
             if not collection:
                 return None
             return {
-                "id": collection.id,
+                "collection_id": collection.id,
                 "name": collection.name,
                 "qdrant_collection": collection.qdrant_collection,
                 "user_id": collection.user_id,

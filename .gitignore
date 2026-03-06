@@ -65,3 +65,6 @@ deploy_key.pub
 
 # test logs
 test_logs/
+
+# test environment
+test-env/

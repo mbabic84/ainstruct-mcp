@@ -34,7 +34,7 @@ async def create_collection(
     )
 
     return CollectionResponse(
-        collection_id=collection.id,
+        collection_id=collection.collection_id,
         name=collection.name,
         document_count=0,
         cat_count=0,
@@ -142,7 +142,7 @@ async def rename_collection(
         )
 
     return CollectionResponse(
-        collection_id=updated.id,
+        collection_id=updated.collection_id,
         name=updated.name,
         document_count=updated.document_count,
         cat_count=updated.cat_count,

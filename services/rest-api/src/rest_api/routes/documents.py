@@ -81,7 +81,7 @@ async def store_document(
             "chunk_index": c.get("chunk_index", i),
             "content": c.get("content", ""),
             "title": c.get("title", body.title),
-            "document_id": document.id,
+            "document_id": document.document_id,
         }
         for i, c in enumerate(chunks)
     ]
@@ -93,7 +93,7 @@ async def store_document(
     await qdrant_service.upsert_chunks(chunk_data, vectors)
 
     return DocumentStoreResponse(
-        id=document.id,
+        document_id=document.document_id,
         title=document.title,
         collection_id=document.collection_id,
         chunk_count=len(chunks),
@@ -141,7 +141,7 @@ async def list_documents(
 
     items = [
         DocumentListItem(
-            id=d.id,
+            document_id=d.document_id,
             title=d.title,
             collection_id=d.collection_id,
             collection_name=collection_map.get(d.collection_id),
@@ -192,7 +192,7 @@ async def get_document(
         )
 
     return DocumentResponse(
-        id=document.id,
+        document_id=document.document_id,
         title=document.title,
         content=document.content,
         collection_id=document.collection_id,
@@ -258,7 +258,7 @@ async def update_document(
                 "chunk_index": c.get("chunk_index", i),
                 "content": c.get("content", ""),
                 "title": c.get("title", title),
-                "document_id": document.id,
+                "document_id": document.document_id,
             }
             for i, c in enumerate(chunks)
         ]
@@ -268,7 +268,7 @@ async def update_document(
 
         if collection:
             qdrant_service = get_qdrant_service(collection["qdrant_collection"])
-            await qdrant_service.delete_by_document_id(document.id)
+            await qdrant_service.delete_by_document_id(document.document_id)
             await qdrant_service.upsert_chunks(chunk_data, vectors)
 
     if update_data:
@@ -277,7 +277,7 @@ async def update_document(
         updated = await doc_repo.get_by_id(document_id)
 
     return DocumentUpdateResponse(
-        id=updated.id,
+        document_id=updated.document_id,
         title=updated.title,
         chunk_count=None,
         token_count=None,
@@ -318,7 +318,7 @@ async def delete_document(
 
     if collection:
         qdrant_service = get_qdrant_service(collection["qdrant_collection"])
-        await qdrant_service.delete_by_document_id(document.id)
+        await qdrant_service.delete_by_document_id(document.document_id)
 
     await doc_repo.delete(document_id)
     return MessageResponse(message="Document deleted successfully")

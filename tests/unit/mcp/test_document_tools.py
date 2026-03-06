@@ -1,12 +1,19 @@
 """Tests for document tools with CAT token authentication."""
 
+from datetime import datetime
 from unittest.mock import AsyncMock, MagicMock, patch
 
 import pytest
 from mcp_server.tools.context import clear_cat_info, set_cat_info
 from mcp_server.tools.document_tools import (
+    DeleteDocumentInput,
+    GetDocumentInput,
+    ListDocumentsInput,
     MoveDocumentInput,
     StoreDocumentInput,
+    delete_document,
+    get_document,
+    list_documents,
     move_document,
     store_document,
 )
@@ -46,7 +53,7 @@ class TestStoreDocumentWithCatToken:
         mock_doc_repo = MagicMock()
         mock_doc_repo.create = AsyncMock(
             return_value=MagicMock(
-                id="doc-123",
+                document_id="doc-123",
                 collection_id=mock_cat_info["collection_id"],
             )
         )
@@ -123,7 +130,7 @@ class TestStoreDocumentWithCatToken:
         mock_doc_repo = MagicMock()
         mock_doc_repo.create = AsyncMock(
             return_value=MagicMock(
-                id="doc-123",
+                document_id="doc-123",
                 collection_id=mock_cat_info["collection_id"],
             )
         )
@@ -215,9 +222,17 @@ class TestMoveDocumentWithCatToken:
             async def mock_get_by_id(collection_id):
                 collection_lookups.append(collection_id)
                 if collection_id == "source-collection-id":
-                    return {"id": "source-collection-id", "qdrant_collection": "docs_source123"}
+                    return {
+                        "collection_id": "source-collection-id",
+                        "qdrant_collection": "docs_source123",
+                        "user_id": "user-456",
+                    }
                 elif collection_id == "target-collection-id":
-                    return {"id": "target-collection-id", "qdrant_collection": "docs_target456"}
+                    return {
+                        "collection_id": "target-collection-id",
+                        "qdrant_collection": "docs_target456",
+                        "user_id": "user-456",
+                    }
                 return None
 
             mock_repo.get_by_id = mock_get_by_id
@@ -236,7 +251,7 @@ class TestMoveDocumentWithCatToken:
         mock_doc_repo = MagicMock()
         mock_doc_repo.get_by_id = AsyncMock(
             return_value=MagicMock(
-                id="doc-123",
+                document_id="doc-123",
                 collection_id="source-collection-id",
                 title="Test Doc",
                 content="# Test Content",
@@ -300,3 +315,171 @@ class TestMoveDocumentWithCatToken:
 
             assert captured_collections[1] == "docs_target456"  # Target (upsert)
             assert captured_collections[1] != "target-collection-id"
+
+
+class TestGetDocument:
+    """Test cases for get_document function."""
+
+    @pytest.fixture(autouse=True)
+    def setup(self):
+        clear_cat_info()
+        yield
+        clear_cat_info()
+
+    @pytest.fixture
+    def mock_cat_info(self):
+        return {
+            "id": "cat-123",
+            "user_id": "user-456",
+            "collection_id": "27241155-eaae-4678-a69f-c8003512f1fe",
+            "collection_name": "My Collection",
+            "qdrant_collection": "docs_abc123def456",
+            "permission": "read_write",
+            "is_admin": False,
+        }
+
+    @pytest.mark.asyncio
+    async def test_get_document_returns_document_id(self, mock_cat_info):
+        """Test that get_document returns document_id field, not id."""
+        set_cat_info(mock_cat_info)
+
+        mock_doc_repo = MagicMock()
+        mock_doc_repo.get_by_id = AsyncMock(
+            return_value=MagicMock(
+                document_id="doc-123",
+                collection_id="27241155-eaae-4678-a69f-c8003512f1fe",
+                title="Test Doc",
+                content="Test content",
+                document_type="markdown",
+                created_at=datetime(2024, 1, 1, 0, 0, 0),
+                updated_at=datetime(2024, 1, 1, 0, 0, 0),
+                doc_metadata={},
+            )
+        )
+
+        with patch(
+            "mcp_server.tools.document_tools.get_document_repository",
+            return_value=mock_doc_repo,
+        ):
+            result = await get_document(GetDocumentInput(document_id="doc-123"))
+
+            assert result is not None
+            assert result.document_id == "doc-123"
+
+
+class TestListDocuments:
+    """Test cases for list_documents function."""
+
+    @pytest.fixture(autouse=True)
+    def setup(self):
+        clear_cat_info()
+        yield
+        clear_cat_info()
+
+    @pytest.fixture
+    def mock_cat_info(self):
+        return {
+            "id": "cat-123",
+            "user_id": "user-456",
+            "collection_id": "27241155-eaae-4678-a69f-c8003512f1fe",
+            "collection_name": "My Collection",
+            "qdrant_collection": "docs_abc123def456",
+            "permission": "read_write",
+            "is_admin": False,
+        }
+
+    @pytest.mark.asyncio
+    async def test_list_documents_returns_document_id(self, mock_cat_info):
+        """Test that list_documents returns document_id field, not id."""
+        set_cat_info(mock_cat_info)
+
+        mock_doc_repo = MagicMock()
+        mock_doc_repo.list_all = AsyncMock(
+            return_value=[
+                MagicMock(
+                    document_id="doc-123",
+                    collection_id="27241155-eaae-4678-a69f-c8003512f1fe",
+                    title="Test Doc 1",
+                    content="Content 1",
+                    document_type="markdown",
+                    created_at=datetime(2024, 1, 1, 0, 0, 0),
+                    updated_at=datetime(2024, 1, 1, 0, 0, 0),
+                    doc_metadata={},
+                ),
+                MagicMock(
+                    document_id="doc-456",
+                    collection_id="27241155-eaae-4678-a69f-c8003512f1fe",
+                    title="Test Doc 2",
+                    content="Content 2",
+                    document_type="markdown",
+                    created_at=datetime(2024, 1, 2, 0, 0, 0),
+                    updated_at=datetime(2024, 1, 2, 0, 0, 0),
+                    doc_metadata={},
+                ),
+            ]
+        )
+
+        with patch(
+            "mcp_server.tools.document_tools.get_document_repository",
+            return_value=mock_doc_repo,
+        ):
+            result = await list_documents(ListDocumentsInput(limit=50, offset=0))
+
+            assert result.total == 2
+            assert result.documents[0].document_id == "doc-123"
+            assert result.documents[1].document_id == "doc-456"
+
+
+class TestDeleteDocument:
+    """Test cases for delete_document function."""
+
+    @pytest.fixture(autouse=True)
+    def setup(self):
+        clear_cat_info()
+        yield
+        clear_cat_info()
+
+    @pytest.fixture
+    def mock_cat_info(self):
+        return {
+            "id": "cat-123",
+            "user_id": "user-456",
+            "collection_id": "27241155-eaae-4678-a69f-c8003512f1fe",
+            "collection_name": "My Collection",
+            "qdrant_collection": "docs_abc123def456",
+            "permission": "read_write",
+            "is_admin": False,
+        }
+
+    @pytest.mark.asyncio
+    async def test_delete_document_uses_document_id(self, mock_cat_info):
+        """Test that delete_document uses document_id for lookups."""
+        set_cat_info(mock_cat_info)
+
+        mock_doc_repo = MagicMock()
+        mock_doc_repo.get_by_id = AsyncMock(
+            return_value=MagicMock(
+                document_id="doc-123",
+                collection_id="27241155-eaae-4678-a69f-c8003512f1fe",
+            )
+        )
+        mock_doc_repo.delete = AsyncMock()
+
+        mock_qdrant = MagicMock()
+        mock_qdrant.delete_by_document_id = AsyncMock()
+
+        with (
+            patch(
+                "mcp_server.tools.document_tools.get_document_repository",
+                return_value=mock_doc_repo,
+            ),
+            patch(
+                "mcp_server.tools.document_tools.get_qdrant_service",
+                return_value=mock_qdrant,
+            ),
+        ):
+            result = await delete_document(DeleteDocumentInput(document_id="doc-123"))
+
+            assert result.success is True
+            mock_qdrant.delete_by_document_id.assert_called_once_with("doc-123")
+            mock_doc_repo.delete.assert_called_once_with("doc-123")

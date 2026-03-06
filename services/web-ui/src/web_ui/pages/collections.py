@@ -83,7 +83,7 @@ async def collections_page():
                         collection_id = e.args[1]["id"]
                         ui.navigate.to(f"/documents?collection_id={collection_id}")
 
-                    def handle_delete(e):
+                    async def handle_delete(e):
                         collection_id = e.args["id"]
                         collection_name = e.args.get("name", "this collection")
 
@@ -93,7 +93,7 @@ async def collections_page():
                                 ui.notify("Collection deleted")
                                 ui.navigate.reload()
 
-                        confirm_action(
+                        await confirm_action(
                             f"Delete '{collection_name}'?",
                             "This action cannot be undone.",
                             do_delete,

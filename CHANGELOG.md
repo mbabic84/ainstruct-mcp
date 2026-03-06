@@ -1,3 +1,10 @@
+# [4.5.0](https://github.com/mbabic84/ainstruct-mcp/compare/v4.4.0...v4.5.0) (2026-03-06)
+
+
+### Features
+
+* **web-ui:** add document dialog with view/edit mode ([639289e](https://github.com/mbabic84/ainstruct-mcp/commit/639289ed1e7bc91b097048f61e1cec064c644f39))
+
 # [4.4.0](https://github.com/mbabic84/ainstruct-mcp/compare/v4.3.0...v4.4.0) (2026-03-06)
 
 

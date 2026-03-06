@@ -1,3 +1,11 @@
+## [4.5.1](https://github.com/mbabic84/ainstruct-mcp/compare/v4.5.0...v4.5.1) (2026-03-06)
+
+
+### Bug Fixes
+
+* **web-ui:** replace bare except with Exception in token refresh ([76647da](https://github.com/mbabic84/ainstruct-mcp/commit/76647dafd3a2897ddb7cf1c600bcbf40c9cfaebf))
+* **web-ui:** resolve token refresh race condition and improve reliability ([22c49cd](https://github.com/mbabic84/ainstruct-mcp/commit/22c49cdb89d2a928c4be6f8fbc7af14e389c30bd))
+
 # [4.5.0](https://github.com/mbabic84/ainstruct-mcp/compare/v4.4.0...v4.5.0) (2026-03-06)
 
 

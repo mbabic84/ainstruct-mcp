@@ -1,9 +1,9 @@
-from datetime import datetime
-
 from nicegui import APIRouter, ui
 
 from web_ui.auth import load_tokens_from_storage, require_auth
 from web_ui.components import render_page
+from web_ui.components.common import add_table_actions, confirm_action
+from web_ui.utils import format_date, handle_api_error
 
 router = APIRouter(prefix="")
 
@@ -28,12 +28,10 @@ async def collections_page():
             def create_collection():
                 if new_name_input.value:
                     response = api_client.create_collection(new_name_input.value)
-                    if response.status_code == 201:
+                    if handle_api_error(response, "Failed to create collection"):
                         ui.notify("Collection created")
                         new_name_input.set_value("")
                         ui.navigate.reload()
-                    else:
-                        ui.notify(f"Error: {response.text}", type="negative")
 
             ui.button("Create", on_click=create_collection).props("color=primary")
 
@@ -76,9 +74,7 @@ async def collections_page():
                                 "name": c["name"],
                                 "document_count": c.get("document_count", 0),
                                 "cat_count": c.get("cat_count", 0),
-                                "created_at": datetime.fromisoformat(
-                                    c["created_at"].replace("Z", "+00:00")
-                                ).strftime("%Y-%m-%d"),
+                                "created_at": format_date(c.get("created_at")),
                                 "id": c["collection_id"],
                             }
                         )
@@ -90,25 +86,20 @@ async def collections_page():
                     def handle_delete(e):
                         collection_id = e.args["id"]
                         collection_name = e.args.get("name", "this collection")
-                        with ui.dialog() as dialog, ui.card():
-                            ui.label(f"Delete '{collection_name}'?").classes("text-lg font-bold")
-                            ui.label("This action cannot be undone.").classes("text-sm text-grey-7")
-                            with ui.row().classes("w-full justify-end gap-2"):
-                                ui.button("Cancel", on_click=dialog.close).props("flat")
-                                ui.button(
-                                    "Delete",
-                                    on_click=lambda: [dialog.close(), _do_delete(collection_id)],
-                                ).props("color=negative")
 
-                        def _do_delete(collection_id):
+                        async def do_delete():
                             response = api_client.delete_collection(collection_id)
-                            if response.status_code == 200:
+                            if handle_api_error(response, "Failed to delete collection"):
                                 ui.notify("Collection deleted")
                                 ui.navigate.reload()
-                            else:
-                                ui.notify(f"Error: {response.text}", type="negative")
 
-                        dialog.open()
+                        confirm_action(
+                            f"Delete '{collection_name}'?",
+                            "This action cannot be undone.",
+                            do_delete,
+                            "Cancel",
+                            "Delete",
+                        )
 
                     table = (
                         ui.table(columns=columns, rows=rows, row_key="id")
@@ -116,13 +107,9 @@ async def collections_page():
                         .on("rowClick", handle_view)
                         .on("row-delete", handle_delete)
                     )
-                    table.add_slot(
-                        "body-cell-actions",
-                        """
-                        <q-td :props="props">
-                            <q-btn flat round color="negative" icon="delete" @click.stop="$parent.$emit('row-delete', props.row)" />
-                        </q-td>
-                    """,
+                    add_table_actions(
+                        table,
+                        [{"color": "negative", "icon": "delete", "emit": "row-delete"}],
                     )
             else:
                 ui.label("No collections yet. Create one above!")

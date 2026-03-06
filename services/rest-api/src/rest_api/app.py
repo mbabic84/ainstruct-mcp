@@ -53,7 +53,7 @@ def create_app() -> FastAPI:
     app.include_router(documents.router, prefix="/api/v1")
     app.include_router(admin.router, prefix="/api/v1")
 
-    @app.get("/health")
+    @app.get("/health", include_in_schema=False)
     async def health():
         return {"status": "healthy"}
 

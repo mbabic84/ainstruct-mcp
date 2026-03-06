@@ -1,3 +1,10 @@
+## [4.2.3](https://github.com/mbabic84/ainstruct-mcp/compare/v4.2.2...v4.2.3) (2026-03-06)
+
+
+### Bug Fixes
+
+* resolve document list API issues ([d8d1230](https://github.com/mbabic84/ainstruct-mcp/commit/d8d1230cd4860cb155cae77f5839bd5add7948b5))
+
 ## [4.2.2](https://github.com/mbabic84/ainstruct-mcp/compare/v4.2.1...v4.2.2) (2026-03-06)
 
 

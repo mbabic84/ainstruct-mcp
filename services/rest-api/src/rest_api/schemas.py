@@ -32,7 +32,7 @@ class UserLogin(BaseModel):
 
 
 class UserResponse(BaseModel):
-    id: str
+    user_id: str
     email: str
     username: str
     is_active: bool
@@ -98,7 +98,7 @@ class DocumentCreate(BaseModel):
 
 
 class DocumentResponse(BaseModel):
-    id: str
+    document_id: str
     title: str
     content: str
     collection_id: str
@@ -111,7 +111,7 @@ class DocumentResponse(BaseModel):
 
 
 class DocumentListItem(BaseModel):
-    id: str
+    document_id: str
     title: str
     collection_id: str
     collection_name: str | None = None
@@ -137,7 +137,7 @@ class DocumentUpdate(BaseModel):
 
 
 class DocumentStoreResponse(BaseModel):
-    id: str
+    document_id: str
     title: str
     collection_id: str
     chunk_count: int
@@ -146,7 +146,7 @@ class DocumentStoreResponse(BaseModel):
 
 
 class DocumentUpdateResponse(BaseModel):
-    id: str
+    document_id: str
     title: str
     chunk_count: int | None = None
     token_count: int | None = None

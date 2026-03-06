@@ -79,7 +79,7 @@ async def store_document(input_data: StoreDocumentInput) -> StoreDocumentOutput:
 
         chunks_with_meta = [
             {
-                "document_id": doc.id,
+                "document_id": doc.document_id,
                 "chunk_index": c["chunk_index"],
                 "content": c["content"],
                 "token_count": c["token_count"],
@@ -89,12 +89,12 @@ async def store_document(input_data: StoreDocumentInput) -> StoreDocumentOutput:
         ]
 
         point_ids = await qdrant.upsert_chunks(chunks_with_meta, embeddings)
-        await doc_repo.update_qdrant_point_ids(doc.id, point_ids)
+        await doc_repo.update_qdrant_point_ids(doc.document_id, point_ids)
 
     total_tokens = sum(c["token_count"] for c in chunks)
 
     return StoreDocumentOutput(
-        document_id=doc.id,
+        document_id=doc.document_id,
         chunk_count=len(chunks),
         token_count=total_tokens,
         message=f"Document stored successfully with {len(chunks)} chunks",
@@ -206,7 +206,7 @@ class GetDocumentInput(BaseModel):
 
 
 class GetDocumentOutput(BaseModel):
-    id: str
+    document_id: str
     collection_id: str
     title: str
     content: str
@@ -240,7 +240,7 @@ async def get_document(input_data: GetDocumentInput) -> GetDocumentOutput | None
         return None
 
     return GetDocumentOutput(
-        id=doc.id,
+        document_id=doc.document_id,
         collection_id=doc.collection_id,
         title=doc.title,
         content=doc.content,
@@ -285,7 +285,7 @@ async def list_documents(input_data: ListDocumentsInput) -> ListDocumentsOutput:
 
     documents = [
         GetDocumentOutput(
-            id=d.id,
+            document_id=d.document_id,
             collection_id=d.collection_id,
             title=d.title,
             content=d.content,
@@ -453,7 +453,7 @@ async def update_document(input_data: UpdateDocumentInput) -> UpdateDocumentOutp
 
         chunks_with_meta = [
             {
-                "document_id": updated_doc.id,
+                "document_id": updated_doc.document_id,
                 "chunk_index": c["chunk_index"],
                 "content": c["content"],
                 "token_count": c["token_count"],
@@ -468,12 +468,12 @@ async def update_document(input_data: UpdateDocumentInput) -> UpdateDocumentOutp
                 point_ids = await q.upsert_chunks(chunks_with_meta, embeddings)
         else:
             point_ids = await qdrant.upsert_chunks(chunks_with_meta, embeddings)
-        await doc_repo.update_qdrant_point_ids(updated_doc.id, point_ids)
+        await doc_repo.update_qdrant_point_ids(updated_doc.document_id, point_ids)
 
     total_tokens = sum(c["token_count"] for c in chunks)
 
     return UpdateDocumentOutput(
-        document_id=updated_doc.id,
+        document_id=updated_doc.document_id,
         chunk_count=len(chunks),
         token_count=total_tokens,
         message=f"Document updated successfully with {len(chunks)} chunks",

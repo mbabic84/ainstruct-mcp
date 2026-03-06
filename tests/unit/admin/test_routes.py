@@ -50,7 +50,7 @@ class TestSearchUsers:
             "User",
             (),
             {
-                "id": "user-123",
+                "user_id": "user-123",
                 "email": "test@example.com",
                 "username": "testuser",
                 "is_active": True,
@@ -84,7 +84,7 @@ class TestSearchUsers:
             "User",
             (),
             {
-                "id": "user-456",
+                "user_id": "user-456",
                 "email": "search@example.com",
                 "username": "searchuser",
                 "is_active": True,
@@ -164,7 +164,7 @@ class TestPromoteUser:
             "User",
             (),
             {
-                "id": "user-123",
+                "user_id": "user-123",
                 "email": "test@example.com",
                 "username": "testuser",
                 "is_active": True,

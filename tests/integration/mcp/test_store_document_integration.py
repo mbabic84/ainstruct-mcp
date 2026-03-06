@@ -67,7 +67,7 @@ class TestStoreDocumentWithRealServices:
         mock_doc_repo = MagicMock()
         mock_doc_repo.create = AsyncMock(
             return_value=MagicMock(
-                id="doc-new-123",
+                document_id="doc-new-123",
                 collection_id=mock_pat_info["collection_ids"][0],
             )
         )
@@ -128,7 +128,7 @@ class TestStoreDocumentWithRealServices:
         mock_doc_repo = MagicMock()
         mock_doc_repo.create = AsyncMock(
             return_value=MagicMock(
-                id="doc-new-456",
+                document_id="doc-new-456",
                 collection_id=mock_cat_info["collection_id"],
             )
         )
@@ -196,7 +196,7 @@ class TestStoreDocumentWithRealServices:
 
         mock_doc_repo = MagicMock()
         mock_doc_repo.create = AsyncMock(
-            return_value=MagicMock(id="doc-col-789", collection_id="specific-collection")
+            return_value=MagicMock(document_id="doc-col-789", collection_id="specific-collection")
         )
         mock_doc_repo.update_qdrant_point_ids = AsyncMock()
 

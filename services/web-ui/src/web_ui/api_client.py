@@ -56,6 +56,7 @@ class ApiClient:
         path: str,
         json: dict | None = None,
         params: dict | None = None,
+        retry_on_401: bool = True,
     ) -> httpx.Response:
         url = self._get_url(path)
         response = self._client.request(
@@ -65,6 +66,30 @@ class ApiClient:
             params=params,
             headers=self._get_headers(),
         )
+
+        # Handle expired tokens automatically
+        if response.status_code == 401 and retry_on_401 and self.refresh_token:
+            refresh_res = self.refresh(self.refresh_token)
+            if refresh_res.status_code == 200:
+                data = refresh_res.json()
+                self.set_tokens(data["access_token"], data["refresh_token"])
+
+                # Attempt to update storage if we are in a NiceGUI context
+                try:
+                    from nicegui import ui
+
+                    ui.run_javascript(
+                        f"localStorage.setItem('access_token', '{data['access_token']}')"
+                    )
+                    ui.run_javascript(
+                        f"localStorage.setItem('refresh_token', '{data['refresh_token']}')"
+                    )
+                except:
+                    pass
+
+                # Retry original request with new token
+                return self._request(method, path, json, params, retry_on_401=False)
+
         return response
 
     def register(self, username: str, email: str, password: str) -> httpx.Response:
@@ -86,6 +111,7 @@ class ApiClient:
             "POST",
             "/api/v1/auth/refresh",
             json={"refresh_token": refresh_token},
+            retry_on_401=False,
         )
 
     def get_profile(self) -> httpx.Response:

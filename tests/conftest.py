@@ -1,4 +1,5 @@
 """Shared pytest configuration and fixtures for the workspace."""
+
 import sys
 from pathlib import Path
 from typing import Any
@@ -16,7 +17,7 @@ sys.path.insert(0, str(workspace_root / "services" / "rest-api" / "src"))
 def mock_settings(monkeypatch: pytest.MonkeyPatch) -> None:
     """Mock settings for testing."""
     monkeypatch.setenv("USE_MOCK_EMBEDDINGS", "true")
-    monkeypatch.setenv("JWT_SECRET_KEY", "test-secret-key")
+    monkeypatch.setenv("JWT_SECRET_KEY", "test-secret-key-that-is-at-least-32-bytes-long")
     monkeypatch.setenv("QDRANT_URL", "http://localhost:6333")
 
 

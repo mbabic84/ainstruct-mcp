@@ -1,3 +1,10 @@
+## [4.2.4](https://github.com/mbabic84/ainstruct-mcp/compare/v4.2.3...v4.2.4) (2026-03-06)
+
+
+### Bug Fixes
+
+* collection row click navigation and document response field ([361c02e](https://github.com/mbabic84/ainstruct-mcp/commit/361c02e2982d46d125cbbc17b91e0e8c7488b772))
+
 ## [4.2.3](https://github.com/mbabic84/ainstruct-mcp/compare/v4.2.2...v4.2.3) (2026-03-06)
 
 

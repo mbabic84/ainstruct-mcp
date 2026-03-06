@@ -91,24 +91,24 @@ async def list_cats(
 
     if collection_id:
         cats = await cat_repo.list_by_user(user.user_id)
-        cats = [c for c in cats if c.get("collection_id") == collection_id]
+        cats = [cat for cat in cats if cat.get("collection_id") == collection_id]
     else:
         cats = await cat_repo.list_by_user(user.user_id)
 
     items = [
         CatListItem(
-            cat_id=c["cat_id"],
-            label=c["label"],
-            collection_id=c["collection_id"],
-            collection_name=c.get("collection_name"),
+            cat_id=cat["cat_id"],
+            label=cat["label"],
+            collection_id=cat["collection_id"],
+            collection_name=cat.get("collection_name"),
             permission="read_write"
-            if c.get("permission") == ModelPermission.READ_WRITE
+            if cat.get("permission") == ModelPermission.READ_WRITE
             else "read",
-            created_at=c["created_at"],
-            expires_at=c.get("expires_at"),
-            is_active=c["is_active"],
+            created_at=cat["created_at"],
+            expires_at=cat.get("expires_at"),
+            is_active=cat["is_active"],
         )
-        for c in cats
+        for cat in cats
     ]
 
     return CatListResponse(tokens=items)

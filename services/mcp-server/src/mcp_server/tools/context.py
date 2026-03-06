@@ -161,7 +161,7 @@ def get_auth_context() -> dict:
             "is_admin": user_info.get("is_superuser", False),
             "is_superuser": user_info.get("is_superuser", False),
             "auth_type": "jwt",
-            "collection_ids": [c["id"] for c in user_collections],
+            "collection_ids": [c["collection_id"] for c in user_collections],
             "qdrant_collections": [c["qdrant_collection"] for c in user_collections],
         }
 
@@ -177,7 +177,7 @@ def get_auth_context() -> dict:
             "is_admin": pat_info.get("is_superuser", False),
             "is_superuser": pat_info.get("is_superuser", False),
             "auth_type": "pat",
-            "collection_ids": [c["id"] for c in pat_collections],
+            "collection_ids": [c["collection_id"] for c in pat_collections],
             "qdrant_collections": [c["qdrant_collection"] for c in pat_collections],
         }
 

@@ -153,6 +153,7 @@ class CollectionResponse(BaseModel):
     document_count: int
     cat_count: int
     created_at: datetime
+    updated_at: datetime | None = None
 
 
 class CollectionListResponse(BaseModel):

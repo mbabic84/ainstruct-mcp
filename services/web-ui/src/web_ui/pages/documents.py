@@ -2,7 +2,7 @@ from nicegui import APIRouter, ui
 
 from web_ui.auth import load_tokens_from_storage, require_auth
 from web_ui.components import render_page
-from web_ui.components.common import add_table_actions, confirm_action
+from web_ui.components.common import add_table_actions, confirm_action, document_dialog
 from web_ui.utils import format_date, handle_api_error
 
 router = APIRouter(prefix="")
@@ -92,9 +92,11 @@ async def documents_page(collection_id: str | None = None):
                             }
                         )
 
-                    def handle_edit(e):
+                    async def handle_edit(e):
                         doc_id = e.args[1]["id"]
-                        ui.navigate.to(f"/documents/{doc_id}/edit")
+                        if await document_dialog(doc_id, api_client):
+                            # Refresh documents list
+                            ui.navigate.reload()
 
                     def handle_delete(e):
                         doc_id = e.args[0]["id"]
@@ -128,52 +130,5 @@ async def documents_page(collection_id: str | None = None):
                 ui.label("No documents yet.")
         else:
             ui.notify(f"Error loading documents: {response.text}", type="negative")
-
-    render_page(content)
-
-
-@router.page("/documents/{doc_id}/edit")
-async def document_edit_page(doc_id: str):
-    await load_tokens_from_storage()
-
-    if not require_auth():
-        return
-
-    def content():
-        from web_ui.auth import get_api_client
-
-        api_client = get_api_client()
-
-        response = api_client.get_document(doc_id)
-        if response.status_code != 200:
-            ui.notify("Document not found", type="negative")
-            ui.navigate.to("/documents")
-            return
-
-        doc = response.json()
-
-        title_input = ui.input("Title", value=doc["title"]).classes("w-full")
-        doc_type_input = ui.select(
-            options=["markdown", "text", "html"],
-            label="Document Type",
-            value=doc["document_type"],
-        ).classes("w-full")
-        content_input = ui.textarea("Content", value=doc.get("content", "")).classes("w-full h-64")
-
-        with ui.row().classes("gap-2 mt-4"):
-
-            def save_document():
-                update_data = {
-                    "title": title_input.value,
-                    "document_type": doc_type_input.value,
-                    "content": content_input.value,
-                }
-                response = api_client.update_document(doc_id, **update_data)
-                if handle_api_error(response, "Failed to save document"):
-                    ui.notify("Document saved")
-                    ui.navigate.to("/documents")
-
-            ui.button("Save", on_click=save_document).props("color=primary")
-            ui.button("Cancel", on_click=lambda: ui.navigate.to("/documents")).props("flat")
 
     render_page(content)

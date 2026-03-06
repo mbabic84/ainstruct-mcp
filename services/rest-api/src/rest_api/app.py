@@ -25,6 +25,12 @@ def create_app() -> FastAPI:
         lifespan=lifespan,
     )
 
+    if app.openapi_schema:
+        app.openapi_schema["components"]["securitySchemes"] = {
+            "HTTPBearer": {"type": "http", "scheme": "bearer"},
+            "AdminApiKey": {"type": "apiKey", "in": "header", "name": "X-Admin-Api-Key"},
+        }
+
     app.add_middleware(
         CORSMiddleware,
         allow_origins=["*"],

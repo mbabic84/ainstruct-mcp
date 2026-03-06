@@ -215,6 +215,44 @@ class DocumentRepository:
             )
             return result.scalar() or 0
 
+    async def count_by_user(self, user_id: str) -> int:
+        async with self.async_session() as session:
+            result = await session.execute(
+                select(func.count(DocumentModel.id))
+                .join(CollectionModel)
+                .where(CollectionModel.user_id == user_id)
+            )
+            return result.scalar() or 0
+
+    async def list_by_collection(
+        self, user_id: str, collection_id: str, limit: int = 50, offset: int = 0
+    ) -> list[DocumentResponse]:
+        async with self.async_session() as session:
+            query = (
+                select(DocumentModel)
+                .join(CollectionModel)
+                .where(CollectionModel.user_id == user_id)
+                .where(DocumentModel.collection_id == collection_id)
+                .order_by(DocumentModel.created_at.desc())
+            )
+
+            result = await session.execute(query.limit(limit).offset(offset))
+            docs = result.scalars().all()
+
+            return [
+                DocumentResponse(
+                    id=d.id,
+                    collection_id=d.collection_id,
+                    title=d.title,
+                    content=d.content,
+                    document_type=d.document_type,
+                    created_at=d.created_at,
+                    updated_at=d.updated_at,
+                    doc_metadata=d.doc_metadata or {},
+                )
+                for d in docs
+            ]
+
     async def get_by_id_for_user(self, doc_id: str, user_id: str) -> DocumentResponse | None:
         async with self.async_session() as session:
             query = (

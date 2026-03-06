@@ -1,3 +1,10 @@
+# [4.6.0](https://github.com/mbabic84/ainstruct-mcp/compare/v4.5.3...v4.6.0) (2026-03-06)
+
+
+### Features
+
+* **web-ui:** add VS Code Dark theme with matching colors ([b98328b](https://github.com/mbabic84/ainstruct-mcp/commit/b98328b068c367ffcbfe35a560b9a56534d3eeff))
+
 ## [4.5.3](https://github.com/mbabic84/ainstruct-mcp/compare/v4.5.2...v4.5.3) (2026-03-06)
 
 

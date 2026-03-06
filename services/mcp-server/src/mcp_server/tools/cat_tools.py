@@ -28,9 +28,11 @@ async def create_cat(input_data: CreateCatInput) -> CatResponse:
     user_info = get_user_info()
     pat_info = get_pat_info()
 
-    auth_info = user_info or pat_info
-    if not auth_info:
-        raise ValueError("JWT or PAT authentication required to create CAT tokens")
+    is_superuser = False
+    if user_info:
+        is_superuser = user_info.get("is_superuser", False)
+    elif pat_info:
+        is_superuser = pat_info.get("is_superuser", False)
 
     collection_repo = get_collection_repository()
     collection = await collection_repo.get_by_id(input_data.collection_id)
@@ -38,13 +40,15 @@ async def create_cat(input_data: CreateCatInput) -> CatResponse:
     if not collection:
         raise ValueError("Collection not found")
 
-    if collection["user_id"] != auth_info.get("id") and not auth_info.get("is_superuser"):
+    if collection["user_id"] != user_id and not is_superuser:
         raise ValueError("Collection not found")
 
     try:
         permission = Permission(input_data.permission)
     except ValueError:
-        raise ValueError(f"Invalid permission: {input_data.permission}. Must be 'read' or 'read_write'")
+        raise ValueError(
+            f"Invalid permission: {input_data.permission}. Must be 'read' or 'read_write'"
+        )
 
     repo = get_cat_repository()
     key_id, key = await repo.create(
@@ -60,7 +64,7 @@ async def create_cat(input_data: CreateCatInput) -> CatResponse:
         raise ValueError("Failed to retrieve key info")
 
     return CatResponse(
-        id=key_id,
+        cat_id=key_id,
         label=input_data.label,
         key=key,
         collection_id=input_data.collection_id,
@@ -81,14 +85,14 @@ async def list_cats() -> list[CatListResponse]:
     user_id = None
 
     if auth_info and not auth_info.get("is_superuser"):
-        user_id = auth_info.get("id")
+        user_id = auth_info.get("user_id")
 
     repo = get_cat_repository()
     keys = await repo.list_all(user_id=user_id)
 
     return [
         CatListResponse(
-            id=k["id"],
+            cat_id=k["cat_id"],
             label=k["label"],
             collection_id=k["collection_id"],
             collection_name=k.get("collection_name", ""),
@@ -103,18 +107,26 @@ async def list_cats() -> list[CatListResponse]:
 
 
 async def revoke_cat(input_data: RevokeCatInput) -> dict:
+    import logging
+
+    logger = logging.getLogger(__name__)
+
     repo = get_cat_repository()
 
     key_info = await repo.get_by_id(input_data.key_id)
     if not key_info:
         raise ValueError("CAT token not found")
 
+    logger.info(f"revoke_cat: key_info.user_id = {key_info.get('user_id')}")
+
     user_info = get_user_info()
     pat_info = get_pat_info()
+    logger.info(f"revoke_cat: user_info = {user_info}, pat_info = {pat_info}")
 
     auth_info = user_info or pat_info
     if auth_info and not auth_info.get("is_superuser"):
-        if key_info.get("user_id") and key_info.get("user_id") != auth_info.get("id"):
+        logger.info(f"revoke_cat: auth_info.user_id = {auth_info.get('user_id')}")
+        if key_info.get("user_id") and key_info.get("user_id") != auth_info.get("user_id"):
             raise ValueError("You can only revoke your own CAT tokens")
 
     success = await repo.revoke(input_data.key_id)
@@ -136,7 +148,7 @@ async def rotate_cat(input_data: RotateCatInput) -> CatResponse:
 
     auth_info = user_info or pat_info
     if auth_info and not auth_info.get("is_superuser"):
-        if key_info.get("user_id") and key_info.get("user_id") != auth_info.get("id"):
+        if key_info.get("user_id") and key_info.get("user_id") != auth_info.get("user_id"):
             raise ValueError("You can only rotate your own CAT tokens")
 
     result = await repo.rotate(input_data.key_id)
@@ -149,7 +161,7 @@ async def rotate_cat(input_data: RotateCatInput) -> CatResponse:
         raise ValueError("Failed to retrieve new key info")
 
     return CatResponse(
-        id=new_key_id,
+        cat_id=new_key_id,
         label=new_key_info["label"],
         key=new_key,
         collection_id=new_key_info["collection_id"],

@@ -1,3 +1,10 @@
+# [4.8.0](https://github.com/mbabic84/ainstruct-mcp/compare/v4.7.1...v4.8.0) (2026-03-07)
+
+
+### Features
+
+* add CodeMirror built-in languages support for document types ([459caa1](https://github.com/mbabic84/ainstruct-mcp/commit/459caa14b7728ed2928619d9d4e38fd94449c6a0))
+
 ## [4.7.1](https://github.com/mbabic84/ainstruct-mcp/compare/v4.7.0...v4.7.1) (2026-03-07)
 
 

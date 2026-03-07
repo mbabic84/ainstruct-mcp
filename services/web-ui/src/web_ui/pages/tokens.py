@@ -2,7 +2,7 @@ from nicegui import APIRouter, ui
 
 from web_ui.auth import load_tokens_from_storage, require_auth
 from web_ui.components import render_page
-from web_ui.components.common import add_table_action_buttons, confirm_action, mcp_token_dialog
+from web_ui.components.common import add_table_action_buttons, mcp_token_dialog
 from web_ui.utils import format_date, handle_api_error
 
 router = APIRouter(prefix="")
@@ -100,7 +100,6 @@ def _render_pat_table(api_client, pats):
 
     async def rotate_pat(item):
         item_id = item["id"]
-        item_label = item.get("label", "this PAT")
 
         async def do_rotate():
             response = api_client.rotate_pat(item_id)
@@ -111,18 +110,8 @@ def _render_pat_table(api_client, pats):
             else:
                 ui.notify(f"Error: {response.text}", type="negative")
 
-        await confirm_action(
-            f"Rotate '{item_label}'?",
-            "A new token will be generated and the old one will be invalidated.",
-            do_rotate,
-            "Cancel",
-            "Rotate",
-            color="warning",
-        )
-
     async def revoke_pat(item):
         item_id = item["id"]
-        item_label = item.get("label", "this PAT")
 
         async def do_revoke():
             response = api_client.revoke_pat(item_id)
@@ -130,21 +119,27 @@ def _render_pat_table(api_client, pats):
                 ui.notify("PAT revoked")
                 ui.navigate.reload()
 
-        await confirm_action(
-            f"Revoke '{item_label}'?",
-            "This action cannot be undone.",
-            do_revoke,
-            "Cancel",
-            "Revoke",
-        )
-
     table = ui.table(columns=columns, rows=rows, row_key="id").classes("w-full")
     add_table_action_buttons(
         table,
         "actions",
         [
-            {"icon": "refresh", "color": "warning", "on_click": rotate_pat},
-            {"icon": "delete", "color": "negative", "on_click": revoke_pat},
+            {
+                "icon": "refresh",
+                "color": "warning",
+                "on_click": rotate_pat,
+                "confirm": True,
+                "confirm_message": "A new token will be generated and the old one will be invalidated.",
+                "confirm_label": "Rotate",
+            },
+            {
+                "icon": "delete",
+                "color": "negative",
+                "on_click": revoke_pat,
+                "confirm": True,
+                "confirm_message": "This action cannot be undone.",
+                "confirm_label": "Revoke",
+            },
         ],
     )
 
@@ -249,7 +244,6 @@ def _render_cat_table(api_client, cats):
 
     async def rotate_cat(item):
         item_id = item["id"]
-        item_label = item.get("label", "this CAT")
 
         async def do_rotate():
             response = api_client.rotate_cat(item_id)
@@ -260,18 +254,8 @@ def _render_cat_table(api_client, cats):
             else:
                 ui.notify(f"Error: {response.text}", type="negative")
 
-        await confirm_action(
-            f"Rotate '{item_label}'?",
-            "A new token will be generated and the old one will be invalidated.",
-            do_rotate,
-            "Cancel",
-            "Rotate",
-            color="warning",
-        )
-
     async def revoke_cat(item):
         item_id = item["id"]
-        item_label = item.get("label", "this CAT")
 
         async def do_revoke():
             response = api_client.revoke_cat(item_id)
@@ -279,13 +263,29 @@ def _render_cat_table(api_client, cats):
                 ui.notify("CAT revoked")
                 ui.navigate.to("/tokens?tab=cat")
 
-        await confirm_action(
-            f"Revoke '{item_label}'?",
-            "This action cannot be undone.",
-            do_revoke,
-            "Cancel",
-            "Revoke",
-        )
+    table = ui.table(columns=columns, rows=rows, row_key="id").classes("w-full")
+    add_table_action_buttons(
+        table,
+        "actions",
+        [
+            {
+                "icon": "refresh",
+                "color": "warning",
+                "on_click": rotate_cat,
+                "confirm": True,
+                "confirm_message": "A new token will be generated and the old one will be invalidated.",
+                "confirm_label": "Rotate",
+            },
+            {
+                "icon": "delete",
+                "color": "negative",
+                "on_click": revoke_cat,
+                "confirm": True,
+                "confirm_message": "This action cannot be undone.",
+                "confirm_label": "Revoke",
+            },
+        ],
+    )
 
     table = ui.table(columns=columns, rows=rows, row_key="id").classes("w-full")
     add_table_action_buttons(

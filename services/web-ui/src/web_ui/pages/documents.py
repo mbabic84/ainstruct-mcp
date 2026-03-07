@@ -1,7 +1,7 @@
 from nicegui import APIRouter, ui
 
 from web_ui.auth import load_tokens_from_storage, require_auth
-from web_ui.components import add_table_action_buttons, confirm_action, render_page
+from web_ui.components import add_table_action_buttons, render_page
 from web_ui.utils import format_date, handle_api_error
 
 router = APIRouter(prefix="")
@@ -98,21 +98,12 @@ async def documents_page(collection_id: str | None = None):
 
                     async def handle_delete(item):
                         item_id = item["id"]
-                        item_label = item.get("label", "this document")
 
                         async def do_delete():
                             response = api_client.delete_document(item_id)
                             if handle_api_error(response, "Failed to delete document"):
                                 ui.notify("Document deleted")
                                 ui.navigate.reload()
-
-                        await confirm_action(
-                            f"Delete '{item_label}'?",
-                            "This action cannot be undone.",
-                            do_delete,
-                            "Cancel",
-                            "Delete",
-                        )
 
                     table = (
                         ui.table(columns=columns, rows=rows, row_key="id")
@@ -128,6 +119,9 @@ async def documents_page(collection_id: str | None = None):
                                 "color": "negative",
                                 "on_click": handle_delete,
                                 "label_field": "title",
+                                "confirm": True,
+                                "confirm_message": "Deleting a document removes it permanently. This action cannot be undone.",
+                                "confirm_label": "Delete",
                             }
                         ],
                     )

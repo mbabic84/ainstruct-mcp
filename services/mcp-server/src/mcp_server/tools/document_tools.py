@@ -273,6 +273,7 @@ async def get_document(input_data: GetDocumentInput) -> GetDocumentOutput | None
 class ListDocumentsInput(BaseModel):
     limit: int = 50
     offset: int = 0
+    collection_id: str | None = None
 
 
 class ListDocumentsOutput(BaseModel):
@@ -290,7 +291,18 @@ async def list_documents(input_data: ListDocumentsInput) -> ListDocumentsOutput:
     auth_type = auth.get("auth_type")
     user_id = auth.get("user_id")
 
-    if is_admin:
+    if input_data.collection_id:
+        collection_repo = get_collection_repository()
+        collection = await collection_repo.get_by_id(input_data.collection_id)
+        if not collection or collection.get("user_id") != user_id:
+            raise ValueError("Collection not found or access denied")
+
+        doc_repo = get_document_repository(None)
+        docs = await doc_repo.list_by_collection(
+            user_id, input_data.collection_id, limit=input_data.limit, offset=input_data.offset
+        )
+        total = await doc_repo.count_by_collection(input_data.collection_id)
+    elif is_admin:
         doc_repo = get_document_repository(None)
         docs = await doc_repo.list_all(limit=input_data.limit, offset=input_data.offset)
         total = await doc_repo.count_all()

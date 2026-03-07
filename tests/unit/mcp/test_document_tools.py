@@ -602,6 +602,263 @@ class TestListDocuments:
             mock_doc_repo.count_by_user.assert_called_once_with("user-789")
         clear_all_auth()
 
+    @pytest.mark.asyncio
+    async def test_list_documents_with_collection_id_filter(self):
+        """Test that list_documents with collection_id filters by collection."""
+        clear_cat_info()
+        clear_all_auth()
+        set_user_info(
+            {
+                "user_id": "user-456",
+                "username": "user",
+                "email": "user@test.com",
+                "is_superuser": False,
+                "scopes": ["read"],
+            }
+        )
+        set_user_collections(
+            [
+                {"collection_id": "col-1", "qdrant_collection": "qdrant-1"},
+                {"collection_id": "col-2", "qdrant_collection": "qdrant-2"},
+            ]
+        )
+
+        mock_collection_repo = MagicMock()
+        mock_collection_repo.get_by_id = AsyncMock(
+            return_value={
+                "collection_id": "col-1",
+                "user_id": "user-456",
+                "name": "Collection 1",
+            }
+        )
+
+        mock_doc_repo = MagicMock()
+        mock_doc_repo.list_by_collection = AsyncMock(
+            return_value=[
+                MagicMock(
+                    document_id="doc-1",
+                    collection_id="col-1",
+                    title="Doc in Collection 1",
+                    content="Content",
+                    document_type="markdown",
+                    created_at=datetime(2024, 1, 1),
+                    updated_at=datetime(2024, 1, 1),
+                    doc_metadata={},
+                ),
+            ]
+        )
+        mock_doc_repo.count_by_collection = AsyncMock(return_value=1)
+
+        with (
+            patch(
+                "mcp_server.tools.document_tools.get_collection_repository",
+                return_value=mock_collection_repo,
+            ),
+            patch(
+                "mcp_server.tools.document_tools.get_document_repository",
+                return_value=mock_doc_repo,
+            ),
+        ):
+            result = await list_documents(
+                ListDocumentsInput(limit=50, offset=0, collection_id="col-1")
+            )
+
+            assert result.total == 1
+            assert len(result.documents) == 1
+            assert result.documents[0].document_id == "doc-1"
+            mock_doc_repo.list_by_collection.assert_called_once_with(
+                "user-456", "col-1", limit=50, offset=0
+            )
+        clear_all_auth()
+
+    @pytest.mark.asyncio
+    async def test_list_documents_with_collection_id_not_owned(self):
+        """Test that list_documents raises error when accessing another user's collection."""
+        clear_cat_info()
+        clear_all_auth()
+        set_user_info(
+            {
+                "user_id": "user-456",
+                "username": "user",
+                "email": "user@test.com",
+                "is_superuser": False,
+                "scopes": ["read"],
+            }
+        )
+        set_user_collections([])
+
+        mock_collection_repo = MagicMock()
+        mock_collection_repo.get_by_id = AsyncMock(
+            return_value={
+                "collection_id": "col-1",
+                "user_id": "other-user",
+                "name": "Other User Collection",
+            }
+        )
+
+        with patch(
+            "mcp_server.tools.document_tools.get_collection_repository",
+            return_value=mock_collection_repo,
+        ):
+            with pytest.raises(ValueError, match="Collection not found or access denied"):
+                await list_documents(ListDocumentsInput(limit=50, offset=0, collection_id="col-1"))
+        clear_all_auth()
+
+    @pytest.mark.asyncio
+    async def test_list_documents_with_collection_id_not_found(self):
+        """Test that list_documents raises error for non-existent collection."""
+        clear_cat_info()
+        clear_all_auth()
+        set_user_info(
+            {
+                "user_id": "user-456",
+                "username": "user",
+                "email": "user@test.com",
+                "is_superuser": False,
+                "scopes": ["read"],
+            }
+        )
+        set_user_collections([])
+
+        mock_collection_repo = MagicMock()
+        mock_collection_repo.get_by_id = AsyncMock(return_value=None)
+
+        with patch(
+            "mcp_server.tools.document_tools.get_collection_repository",
+            return_value=mock_collection_repo,
+        ):
+            with pytest.raises(ValueError, match="Collection not found or access denied"):
+                await list_documents(
+                    ListDocumentsInput(limit=50, offset=0, collection_id="non-existent")
+                )
+        clear_all_auth()
+
+    @pytest.mark.asyncio
+    async def test_list_documents_without_collection_id(self):
+        """Test that list_documents without collection_id returns all user documents."""
+        clear_cat_info()
+        clear_all_auth()
+        set_user_info(
+            {
+                "user_id": "user-456",
+                "username": "user",
+                "email": "user@test.com",
+                "is_superuser": False,
+                "scopes": ["read"],
+            }
+        )
+        set_user_collections(
+            [
+                {"collection_id": "col-1", "qdrant_collection": "qdrant-1"},
+            ]
+        )
+
+        mock_doc_repo = MagicMock()
+        mock_doc_repo.list_all_for_user = AsyncMock(
+            return_value=[
+                MagicMock(
+                    document_id="doc-1",
+                    collection_id="col-1",
+                    title="Doc 1",
+                    content="Content",
+                    document_type="markdown",
+                    created_at=datetime(2024, 1, 1),
+                    updated_at=datetime(2024, 1, 1),
+                    doc_metadata={},
+                ),
+                MagicMock(
+                    document_id="doc-2",
+                    collection_id="col-2",
+                    title="Doc 2",
+                    content="Content",
+                    document_type="markdown",
+                    created_at=datetime(2024, 1, 2),
+                    updated_at=datetime(2024, 1, 2),
+                    doc_metadata={},
+                ),
+            ]
+        )
+        mock_doc_repo.count_by_user = AsyncMock(return_value=2)
+
+        with patch(
+            "mcp_server.tools.document_tools.get_document_repository",
+            return_value=mock_doc_repo,
+        ):
+            result = await list_documents(ListDocumentsInput(limit=50, offset=0))
+
+            assert result.total == 2
+            assert len(result.documents) == 2
+            mock_doc_repo.list_all_for_user.assert_called_once_with("user-456", limit=50, offset=0)
+        clear_all_auth()
+
+    @pytest.mark.asyncio
+    async def test_list_documents_with_collection_id_pagination(self):
+        """Test that pagination works with collection_id filter."""
+        clear_cat_info()
+        clear_all_auth()
+        set_user_info(
+            {
+                "user_id": "user-456",
+                "username": "user",
+                "email": "user@test.com",
+                "is_superuser": False,
+                "scopes": ["read"],
+            }
+        )
+        set_user_collections(
+            [
+                {"collection_id": "col-1", "qdrant_collection": "qdrant-1"},
+            ]
+        )
+
+        mock_collection_repo = MagicMock()
+        mock_collection_repo.get_by_id = AsyncMock(
+            return_value={
+                "collection_id": "col-1",
+                "user_id": "user-456",
+                "name": "Collection 1",
+            }
+        )
+
+        mock_doc_repo = MagicMock()
+        mock_doc_repo.list_by_collection = AsyncMock(
+            return_value=[
+                MagicMock(
+                    document_id="doc-2",
+                    collection_id="col-1",
+                    title="Doc 2",
+                    content="Content",
+                    document_type="markdown",
+                    created_at=datetime(2024, 1, 2),
+                    updated_at=datetime(2024, 1, 2),
+                    doc_metadata={},
+                ),
+            ]
+        )
+        mock_doc_repo.count_by_collection = AsyncMock(return_value=10)
+
+        with (
+            patch(
+                "mcp_server.tools.document_tools.get_collection_repository",
+                return_value=mock_collection_repo,
+            ),
+            patch(
+                "mcp_server.tools.document_tools.get_document_repository",
+                return_value=mock_doc_repo,
+            ),
+        ):
+            result = await list_documents(
+                ListDocumentsInput(limit=1, offset=1, collection_id="col-1")
+            )
+
+            assert result.total == 10
+            assert len(result.documents) == 1
+            assert result.documents[0].document_id == "doc-2"
+            mock_doc_repo.list_by_collection.assert_called_once_with(
+                "user-456", "col-1", limit=1, offset=1
+            )
+        clear_all_auth()
+
 
 class TestDeleteDocument:
     """Test cases for delete_document function."""

@@ -3,6 +3,7 @@ from shared.db import (
     get_cat_repository,
     get_collection_repository,
     get_pat_token_repository,
+    get_qdrant_service,
     get_user_repository,
 )
 from shared.services import get_auth_service
@@ -182,6 +183,7 @@ async def update_user(
     responses={
         404: {"model": ErrorResponse, "description": "User not found"},
         400: {"model": ErrorResponse, "description": "Cannot delete self"},
+        500: {"model": ErrorResponse, "description": "Qdrant deletion failed"},
     },
 )
 async def delete_user(
@@ -190,6 +192,8 @@ async def delete_user(
     admin: AdminDep,
 ):
     user_repo = get_user_repository()
+    collection_repo = get_collection_repository()
+
     user = await user_repo.get_by_id(user_id)
 
     if not user:
@@ -203,6 +207,21 @@ async def delete_user(
             status_code=status.HTTP_400_BAD_REQUEST,
             detail={"code": "CANNOT_DELETE_SELF", "message": "Cannot delete your own account"},
         )
+
+    collections = await collection_repo.list_by_user(user_id)
+
+    for collection in collections:
+        qdrant_service = get_qdrant_service(collection["qdrant_collection"])
+        try:
+            await qdrant_service.delete_collection(collection["qdrant_collection"])
+        except Exception as e:
+            raise HTTPException(
+                status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+                detail={
+                    "code": "QDRANT_DELETE_FAILED",
+                    "message": f"Failed to delete collection '{collection['name']}' from vector store: {e}",
+                },
+            )
 
     await user_repo.delete(user_id)
     return MessageResponse(message="User deleted successfully")

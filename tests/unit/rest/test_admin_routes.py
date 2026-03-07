@@ -245,3 +245,191 @@ class TestPromoteUser:
 
         assert response.status_code == 503
         assert response.json()["detail"]["code"] == "ADMIN_API_KEY_NOT_CONFIGURED"
+
+
+class TestDeleteUser:
+    """Test cases for delete_user endpoint."""
+
+    def test_delete_user_success(self, app, client, admin_user):
+        """Test successful user deletion with Qdrant cleanup."""
+        mock_user = type(
+            "User",
+            (),
+            {
+                "user_id": "user-to-delete",
+                "email": "delete@example.com",
+                "username": "deleteuser",
+                "is_active": True,
+                "is_superuser": False,
+                "created_at": "2024-01-01T00:00:00",
+            },
+        )()
+
+        mock_collections = [
+            {"collection_id": "col-1", "name": "Collection 1", "qdrant_collection": "qdrant-col-1"},
+            {"collection_id": "col-2", "name": "Collection 2", "qdrant_collection": "qdrant-col-2"},
+        ]
+
+        app.dependency_overrides[get_current_user] = lambda: admin_user
+
+        with (
+            patch("rest_api.routes.admin.get_user_repository") as mock_user_repo,
+            patch("rest_api.routes.admin.get_collection_repository") as mock_col_repo,
+            patch("rest_api.routes.admin.get_qdrant_service") as mock_qdrant_service,
+        ):
+            user_repository = AsyncMock()
+            user_repository.get_by_id = AsyncMock(return_value=mock_user)
+            user_repository.delete = AsyncMock(return_value=True)
+            mock_user_repo.return_value = user_repository
+
+            collection_repository = AsyncMock()
+            collection_repository.list_by_user = AsyncMock(return_value=mock_collections)
+            mock_col_repo.return_value = collection_repository
+
+            mock_qdrant_instance = AsyncMock()
+            mock_qdrant_service.return_value = mock_qdrant_instance
+
+            response = client.delete("/api/v1/admin/users/user-to-delete")
+
+        assert response.status_code == 200
+        data = response.json()
+        assert data["message"] == "User deleted successfully"
+
+        assert mock_qdrant_instance.delete_collection.call_count == 2
+        mock_qdrant_instance.delete_collection.assert_any_call("qdrant-col-1")
+        mock_qdrant_instance.delete_collection.assert_any_call("qdrant-col-2")
+
+        user_repository.delete.assert_called_once_with("user-to-delete")
+
+        app.dependency_overrides.clear()
+
+    def test_delete_user_with_no_collections(self, app, client, admin_user):
+        """Test user deletion when user has no collections."""
+        mock_user = type(
+            "User",
+            (),
+            {
+                "user_id": "user-no-cols",
+                "email": "nocols@example.com",
+                "username": "nocolsuser",
+                "is_active": True,
+                "is_superuser": False,
+                "created_at": "2024-01-01T00:00:00",
+            },
+        )()
+
+        app.dependency_overrides[get_current_user] = lambda: admin_user
+
+        with (
+            patch("rest_api.routes.admin.get_user_repository") as mock_user_repo,
+            patch("rest_api.routes.admin.get_collection_repository") as mock_col_repo,
+            patch("rest_api.routes.admin.get_qdrant_service") as mock_qdrant_service,
+        ):
+            user_repository = AsyncMock()
+            user_repository.get_by_id = AsyncMock(return_value=mock_user)
+            user_repository.delete = AsyncMock(return_value=True)
+            mock_user_repo.return_value = user_repository
+
+            collection_repository = AsyncMock()
+            collection_repository.list_by_user = AsyncMock(return_value=[])
+            mock_col_repo.return_value = collection_repository
+
+            mock_qdrant_instance = AsyncMock()
+            mock_qdrant_service.return_value = mock_qdrant_instance
+
+            response = client.delete("/api/v1/admin/users/user-no-cols")
+
+        assert response.status_code == 200
+
+        mock_qdrant_instance.delete_collection.assert_not_called()
+
+        user_repository.delete.assert_called_once_with("user-no-cols")
+
+        app.dependency_overrides.clear()
+
+    def test_delete_user_qdrant_failure(self, app, client, admin_user):
+        """Test that Qdrant failure prevents user deletion."""
+        mock_user = type(
+            "User",
+            (),
+            {
+                "user_id": "user-qdrant-fail",
+                "email": "qdrantfail@example.com",
+                "username": "qdrantfailuser",
+                "is_active": True,
+                "is_superuser": False,
+                "created_at": "2024-01-01T00:00:00",
+            },
+        )()
+
+        mock_collections = [
+            {"collection_id": "col-1", "name": "Collection 1", "qdrant_collection": "qdrant-col-1"},
+        ]
+
+        app.dependency_overrides[get_current_user] = lambda: admin_user
+
+        with (
+            patch("rest_api.routes.admin.get_user_repository") as mock_user_repo,
+            patch("rest_api.routes.admin.get_collection_repository") as mock_col_repo,
+            patch("rest_api.routes.admin.get_qdrant_service") as mock_qdrant_service,
+        ):
+            user_repository = AsyncMock()
+            user_repository.get_by_id = AsyncMock(return_value=mock_user)
+            user_repository.delete = AsyncMock(return_value=True)
+            mock_user_repo.return_value = user_repository
+
+            collection_repository = AsyncMock()
+            collection_repository.list_by_user = AsyncMock(return_value=mock_collections)
+            mock_col_repo.return_value = collection_repository
+
+            mock_qdrant_instance = AsyncMock()
+            mock_qdrant_instance.delete_collection = AsyncMock(
+                side_effect=Exception("Qdrant connection error")
+            )
+            mock_qdrant_service.return_value = mock_qdrant_instance
+
+            response = client.delete("/api/v1/admin/users/user-qdrant-fail")
+
+        assert response.status_code == 500
+        data = response.json()
+        assert data["detail"]["code"] == "QDRANT_DELETE_FAILED"
+
+        user_repository.delete.assert_not_called()
+
+        app.dependency_overrides.clear()
+
+    def test_delete_user_not_found(self, app, client, admin_user):
+        """Test deletion of non-existent user."""
+        app.dependency_overrides[get_current_user] = lambda: admin_user
+
+        with patch("rest_api.routes.admin.get_user_repository") as mock_user_repo:
+            user_repository = AsyncMock()
+            user_repository.get_by_id = AsyncMock(return_value=None)
+            mock_user_repo.return_value = user_repository
+
+            response = client.delete("/api/v1/admin/users/nonexistent")
+
+        assert response.status_code == 404
+        data = response.json()
+        assert data["detail"]["code"] == "USER_NOT_FOUND"
+
+        app.dependency_overrides.clear()
+
+    def test_delete_self_forbidden(self, app, client, admin_user):
+        """Test that admin cannot delete themselves."""
+        app.dependency_overrides[get_current_user] = lambda: admin_user
+
+        with patch("rest_api.routes.admin.get_user_repository") as mock_user_repo:
+            user_repository = AsyncMock()
+            user_repository.get_by_id = AsyncMock(return_value=admin_user)
+            mock_user_repo.return_value = user_repository
+
+            response = client.delete(f"/api/v1/admin/users/{admin_user.user_id}")
+
+        assert response.status_code == 400
+        data = response.json()
+        assert data["detail"]["code"] == "CANNOT_DELETE_SELF"
+
+        user_repository.delete.assert_not_called()
+
+        app.dependency_overrides.clear()

@@ -216,6 +216,16 @@ class GetDocumentOutput(BaseModel):
     doc_metadata: dict
 
 
+class DocumentListItem(BaseModel):
+    document_id: str
+    collection_id: str
+    title: str
+    document_type: str
+    created_at: str
+    updated_at: str
+    doc_metadata: dict
+
+
 async def get_document(input_data: GetDocumentInput) -> GetDocumentOutput | None:
     auth = get_auth_context()
     if not auth:
@@ -257,7 +267,7 @@ class ListDocumentsInput(BaseModel):
 
 
 class ListDocumentsOutput(BaseModel):
-    documents: list[GetDocumentOutput]
+    documents: list[DocumentListItem]
     total: int
 
 
@@ -274,21 +284,25 @@ async def list_documents(input_data: ListDocumentsInput) -> ListDocumentsOutput:
     if is_admin:
         doc_repo = get_document_repository(None)
         docs = await doc_repo.list_all(limit=input_data.limit, offset=input_data.offset)
+        total = await doc_repo.count_all()
     elif auth_type in ("pat", "jwt") and user_id:
         doc_repo = get_document_repository(None)
         docs = await doc_repo.list_all_for_user(
             user_id, limit=input_data.limit, offset=input_data.offset
         )
+        total = await doc_repo.count_by_user(user_id)
     else:
         doc_repo = get_document_repository(str(collection_id) if collection_id else None)
         docs = await doc_repo.list_all(limit=input_data.limit, offset=input_data.offset)
+        total = (
+            await doc_repo.count_by_collection(str(collection_id)) if collection_id else len(docs)
+        )
 
     documents = [
-        GetDocumentOutput(
+        DocumentListItem(
             document_id=d.document_id,
             collection_id=d.collection_id,
             title=d.title,
-            content=d.content,
             document_type=d.document_type,
             created_at=d.created_at.isoformat(),
             updated_at=d.updated_at.isoformat(),
@@ -299,7 +313,7 @@ async def list_documents(input_data: ListDocumentsInput) -> ListDocumentsOutput:
 
     return ListDocumentsOutput(
         documents=documents,
-        total=len(documents),
+        total=total,
     )
 
 

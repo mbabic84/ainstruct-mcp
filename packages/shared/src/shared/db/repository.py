@@ -215,6 +215,11 @@ class DocumentRepository:
             )
             return result.scalar() or 0
 
+    async def count_all(self) -> int:
+        async with self.async_session() as session:
+            result = await session.execute(select(func.count(DocumentModel.id)))
+            return result.scalar() or 0
+
     async def count_by_user(self, user_id: str) -> int:
         async with self.async_session() as session:
             result = await session.execute(

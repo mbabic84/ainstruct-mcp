@@ -4,7 +4,13 @@ from datetime import datetime
 from unittest.mock import AsyncMock, MagicMock, patch
 
 import pytest
-from mcp_server.tools.context import clear_cat_info, set_cat_info
+from mcp_server.tools.context import (
+    clear_all_auth,
+    clear_cat_info,
+    set_cat_info,
+    set_user_collections,
+    set_user_info,
+)
 from mcp_server.tools.document_tools import (
     DeleteDocumentInput,
     GetDocumentInput,
@@ -418,6 +424,7 @@ class TestListDocuments:
                 ),
             ]
         )
+        mock_doc_repo.count_by_collection = AsyncMock(return_value=2)
 
         with patch(
             "mcp_server.tools.document_tools.get_document_repository",
@@ -428,6 +435,172 @@ class TestListDocuments:
             assert result.total == 2
             assert result.documents[0].document_id == "doc-123"
             assert result.documents[1].document_id == "doc-456"
+
+    @pytest.mark.asyncio
+    async def test_list_documents_excludes_content(self, mock_cat_info):
+        """Test that list_documents does NOT return document content."""
+        set_cat_info(mock_cat_info)
+
+        mock_doc_repo = MagicMock()
+        mock_doc_repo.list_all = AsyncMock(
+            return_value=[
+                MagicMock(
+                    document_id="doc-123",
+                    collection_id="27241155-eaae-4678-a69f-c8003512f1fe",
+                    title="Test Doc 1",
+                    content="This content should NOT be returned",
+                    document_type="markdown",
+                    created_at=datetime(2024, 1, 1, 0, 0, 0),
+                    updated_at=datetime(2024, 1, 1, 0, 0, 0),
+                    doc_metadata={},
+                ),
+            ]
+        )
+        mock_doc_repo.count_by_collection = AsyncMock(return_value=1)
+
+        with patch(
+            "mcp_server.tools.document_tools.get_document_repository",
+            return_value=mock_doc_repo,
+        ):
+            result = await list_documents(ListDocumentsInput(limit=50, offset=0))
+
+            assert len(result.documents) == 1
+            doc = result.documents[0]
+            assert doc.document_id == "doc-123"
+            assert doc.title == "Test Doc 1"
+            # Verify content field is NOT present on DocumentListItem
+            assert not hasattr(doc, "content")
+
+    @pytest.mark.asyncio
+    async def test_list_documents_uses_count_query_not_len(self, mock_cat_info):
+        """Test that total count comes from count_by_collection, not len(documents)."""
+        set_cat_info(mock_cat_info)
+
+        mock_doc_repo = MagicMock()
+        # Simulate pagination: only 2 docs returned but 10 total in collection
+        mock_doc_repo.list_all = AsyncMock(
+            return_value=[
+                MagicMock(
+                    document_id=f"doc-{i}",
+                    collection_id="27241155-eaae-4678-a69f-c8003512f1fe",
+                    title=f"Test Doc {i}",
+                    content=f"Content {i}",
+                    document_type="markdown",
+                    created_at=datetime(2024, 1, i, 0, 0, 0),
+                    updated_at=datetime(2024, 1, i, 0, 0, 0),
+                    doc_metadata={},
+                )
+                for i in range(1, 3)  # Only 2 docs
+            ]
+        )
+        mock_doc_repo.count_by_collection = AsyncMock(return_value=10)
+
+        with patch(
+            "mcp_server.tools.document_tools.get_document_repository",
+            return_value=mock_doc_repo,
+        ):
+            result = await list_documents(ListDocumentsInput(limit=2, offset=0))
+
+            # Should return actual total (10), not length of returned docs (2)
+            assert result.total == 10
+            assert len(result.documents) == 2
+            mock_doc_repo.count_by_collection.assert_called_once_with(
+                "27241155-eaae-4678-a69f-c8003512f1fe"
+            )
+
+    @pytest.mark.asyncio
+    async def test_list_documents_admin_uses_count_all(self):
+        """Test that admin listing uses count_all() for total."""
+        clear_cat_info()
+        clear_all_auth()
+        # Admin user: is_superuser flag in user_info makes is_admin=True in auth context
+        set_user_info(
+            {
+                "user_id": "admin-123",
+                "username": "admin",
+                "email": "admin@test.com",
+                "is_superuser": True,
+                "scopes": [],
+            }
+        )
+        # Need to set collections (even if empty) for auth context to build properly
+        set_user_collections([])
+
+        mock_doc_repo = MagicMock()
+        mock_doc_repo.list_all = AsyncMock(
+            return_value=[
+                MagicMock(
+                    document_id="doc-1",
+                    collection_id="col-1",
+                    title="Doc 1",
+                    content="Content 1",
+                    document_type="markdown",
+                    created_at=datetime(2024, 1, 1),
+                    updated_at=datetime(2024, 1, 1),
+                    doc_metadata={},
+                ),
+            ]
+        )
+        mock_doc_repo.count_all = AsyncMock(return_value=100)
+
+        with patch(
+            "mcp_server.tools.document_tools.get_document_repository",
+            return_value=mock_doc_repo,
+        ):
+            result = await list_documents(ListDocumentsInput(limit=1, offset=0))
+
+            assert result.total == 100
+            assert len(result.documents) == 1
+            mock_doc_repo.count_all.assert_called_once()
+        clear_all_auth()
+
+    @pytest.mark.asyncio
+    async def test_list_documents_pat_user_uses_count_by_user(self):
+        """Test that PAT/JWT user listing uses count_by_user() for total."""
+        clear_cat_info()
+        clear_all_auth()
+        set_user_info(
+            {
+                "user_id": "user-789",
+                "username": "user",
+                "email": "user@test.com",
+                "is_superuser": False,
+                "scopes": ["read"],
+            }
+        )
+        set_user_collections(
+            [
+                {"collection_id": "col-1", "qdrant_collection": "qdrant-1"},
+            ]
+        )
+
+        mock_doc_repo = MagicMock()
+        mock_doc_repo.list_all_for_user = AsyncMock(
+            return_value=[
+                MagicMock(
+                    document_id="doc-1",
+                    collection_id="col-1",
+                    title="Doc 1",
+                    content="Content 1",
+                    document_type="markdown",
+                    created_at=datetime(2024, 1, 1),
+                    updated_at=datetime(2024, 1, 1),
+                    doc_metadata={},
+                ),
+            ]
+        )
+        mock_doc_repo.count_by_user = AsyncMock(return_value=50)
+
+        with patch(
+            "mcp_server.tools.document_tools.get_document_repository",
+            return_value=mock_doc_repo,
+        ):
+            result = await list_documents(ListDocumentsInput(limit=1, offset=0))
+
+            assert result.total == 50
+            assert len(result.documents) == 1
+            mock_doc_repo.count_by_user.assert_called_once_with("user-789")
+        clear_all_auth()
 
 
 class TestDeleteDocument:

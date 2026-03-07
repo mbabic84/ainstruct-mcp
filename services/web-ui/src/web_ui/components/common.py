@@ -1,4 +1,5 @@
 import asyncio
+from inspect import iscoroutinefunction
 
 from nicegui import ui
 
@@ -66,18 +67,36 @@ async def mcp_token_dialog(token: str, title: str = "Token Created"):
     dialog.open()
 
 
-def create_table_actions_slot(buttons: list[dict]):
-    slot_content = '<q-td :props="props">'
-    for btn in buttons:
-        color = btn.get("color", "primary")
-        icon = btn.get("icon", "add")
-        emit = btn.get("emit", "click")
-        slot_content += f'\n                            <q-btn flat round color="{color}" icon="{icon}" @click.stop="$parent.$emit(\'{emit}\', props.row)" />'
-    slot_content += "\n                        </q-td>"
-    return slot_content
+def add_table_action_buttons(
+    table,
+    action: str,
+    buttons: list[dict],
+):
+    with table.add_slot(f"body-cell-{action}"):
+        with table.cell(action):
+            for btn in buttons:
+                icon = btn.get("icon", "add")
+                color = btn.get("color", "primary")
+                id_field = btn.get("id_field", "id")
+                label_field = btn.get("label_field", "label")
+                extra_fields = btn.get("extra_fields") or {}
+                on_click = btn.get("on_click")
 
+                extra = ""
+                for key, field in extra_fields.items():
+                    extra += f", {key}: props.row.{field}"
 
-def add_table_actions(table, buttons: list[dict]):
-    slot_content = create_table_actions_slot(buttons)
-    table.add_slot("body-cell-actions", slot_content)
-    return table
+                def make_handler(handler):
+                    async def handler_wrapper(e):
+                        if iscoroutinefunction(handler):
+                            await handler(e.args)
+                        else:
+                            handler(e.args)
+
+                    return handler_wrapper
+
+                ui.button().props(f"icon={icon} flat round color={color}").on(
+                    "click",
+                    js_handler=f"""(e) => {{ e.stopPropagation(); emit({{ id: props.row.{id_field}, label: props.row.{label_field}{extra} }}) }}""",
+                    handler=make_handler(on_click),
+                )

@@ -1,8 +1,7 @@
 from nicegui import APIRouter, ui
 
 from web_ui.auth import load_tokens_from_storage, require_auth
-from web_ui.components import render_page
-from web_ui.components.common import add_table_actions, confirm_action
+from web_ui.components import add_table_action_buttons, confirm_action, render_page
 from web_ui.utils import format_date, handle_api_error
 
 router = APIRouter(prefix="")
@@ -92,23 +91,23 @@ async def documents_page(collection_id: str | None = None):
                             }
                         )
 
-                    async def handle_view(e):
+                    def handle_view(e):
                         row = e.args[1]
                         doc_id = row["id"]
                         ui.navigate.to(f"/viewer/{doc_id}")
 
-                    async def handle_delete(e):
-                        doc_id = e.args["id"]
-                        doc_title = e.args.get("title", "this document")
+                    async def handle_delete(item):
+                        item_id = item["id"]
+                        item_label = item.get("label", "this document")
 
                         async def do_delete():
-                            response = api_client.delete_document(doc_id)
+                            response = api_client.delete_document(item_id)
                             if handle_api_error(response, "Failed to delete document"):
                                 ui.notify("Document deleted")
                                 ui.navigate.reload()
 
                         await confirm_action(
-                            f"Delete '{doc_title}'?",
+                            f"Delete '{item_label}'?",
                             "This action cannot be undone.",
                             do_delete,
                             "Cancel",
@@ -119,11 +118,18 @@ async def documents_page(collection_id: str | None = None):
                         ui.table(columns=columns, rows=rows, row_key="id")
                         .classes("w-full")
                         .on("rowClick", handle_view)
-                        .on("row-delete", handle_delete)
                     )
-                    add_table_actions(
+                    add_table_action_buttons(
                         table,
-                        [{"color": "negative", "icon": "delete", "emit": "row-delete"}],
+                        "actions",
+                        [
+                            {
+                                "icon": "delete",
+                                "color": "negative",
+                                "on_click": handle_delete,
+                                "label_field": "title",
+                            }
+                        ],
                     )
             else:
                 ui.label("No documents yet.")

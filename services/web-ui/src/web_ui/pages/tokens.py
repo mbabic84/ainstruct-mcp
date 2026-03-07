@@ -2,7 +2,7 @@ from nicegui import APIRouter, ui
 
 from web_ui.auth import load_tokens_from_storage, require_auth
 from web_ui.components import render_page
-from web_ui.components.common import confirm_action, mcp_token_dialog
+from web_ui.components.common import add_table_action_buttons, confirm_action, mcp_token_dialog
 from web_ui.utils import format_date, handle_api_error
 
 router = APIRouter(prefix="")
@@ -98,30 +98,12 @@ def _render_pat_table(api_client, pats):
             }
         )
 
-    def revoke_pat(e):
-        pat_id = e.args["id"]
-        pat_label_text = e.args.get("label", "this PAT")
-
-        async def do_revoke():
-            response = api_client.revoke_pat(pat_id)
-            if handle_api_error(response, "Failed to revoke PAT"):
-                ui.notify("PAT revoked")
-                ui.navigate.reload()
-
-        confirm_action(
-            f"Revoke '{pat_label_text}'?",
-            "This action cannot be undone.",
-            do_revoke,
-            "Cancel",
-            "Revoke",
-        )
-
-    def rotate_pat(e):
-        pat_id = e.args["id"]
-        pat_label_text = e.args.get("label", "this PAT")
+    async def rotate_pat(item):
+        item_id = item["id"]
+        item_label = item.get("label", "this PAT")
 
         async def do_rotate():
-            response = api_client.rotate_pat(pat_id)
+            response = api_client.rotate_pat(item_id)
             if response.status_code == 200:
                 data = response.json()
                 token = data.get("token", "N/A")
@@ -129,8 +111,8 @@ def _render_pat_table(api_client, pats):
             else:
                 ui.notify(f"Error: {response.text}", type="negative")
 
-        confirm_action(
-            f"Rotate '{pat_label_text}'?",
+        await confirm_action(
+            f"Rotate '{item_label}'?",
             "A new token will be generated and the old one will be invalidated.",
             do_rotate,
             "Cancel",
@@ -138,19 +120,31 @@ def _render_pat_table(api_client, pats):
             color="warning",
         )
 
-    from web_ui.components.common import add_table_actions
+    async def revoke_pat(item):
+        item_id = item["id"]
+        item_label = item.get("label", "this PAT")
 
-    table = (
-        ui.table(columns=columns, rows=rows, row_key="id")
-        .classes("w-full")
-        .on("rotate-click", rotate_pat)
-        .on("revoke-click", revoke_pat)
-    )
-    add_table_actions(
+        async def do_revoke():
+            response = api_client.revoke_pat(item_id)
+            if handle_api_error(response, "Failed to revoke PAT"):
+                ui.notify("PAT revoked")
+                ui.navigate.reload()
+
+        await confirm_action(
+            f"Revoke '{item_label}'?",
+            "This action cannot be undone.",
+            do_revoke,
+            "Cancel",
+            "Revoke",
+        )
+
+    table = ui.table(columns=columns, rows=rows, row_key="id").classes("w-full")
+    add_table_action_buttons(
         table,
+        "actions",
         [
-            {"color": "warning", "icon": "refresh", "emit": "rotate-click"},
-            {"color": "negative", "icon": "delete", "emit": "revoke-click"},
+            {"icon": "refresh", "color": "warning", "on_click": rotate_pat},
+            {"icon": "delete", "color": "negative", "on_click": revoke_pat},
         ],
     )
 
@@ -253,30 +247,12 @@ def _render_cat_table(api_client, cats):
             }
         )
 
-    def revoke_cat(e):
-        cat_id = e.args["id"]
-        cat_label_text = e.args.get("label", "this CAT")
-
-        async def do_revoke():
-            response = api_client.revoke_cat(cat_id)
-            if handle_api_error(response, "Failed to revoke CAT"):
-                ui.notify("CAT revoked")
-                ui.navigate.to("/tokens?tab=cat")
-
-        confirm_action(
-            f"Revoke '{cat_label_text}'?",
-            "This action cannot be undone.",
-            do_revoke,
-            "Cancel",
-            "Revoke",
-        )
-
-    def rotate_cat(e):
-        cat_id = e.args["id"]
-        cat_label_text = e.args.get("label", "this CAT")
+    async def rotate_cat(item):
+        item_id = item["id"]
+        item_label = item.get("label", "this CAT")
 
         async def do_rotate():
-            response = api_client.rotate_cat(cat_id)
+            response = api_client.rotate_cat(item_id)
             if response.status_code == 200:
                 data = response.json()
                 token = data.get("token", "N/A")
@@ -284,8 +260,8 @@ def _render_cat_table(api_client, cats):
             else:
                 ui.notify(f"Error: {response.text}", type="negative")
 
-        confirm_action(
-            f"Rotate '{cat_label_text}'?",
+        await confirm_action(
+            f"Rotate '{item_label}'?",
             "A new token will be generated and the old one will be invalidated.",
             do_rotate,
             "Cancel",
@@ -293,18 +269,30 @@ def _render_cat_table(api_client, cats):
             color="warning",
         )
 
-    from web_ui.components.common import add_table_actions
+    async def revoke_cat(item):
+        item_id = item["id"]
+        item_label = item.get("label", "this CAT")
 
-    table = (
-        ui.table(columns=columns, rows=rows, row_key="id")
-        .classes("w-full")
-        .on("rotate-click", rotate_cat)
-        .on("revoke-click", revoke_cat)
-    )
-    add_table_actions(
+        async def do_revoke():
+            response = api_client.revoke_cat(item_id)
+            if handle_api_error(response, "Failed to revoke CAT"):
+                ui.notify("CAT revoked")
+                ui.navigate.to("/tokens?tab=cat")
+
+        await confirm_action(
+            f"Revoke '{item_label}'?",
+            "This action cannot be undone.",
+            do_revoke,
+            "Cancel",
+            "Revoke",
+        )
+
+    table = ui.table(columns=columns, rows=rows, row_key="id").classes("w-full")
+    add_table_action_buttons(
         table,
+        "actions",
         [
-            {"color": "warning", "icon": "refresh", "emit": "rotate-click"},
-            {"color": "negative", "icon": "delete", "emit": "revoke-click"},
+            {"icon": "refresh", "color": "warning", "on_click": rotate_cat},
+            {"icon": "delete", "color": "negative", "on_click": revoke_cat},
         ],
     )

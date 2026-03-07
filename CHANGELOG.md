@@ -1,3 +1,10 @@
+# [4.7.0](https://github.com/mbabic84/ainstruct-mcp/compare/v4.6.1...v4.7.0) (2026-03-07)
+
+
+### Features
+
+* **mcp-server:** exclude content from list_documents response ([471e8fa](https://github.com/mbabic84/ainstruct-mcp/commit/471e8faa961aeec85b176ce0331a2b5f06a3f292))
+
 ## [4.6.1](https://github.com/mbabic84/ainstruct-mcp/compare/v4.6.0...v4.6.1) (2026-03-06)
 
 

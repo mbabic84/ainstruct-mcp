@@ -1,3 +1,10 @@
+## [4.10.1](https://github.com/mbabic84/ainstruct-mcp/compare/v4.10.0...v4.10.1) (2026-03-07)
+
+
+### Bug Fixes
+
+* **web-ui:** fix table action buttons not triggering correct actions ([6a8cb52](https://github.com/mbabic84/ainstruct-mcp/commit/6a8cb52a5677940cdb9ff36b4acc3c278b53ddb3))
+
 # [4.10.0](https://github.com/mbabic84/ainstruct-mcp/compare/v4.9.0...v4.10.0) (2026-03-07)
 
 

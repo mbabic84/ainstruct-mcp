@@ -14,6 +14,26 @@ from web_ui.pages import (  # noqa: E402
     viewer_router,
 )
 
+STATIC_PATH = os.path.join(os.path.dirname(__file__), "static")
+app.add_static_files("/static", STATIC_PATH)
+
+
+@app.get("/favicon.ico")
+async def favicon():
+    from fastapi.responses import FileResponse
+
+    favicon_path = os.path.join(STATIC_PATH, "favicon.svg")
+    return FileResponse(favicon_path, media_type="image/svg+xml")
+
+
+@app.get("/favicon.svg")
+async def favicon_svg():
+    from fastapi.responses import FileResponse
+
+    favicon_path = os.path.join(STATIC_PATH, "favicon.svg")
+    return FileResponse(favicon_path, media_type="image/svg+xml")
+
+
 # VS Code Dark color palette
 app.colors(
     primary="#007acc",  # Blue (VS Code blue)
@@ -83,12 +103,13 @@ def index():
 def main():
     port = int(os.environ.get("PORT", settings.port))
     ui.run(
-        title="AI Document Memory - Dashboard",
+        title="Ainstruct - Dashboard",
         port=port,
         reload=False,
         show=False,
         storage_secret=settings.jwt_secret_key,
         dark=True,
+        favicon="/static/favicon.svg",
     )
 
 

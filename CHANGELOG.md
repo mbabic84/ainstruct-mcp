@@ -1,3 +1,10 @@
+## [4.11.3](https://github.com/mbabic84/ainstruct-mcp/compare/v4.11.2...v4.11.3) (2026-03-07)
+
+
+### Bug Fixes
+
+* **admin:** delete Qdrant collections when deleting user ([15cb8d9](https://github.com/mbabic84/ainstruct-mcp/commit/15cb8d932d61727432eb3528f60f326fae7a13ef))
+
 ## [4.11.2](https://github.com/mbabic84/ainstruct-mcp/compare/v4.11.1...v4.11.2) (2026-03-07)
 
 

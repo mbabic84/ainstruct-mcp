@@ -1,3 +1,10 @@
+# [4.9.0](https://github.com/mbabic84/ainstruct-mcp/compare/v4.8.0...v4.9.0) (2026-03-07)
+
+
+### Features
+
+* add collection_id filter to list_documents tool ([44694f8](https://github.com/mbabic84/ainstruct-mcp/commit/44694f890b4b73a2d6aaeaba6cb48e3d13b96667))
+
 # [4.8.0](https://github.com/mbabic84/ainstruct-mcp/compare/v4.7.1...v4.8.0) (2026-03-07)
 
 

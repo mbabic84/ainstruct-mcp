@@ -1,3 +1,10 @@
+## [4.7.1](https://github.com/mbabic84/ainstruct-mcp/compare/v4.7.0...v4.7.1) (2026-03-07)
+
+
+### Bug Fixes
+
+* **web-ui:** correct rowClick event handler for document table ([b74c5bf](https://github.com/mbabic84/ainstruct-mcp/commit/b74c5bf3dd12cfcd1e51bf3bde943f7111d92593))
+
 # [4.7.0](https://github.com/mbabic84/ainstruct-mcp/compare/v4.6.1...v4.7.0) (2026-03-07)
 
 

@@ -33,7 +33,7 @@ async def list_users(
 ):
     user_repo = get_user_repository()
     users = await user_repo.list_all(limit=limit, offset=offset)
-    total = len(users)
+    total = await user_repo.count_all()
 
     items = [
         UserListItem(

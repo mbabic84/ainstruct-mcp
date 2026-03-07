@@ -475,6 +475,11 @@ class UserRepository:
                 for u in users
             ]
 
+    async def count_all(self) -> int:
+        async with self.async_session() as session:
+            result = await session.execute(select(func.count(UserModel.id)))
+            return result.scalar() or 0
+
     async def count_superusers(self) -> int:
         async with self.async_session() as session:
             result = await session.execute(

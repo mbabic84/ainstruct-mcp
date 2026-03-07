@@ -93,7 +93,8 @@ async def documents_page(collection_id: str | None = None):
                         )
 
                     async def handle_view(e):
-                        doc_id = e.args["id"]
+                        row = e.args[1]
+                        doc_id = row["id"]
                         ui.navigate.to(f"/viewer/{doc_id}")
 
                     async def handle_delete(e):

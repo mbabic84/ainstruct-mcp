@@ -1,3 +1,15 @@
+# [4.11.0](https://github.com/mbabic84/ainstruct-mcp/compare/v4.10.1...v4.11.0) (2026-03-07)
+
+
+### Bug Fixes
+
+* **web-ui:** properly await async handlers in confirm dialogs ([aab6c49](https://github.com/mbabic84/ainstruct-mcp/commit/aab6c4983ad3437c9039de658fbf37a6fe42c0fc))
+
+
+### Features
+
+* **web-ui:** unify action buttons across all pages ([2b789c0](https://github.com/mbabic84/ainstruct-mcp/commit/2b789c013c0669c00aca34bbdc840de3a95e852e))
+
 ## [4.10.1](https://github.com/mbabic84/ainstruct-mcp/compare/v4.10.0...v4.10.1) (2026-03-07)
 
 

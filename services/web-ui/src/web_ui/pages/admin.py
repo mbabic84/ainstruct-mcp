@@ -113,23 +113,38 @@ async def admin_page(offset: int = 0):
                 </q-td>""",
             )
 
-            table.add_slot(
-                "body-cell-actions",
-                """<q-td :props="props">
-                    <q-btn flat round size="sm" icon="info" @click.stop="$parent.$emit('stats-click', props.row)" />
-                    <q-btn flat round size="sm" :color="props.row.is_active ? 'negative' : 'positive'" :icon="props.row.is_active ? 'block' : 'check'" @click.stop="$parent.$emit('toggle-active-click', props.row)" />
-                    <q-btn flat round size="sm" color="purple" :icon="props.row.is_superuser ? 'arrow_downward' : 'arrow_upward'" @click.stop="$parent.$emit('toggle-superuser-click', props.row)" />
-                </q-td>""",
-            )
+            def handle_actions(item):
+                user_id = item["id"]
+                username = item.get("username", "")
+                is_active = item.get("is_active", True)
+                is_superuser = item.get("is_superuser", False)
 
-            table.on("stats-click", lambda e: show_user_stats(e.args["id"], e.args["username"]))
-            table.on(
-                "toggle-active-click", lambda e: toggle_active(e.args["id"], e.args["is_active"])
-            )
-            table.on(
-                "toggle-superuser-click",
-                lambda e: toggle_superuser(e.args["id"], e.args["is_superuser"]),
-            )
+                with ui.dialog() as dialog, ui.card():
+                    ui.label(f"Actions for {username}").classes("text-lg font-bold mb-4")
+                    ui.button(
+                        "View Stats",
+                        on_click=lambda: [dialog.close(), show_user_stats(user_id, username)],
+                    ).props("flat").classes("w-full mb-2")
+                    ui.button(
+                        f"{'Deactivate' if is_active else 'Activate'}",
+                        on_click=lambda: [dialog.close(), toggle_active(user_id, is_active)],
+                    ).props("flat").classes("w-full mb-2")
+                    ui.button(
+                        f"{'Demote from' if is_superuser else 'Promote to'} Superuser",
+                        on_click=lambda: [dialog.close(), toggle_superuser(user_id, is_superuser)],
+                    ).props("flat").classes("w-full")
+                    ui.button("Cancel", on_click=dialog.close).props("color=primary").classes(
+                        "w-full mt-2"
+                    )
+                dialog.open()
+
+            with table.add_slot("body-cell-actions"):
+                with table.cell("actions"):
+                    ui.button().props("icon=more_vert flat round").on(
+                        "click",
+                        js_handler="() => emit(props.row)",
+                        handler=lambda e: handle_actions(e.args),
+                    )
 
             current_page = (current_offset // limit) + 1
             total_pages = (total + limit - 1) // limit

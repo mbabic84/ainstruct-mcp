@@ -173,18 +173,23 @@ async def get_document_tool(document_id: str) -> dict:
 
 
 @mcp.tool()
-async def list_documents_tool(limit: int = 50, offset: int = 0) -> dict:
+async def list_documents_tool(
+    limit: int = 50, offset: int = 0, collection_id: str | None = None
+) -> dict:
     """
     List all stored documents with pagination.
 
     Args:
         limit: Number of documents to return (default: 50)
         offset: Pagination offset (default: 0)
+        collection_id: Optional UUID of the collection to filter by
 
     Returns:
         List of documents with titles and metadata
     """
-    result = await list_documents(ListDocumentsInput(limit=limit, offset=offset))
+    result = await list_documents(
+        ListDocumentsInput(limit=limit, offset=offset, collection_id=collection_id)
+    )
     return {
         "documents": [d.model_dump() for d in result.documents],
         "total": result.total,

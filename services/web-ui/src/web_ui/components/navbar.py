@@ -5,8 +5,9 @@ from web_ui.auth import get_user, is_admin, is_logged_in, logout
 
 def render_nav():
     with ui.row().classes("w-full justify-between items-center p-2"):
-        with ui.row().classes("items-center gap-4"):
-            ui.label("AI Document Memory").classes("text-xl font-bold")
+        with ui.row().classes("items-center gap-2"):
+            ui.image("/static/favicon.svg").classes("w-10 h-10")
+            ui.label("Ainstruct").classes("text-xl font-bold")
         with ui.row().classes("items-center gap-4"):
             if is_logged_in():
                 if is_admin():

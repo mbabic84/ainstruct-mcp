@@ -1,3 +1,10 @@
+## [4.11.2](https://github.com/mbabic84/ainstruct-mcp/compare/v4.11.1...v4.11.2) (2026-03-07)
+
+
+### Bug Fixes
+
+* include is_active and is_superuser in admin table action events ([5fb8f44](https://github.com/mbabic84/ainstruct-mcp/commit/5fb8f44b675112095a5b8e9ef62b5e2dbf80e604))
+
 ## [4.11.1](https://github.com/mbabic84/ainstruct-mcp/compare/v4.11.0...v4.11.1) (2026-03-07)
 
 

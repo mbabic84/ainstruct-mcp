@@ -1,5 +1,4 @@
 import asyncio
-from inspect import iscoroutinefunction
 
 from nicegui import ui
 
@@ -106,10 +105,9 @@ def add_table_action_buttons(
                             if use_confirm:
 
                                 async def do_action():
-                                    if iscoroutinefunction(handler):
-                                        await handler(item_data)
-                                    else:
-                                        handler(item_data)
+                                    result = handler(item_data)
+                                    if asyncio.iscoroutine(result):
+                                        await result
 
                                 message = confirm_msg.replace("{name}", f"'{item_label}'")
                                 await confirm_action(
@@ -121,10 +119,9 @@ def add_table_action_buttons(
                                     color=btn_color,
                                 )
                             else:
-                                if iscoroutinefunction(handler):
-                                    await handler(item_data)
-                                else:
-                                    handler(item_data)
+                                result = handler(item_data)
+                                if asyncio.iscoroutine(result):
+                                    await result
 
                         return handler_wrapper
 

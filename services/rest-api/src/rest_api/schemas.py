@@ -1,7 +1,8 @@
 from datetime import datetime
 from enum import StrEnum
 
-from pydantic import BaseModel, EmailStr
+from pydantic import BaseModel, EmailStr, field_validator
+from shared.constants import DocumentType
 
 
 class Permission(StrEnum):
@@ -92,9 +93,17 @@ class CollectionUpdate(BaseModel):
 class DocumentCreate(BaseModel):
     title: str
     content: str
-    document_type: str = "markdown"
+    document_type: str = DocumentType.MARKDOWN.value
     collection_id: str
     metadata: dict | None = None
+
+    @field_validator("document_type")
+    @classmethod
+    def validate_document_type(cls, v: str) -> str:
+        if not DocumentType.is_valid(v):
+            valid_types = ", ".join(DocumentType.get_codemirror_types())
+            raise ValueError(f"Invalid document_type. Must be one of: {valid_types}")
+        return v
 
 
 class DocumentResponse(BaseModel):
@@ -134,6 +143,14 @@ class DocumentUpdate(BaseModel):
     content: str | None = None
     document_type: str | None = None
     metadata: dict | None = None
+
+    @field_validator("document_type")
+    @classmethod
+    def validate_document_type(cls, v: str | None) -> str | None:
+        if v is not None and not DocumentType.is_valid(v):
+            valid_types = ", ".join(DocumentType.get_codemirror_types())
+            raise ValueError(f"Invalid document_type. Must be one of: {valid_types}")
+        return v
 
 
 class DocumentStoreResponse(BaseModel):

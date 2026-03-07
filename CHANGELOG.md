@@ -1,3 +1,10 @@
+## [4.11.1](https://github.com/mbabic84/ainstruct-mcp/compare/v4.11.0...v4.11.1) (2026-03-07)
+
+
+### Bug Fixes
+
+* **admin:** use actual user count for pagination in list_users endpoint ([cd126e7](https://github.com/mbabic84/ainstruct-mcp/commit/cd126e7003464f5dc79f2cf63079c6cc7411e581))
+
 # [4.11.0](https://github.com/mbabic84/ainstruct-mcp/compare/v4.10.1...v4.11.0) (2026-03-07)
 
 

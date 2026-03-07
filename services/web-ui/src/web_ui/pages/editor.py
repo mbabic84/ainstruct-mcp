@@ -1,4 +1,5 @@
 from nicegui import APIRouter, ui
+from shared.constants import DocumentType
 
 from web_ui.auth import load_tokens_from_storage, require_auth
 from web_ui.components import render_page
@@ -6,7 +7,7 @@ from web_ui.utils import handle_api_error
 
 router = APIRouter(prefix="")
 
-supported_types = ["markdown", "text", "html", "json", "yaml", "xml", "python", "javascript"]
+supported_types = DocumentType.get_codemirror_types()
 
 
 @router.page("/editor/{doc_id}")

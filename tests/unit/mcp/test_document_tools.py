@@ -656,3 +656,50 @@ class TestDeleteDocument:
             assert result.success is True
             mock_qdrant.delete_by_document_id.assert_called_once_with("doc-123")
             mock_doc_repo.delete.assert_called_once_with("doc-123")
+
+
+class TestDocumentTypeValidation:
+    """Test cases for document_type validation in StoreDocumentInput and UpdateDocumentInput."""
+
+    @pytest.fixture(autouse=True)
+    def setup(self):
+        """Set up test fixtures."""
+        clear_cat_info()
+        yield
+        clear_cat_info()
+
+    def test_store_document_input_valid_types(self):
+        """Test that StoreDocumentInput accepts all valid document types."""
+        from shared.constants import DocumentType
+
+        valid_types = DocumentType.get_codemirror_types()
+
+        for doc_type in valid_types:
+            # Should not raise
+            input_data = StoreDocumentInput(
+                title="Test",
+                content="Test content",
+                document_type=doc_type,
+            )
+            assert input_data.document_type == doc_type
+
+    def test_store_document_input_default_is_markdown(self):
+        """Test that StoreDocumentInput defaults to markdown."""
+        input_data = StoreDocumentInput(
+            title="Test",
+            content="Test content",
+        )
+        assert input_data.document_type == "markdown"
+
+    def test_store_document_input_invalid_type_raises_error(self):
+        """Test that StoreDocumentInput raises error for invalid document types."""
+        from pydantic import ValidationError
+
+        with pytest.raises(ValidationError) as exc_info:
+            StoreDocumentInput(
+                title="Test",
+                content="Test content",
+                document_type="pdf",
+            )
+
+        assert "Invalid document_type" in str(exc_info.value)

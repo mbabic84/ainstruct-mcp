@@ -6,11 +6,13 @@ import uuid
 from datetime import datetime
 from enum import StrEnum
 
-from pydantic import BaseModel, EmailStr
+from pydantic import BaseModel, EmailStr, Field
 from sqlalchemy import JSON, Boolean, DateTime, ForeignKey, String, Text
 from sqlalchemy.dialects.postgresql import ARRAY
 from sqlalchemy.ext.asyncio import AsyncAttrs, create_async_engine
 from sqlalchemy.orm import DeclarativeBase, Mapped, mapped_column, relationship
+
+from shared.constants import DocumentType
 
 
 class Base(AsyncAttrs, DeclarativeBase):
@@ -63,7 +65,7 @@ class DocumentModel(Base):
     title: Mapped[str] = mapped_column(String(500), nullable=False)
     content: Mapped[str] = mapped_column(Text, nullable=False)
     content_hash: Mapped[str] = mapped_column(String(64), nullable=False, index=True)
-    document_type: Mapped[str] = mapped_column(String(20), default="markdown")
+    document_type: Mapped[str] = mapped_column(String(20), default=DocumentType.MARKDOWN.value)
     created_at: Mapped[datetime] = mapped_column(DateTime, default=datetime.utcnow)
     updated_at: Mapped[datetime] = mapped_column(
         DateTime, default=datetime.utcnow, onupdate=datetime.utcnow
@@ -166,7 +168,7 @@ class DocumentCreate(BaseModel):
     collection_id: str
     title: str
     content: str
-    document_type: str = "markdown"
+    document_type: str = Field(default=DocumentType.MARKDOWN.value)
     doc_metadata: dict = {}
 
 

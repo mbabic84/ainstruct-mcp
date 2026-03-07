@@ -1,4 +1,5 @@
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, Field, field_validator
+from shared.constants import DocumentType
 from shared.db import (
     DocumentCreate,
     get_collection_repository,
@@ -13,9 +14,17 @@ from mcp_server.tools.context import get_auth_context, has_write_permission
 class StoreDocumentInput(BaseModel):
     title: str
     content: str
-    document_type: str = "markdown"
+    document_type: str = Field(default=DocumentType.MARKDOWN.value)
     doc_metadata: dict = Field(default_factory=dict)
     collection_id: str | None = None
+
+    @field_validator("document_type")
+    @classmethod
+    def validate_document_type(cls, v: str) -> str:
+        if not DocumentType.is_valid(v):
+            valid_types = ", ".join(DocumentType.get_codemirror_types())
+            raise ValueError(f"Invalid document_type. Must be one of: {valid_types}")
+        return v
 
 
 class StoreDocumentOutput(BaseModel):
@@ -385,8 +394,16 @@ class UpdateDocumentInput(BaseModel):
     document_id: str
     title: str
     content: str
-    document_type: str = "markdown"
+    document_type: str = Field(default=DocumentType.MARKDOWN.value)
     doc_metadata: dict = Field(default_factory=dict)
+
+    @field_validator("document_type")
+    @classmethod
+    def validate_document_type(cls, v: str) -> str:
+        if not DocumentType.is_valid(v):
+            valid_types = ", ".join(DocumentType.get_codemirror_types())
+            raise ValueError(f"Invalid document_type. Must be one of: {valid_types}")
+        return v
 
 
 class UpdateDocumentOutput(BaseModel):

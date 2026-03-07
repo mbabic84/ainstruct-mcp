@@ -92,12 +92,14 @@ async def store_document_tool(
     collection_id: str | None = None,
 ) -> dict:
     """
-    Store a markdown document with automatic chunking and embedding generation.
+    Store a document with automatic chunking and embedding generation.
 
     Args:
         title: Document title
-        content: Markdown content
-        document_type: Type of document (markdown, pdf, docx, html, text, json)
+        content: Document content
+        document_type: Type of document (markdown, text, html, css, javascript, typescript,
+                      json, python, java, php, rust, go, cpp, sql, xml, yaml, vue,
+                      angular, sass, liquid, jinja, wast)
         doc_metadata: Optional custom metadata
         collection_id: Optional UUID of the collection to store the document in
 
@@ -218,8 +220,10 @@ async def update_document_tool(
     Args:
         document_id: UUID of the document to update
         title: New document title
-        content: New markdown content
-        document_type: Type of document (markdown, pdf, docx, html, text, json)
+        content: New document content
+        document_type: Type of document (markdown, text, html, css, javascript, typescript,
+                      json, python, java, php, rust, go, cpp, sql, xml, yaml, vue,
+                      angular, sass, liquid, jinja, wast)
         doc_metadata: Optional custom metadata
 
     Returns:

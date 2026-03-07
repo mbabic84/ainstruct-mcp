@@ -74,29 +74,75 @@ def add_table_action_buttons(
 ):
     with table.add_slot(f"body-cell-{action}"):
         with table.cell(action):
-            for btn in buttons:
-                icon = btn.get("icon", "add")
-                color = btn.get("color", "primary")
-                id_field = btn.get("id_field", "id")
-                label_field = btn.get("label_field", "label")
-                extra_fields = btn.get("extra_fields") or {}
-                on_click = btn.get("on_click")
+            with ui.row().classes("gap-2 justify-center"):
+                for btn in buttons:
+                    icon = btn.get("icon", "add")
+                    color = btn.get("color", "primary")
+                    id_field = btn.get("id_field", "id")
+                    label_field = btn.get("label_field", "label")
+                    extra_fields = btn.get("extra_fields") or {}
+                    on_click = btn.get("on_click")
+                    confirm = btn.get("confirm")
+                    confirm_message = btn.get("confirm_message", "Are you sure?")
+                    confirm_label = btn.get("confirm_label", "Confirm")
 
-                extra = ""
-                for key, field in extra_fields.items():
-                    extra += f", {key}: props.row.{field}"
+                    extra = ""
+                    for key, field in extra_fields.items():
+                        extra += f", {key}: props.row.{field}"
 
-                def make_handler(handler):
-                    async def handler_wrapper(e):
-                        if iscoroutinefunction(handler):
-                            await handler(e.args)
-                        else:
-                            handler(e.args)
+                    def make_handler(
+                        handler,
+                        use_confirm=False,
+                        confirm_msg="",
+                        confirm_lbl="Confirm",
+                        btn_color="primary",
+                        label_field_name="label",
+                    ):
+                        async def handler_wrapper(e):
+                            item_data = e.args
+                            item_label = item_data.get(label_field_name) or item_data.get("label")
+                            if not item_label:
+                                item_label = "Item"
+                            if use_confirm:
 
-                    return handler_wrapper
+                                async def do_action():
+                                    if iscoroutinefunction(handler):
+                                        await handler(item_data)
+                                    else:
+                                        handler(item_data)
 
-                ui.button().props(f"icon={icon} flat round color={color}").on(
-                    "click",
-                    js_handler=f"""(e) => {{ e.stopPropagation(); emit({{ id: props.row.{id_field}, label: props.row.{label_field}{extra} }}) }}""",
-                    handler=make_handler(on_click),
-                )
+                                message = confirm_msg.replace("{name}", f"'{item_label}'")
+                                await confirm_action(
+                                    f"{confirm_lbl} {item_label}?",
+                                    message,
+                                    do_action,
+                                    "Cancel",
+                                    confirm_lbl,
+                                    color=btn_color,
+                                )
+                            else:
+                                if iscoroutinefunction(handler):
+                                    await handler(item_data)
+                                else:
+                                    handler(item_data)
+
+                        return handler_wrapper
+
+                    handler = (
+                        make_handler(
+                            on_click,
+                            use_confirm=confirm,
+                            confirm_msg=confirm_message,
+                            confirm_lbl=confirm_label,
+                            btn_color=color,
+                            label_field_name=label_field,
+                        )
+                        if on_click
+                        else None
+                    )
+
+                    ui.button().props(f"icon={icon} flat round color={color}").on(
+                        "click",
+                        js_handler=f"""(e) => {{ e.stopPropagation(); emit({{ id: props.row.{id_field}, label: props.row.{label_field}{extra} }}) }}""",
+                        handler=handler,
+                    )

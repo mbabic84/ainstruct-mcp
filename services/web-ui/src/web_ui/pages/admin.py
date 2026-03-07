@@ -1,7 +1,7 @@
 from nicegui import APIRouter, ui
 
 from web_ui.auth import load_tokens_from_storage, require_admin
-from web_ui.components import render_page
+from web_ui.components import add_table_action_buttons, render_page
 from web_ui.utils import format_date, handle_api_error
 
 router = APIRouter(prefix="")
@@ -93,6 +93,21 @@ async def admin_page(offset: int = 0):
                     }
                 )
 
+            def handle_stats(item):
+                user_id = item["id"]
+                username = item.get("username", "")
+                show_user_stats(user_id, username)
+
+            def handle_toggle_active(item):
+                user_id = item["id"]
+                is_active = item.get("is_active", True)
+                return toggle_active(user_id, is_active)
+
+            def handle_toggle_superuser(item):
+                user_id = item["id"]
+                is_superuser = item.get("is_superuser", False)
+                return toggle_superuser(user_id, is_superuser)
+
             table = ui.table(columns=columns, rows=rows, row_key="id").classes("w-full")
 
             table.add_slot(
@@ -113,38 +128,36 @@ async def admin_page(offset: int = 0):
                 </q-td>""",
             )
 
-            def handle_actions(item):
-                user_id = item["id"]
-                username = item.get("username", "")
-                is_active = item.get("is_active", True)
-                is_superuser = item.get("is_superuser", False)
-
-                with ui.dialog() as dialog, ui.card():
-                    ui.label(f"Actions for {username}").classes("text-lg font-bold mb-4")
-                    ui.button(
-                        "View Stats",
-                        on_click=lambda: [dialog.close(), show_user_stats(user_id, username)],
-                    ).props("flat").classes("w-full mb-2")
-                    ui.button(
-                        f"{'Deactivate' if is_active else 'Activate'}",
-                        on_click=lambda: [dialog.close(), toggle_active(user_id, is_active)],
-                    ).props("flat").classes("w-full mb-2")
-                    ui.button(
-                        f"{'Demote from' if is_superuser else 'Promote to'} Superuser",
-                        on_click=lambda: [dialog.close(), toggle_superuser(user_id, is_superuser)],
-                    ).props("flat").classes("w-full")
-                    ui.button("Cancel", on_click=dialog.close).props("color=primary").classes(
-                        "w-full mt-2"
-                    )
-                dialog.open()
-
-            with table.add_slot("body-cell-actions"):
-                with table.cell("actions"):
-                    ui.button().props("icon=more_vert flat round").on(
-                        "click",
-                        js_handler="() => emit(props.row)",
-                        handler=lambda e: handle_actions(e.args),
-                    )
+            add_table_action_buttons(
+                table,
+                "actions",
+                [
+                    {
+                        "icon": "analytics",
+                        "color": "primary",
+                        "on_click": handle_stats,
+                        "label_field": "username",
+                    },
+                    {
+                        "icon": "block",
+                        "color": "warning",
+                        "on_click": handle_toggle_active,
+                        "label_field": "username",
+                        "confirm": True,
+                        "confirm_message": "This will change {name} active status.",
+                        "confirm_label": "Toggle Status",
+                    },
+                    {
+                        "icon": "admin_panel_settings",
+                        "color": "purple",
+                        "on_click": handle_toggle_superuser,
+                        "label_field": "username",
+                        "confirm": True,
+                        "confirm_message": "This will change {name} superuser privileges.",
+                        "confirm_label": "Change Role",
+                    },
+                ],
+            )
 
             current_page = (current_offset // limit) + 1
             total_pages = (total + limit - 1) // limit

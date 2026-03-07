@@ -1,3 +1,10 @@
+# [4.10.0](https://github.com/mbabic84/ainstruct-mcp/compare/v4.9.0...v4.10.0) (2026-03-07)
+
+
+### Features
+
+* add favicon and update branding to Ainstruct ([703a56f](https://github.com/mbabic84/ainstruct-mcp/commit/703a56f8911f0c64aa87908ceaa77a337ce7221e))
+
 # [4.9.0](https://github.com/mbabic84/ainstruct-mcp/compare/v4.8.0...v4.9.0) (2026-03-07)
 
 

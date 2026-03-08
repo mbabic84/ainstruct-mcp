@@ -109,14 +109,15 @@ async def documents_page(
                         doc_id = row["id"]
                         ui.navigate.to(f"/viewer/{doc_id}")
 
-                    async def handle_delete(item):
-                        item_id = item["id"]
+                    async def _delete_document(item_id: str):
+                        response = api_client.delete_document(item_id)
+                        if handle_api_error(response, "Failed to delete document"):
+                            ui.notify("Document deleted")
+                            ui.navigate.reload()
 
-                        async def do_delete():
-                            response = api_client.delete_document(item_id)
-                            if handle_api_error(response, "Failed to delete document"):
-                                ui.notify("Document deleted")
-                                ui.navigate.reload()
+                    def handle_delete(item):
+                        item_id = item["id"]
+                        return _delete_document(item_id)
 
                     table = (
                         ui.table(columns=columns, rows=rows, row_key="id", pagination=pagination)

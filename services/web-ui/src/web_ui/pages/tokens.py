@@ -109,26 +109,28 @@ def _render_pat_table(api_client, pats, sort_by: str = "", sort_desc: bool = Fal
             }
         )
 
-    async def rotate_pat(item):
+    async def _rotate_pat(item_id: str):
+        response = api_client.rotate_pat(item_id)
+        if response.status_code == 200:
+            data = response.json()
+            token = data.get("token", "N/A")
+            await mcp_token_dialog(token, "Token Rotated")
+        else:
+            ui.notify(f"Error: {response.text}", type="negative")
+
+    async def _revoke_pat(item_id: str):
+        response = api_client.revoke_pat(item_id)
+        if handle_api_error(response, "Failed to revoke PAT"):
+            ui.notify("PAT revoked")
+            ui.navigate.reload()
+
+    def rotate_pat(item):
         item_id = item["id"]
+        return _rotate_pat(item_id)
 
-        async def do_rotate():
-            response = api_client.rotate_pat(item_id)
-            if response.status_code == 200:
-                data = response.json()
-                token = data.get("token", "N/A")
-                await mcp_token_dialog(token, "Token Rotated")
-            else:
-                ui.notify(f"Error: {response.text}", type="negative")
-
-    async def revoke_pat(item):
+    def revoke_pat(item):
         item_id = item["id"]
-
-        async def do_revoke():
-            response = api_client.revoke_pat(item_id)
-            if handle_api_error(response, "Failed to revoke PAT"):
-                ui.notify("PAT revoked")
-                ui.navigate.reload()
+        return _revoke_pat(item_id)
 
     table = ui.table(columns=columns, rows=rows, row_key="id", pagination=pagination).classes(
         "w-full"
@@ -264,26 +266,28 @@ def _render_cat_table(api_client, cats, sort_by: str = "", sort_desc: bool = Fal
             }
         )
 
-    async def rotate_cat(item):
+    async def _rotate_cat(item_id: str):
+        response = api_client.rotate_cat(item_id)
+        if response.status_code == 200:
+            data = response.json()
+            token = data.get("token", "N/A")
+            await mcp_token_dialog(token, "Token Rotated")
+        else:
+            ui.notify(f"Error: {response.text}", type="negative")
+
+    async def _revoke_cat(item_id: str):
+        response = api_client.revoke_cat(item_id)
+        if handle_api_error(response, "Failed to revoke CAT"):
+            ui.notify("CAT revoked")
+            ui.navigate.to("/tokens?tab=cat")
+
+    def rotate_cat(item):
         item_id = item["id"]
+        return _rotate_cat(item_id)
 
-        async def do_rotate():
-            response = api_client.rotate_cat(item_id)
-            if response.status_code == 200:
-                data = response.json()
-                token = data.get("token", "N/A")
-                await mcp_token_dialog(token, "Token Rotated")
-            else:
-                ui.notify(f"Error: {response.text}", type="negative")
-
-    async def revoke_cat(item):
+    def revoke_cat(item):
         item_id = item["id"]
-
-        async def do_revoke():
-            response = api_client.revoke_cat(item_id)
-            if handle_api_error(response, "Failed to revoke CAT"):
-                ui.notify("CAT revoked")
-                ui.navigate.to("/tokens?tab=cat")
+        return _revoke_cat(item_id)
 
     table = ui.table(columns=columns, rows=rows, row_key="id", pagination=pagination).classes(
         "w-full"

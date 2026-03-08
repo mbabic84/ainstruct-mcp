@@ -93,14 +93,15 @@ async def collections_page(sort_by: str = "", sort_desc: bool = False):
                         collection_id = e.args[1]["id"]
                         ui.navigate.to(f"/documents?collection_id={collection_id}")
 
-                    async def handle_delete(item):
-                        item_id = item["id"]
+                    async def _delete_collection(item_id: str):
+                        response = api_client.delete_collection(item_id)
+                        if handle_api_error(response, "Failed to delete collection"):
+                            ui.notify("Collection deleted")
+                            ui.navigate.reload()
 
-                        async def do_delete():
-                            response = api_client.delete_collection(item_id)
-                            if handle_api_error(response, "Failed to delete collection"):
-                                ui.notify("Collection deleted")
-                                ui.navigate.reload()
+                    def handle_delete(item):
+                        item_id = item["id"]
+                        return _delete_collection(item_id)
 
                     table = (
                         ui.table(columns=columns, rows=rows, row_key="id", pagination=pagination)

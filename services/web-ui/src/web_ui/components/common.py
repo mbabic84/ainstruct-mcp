@@ -10,12 +10,16 @@ def make_columns_sortable(columns: list[dict], exclude: list[str] | None = None)
     return [{**col, "sortable": True} if col.get("name") not in exclude else col for col in columns]
 
 
-def create_table_pagination(sort_by: str = "", sort_desc: bool = False) -> dict:
-    """Create pagination dict for table with optional sort params."""
+def create_table_pagination(
+    sort_by: str = "", sort_desc: bool = False, rows_per_page: int | None = None
+) -> dict:
+    """Create pagination dict for table with optional sort params and rows per page."""
     pagination = {}
     if sort_by:
         pagination["sortBy"] = sort_by
         pagination["descending"] = sort_desc
+    if rows_per_page is not None:
+        pagination["rowsPerPage"] = rows_per_page
     return pagination
 
 

@@ -1,4 +1,5 @@
 from nicegui import APIRouter, ui
+from shared.config import settings
 
 from web_ui.auth import load_tokens_from_storage, require_auth
 from web_ui.components import (
@@ -91,7 +92,7 @@ def _render_pat_table(api_client, pats, sort_by: str = "", sort_desc: bool = Fal
         ]
     )
 
-    pagination = create_table_pagination(sort_by, sort_desc)
+    pagination = create_table_pagination(sort_by, sort_desc, settings.web_records_per_page)
 
     rows = []
     for p in pats:
@@ -247,7 +248,7 @@ def _render_cat_table(api_client, cats, sort_by: str = "", sort_desc: bool = Fal
         ]
     )
 
-    pagination = create_table_pagination(sort_by, sort_desc)
+    pagination = create_table_pagination(sort_by, sort_desc, settings.web_records_per_page)
 
     rows = []
     for c in cats:

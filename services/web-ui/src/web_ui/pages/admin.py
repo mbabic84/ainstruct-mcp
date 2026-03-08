@@ -1,4 +1,5 @@
 from nicegui import APIRouter, ui
+from shared.config import settings
 
 from web_ui.auth import load_tokens_from_storage, require_admin
 from web_ui.components import (
@@ -21,7 +22,7 @@ async def admin_page(offset: int = 0, sort_by: str = "", sort_desc: bool = False
     if not require_admin():
         return
 
-    limit = 20
+    limit = settings.web_records_per_page
 
     def content():
         from web_ui.auth import get_api_client

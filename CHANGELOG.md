@@ -1,3 +1,10 @@
+# [4.12.0](https://github.com/mbabic84/ainstruct-mcp/compare/v4.11.3...v4.12.0) (2026-03-08)
+
+
+### Features
+
+* **admin:** add delete user button with confirmation ([588a78f](https://github.com/mbabic84/ainstruct-mcp/commit/588a78fa6716a4fc677ebf34f9ab98b1407322d2))
+
 ## [4.11.3](https://github.com/mbabic84/ainstruct-mcp/compare/v4.11.2...v4.11.3) (2026-03-07)
 
 

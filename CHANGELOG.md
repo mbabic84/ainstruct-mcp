@@ -1,3 +1,10 @@
+# [4.13.0](https://github.com/mbabic84/ainstruct-mcp/compare/v4.12.0...v4.13.0) (2026-03-08)
+
+
+### Features
+
+* **ui:** persist table sorting state in URL ([2411dc9](https://github.com/mbabic84/ainstruct-mcp/commit/2411dc92f40c6b696aed93e73de1391652734722))
+
 # [4.12.0](https://github.com/mbabic84/ainstruct-mcp/compare/v4.11.3...v4.12.0) (2026-03-08)
 
 

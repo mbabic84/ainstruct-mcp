@@ -59,6 +59,12 @@ async def admin_page(offset: int = 0):
                 )
                 ui.navigate.reload()
 
+        async def delete_user(user_id: int, username: str):
+            response = api_client.delete_user(str(user_id))
+            if handle_api_error(response, "Failed to delete user"):
+                ui.notify(f"User '{username}' deleted successfully", type="positive")
+                ui.navigate.reload()
+
         columns = [
             {"name": "username", "label": "Username", "field": "username", "align": "left"},
             {"name": "email", "label": "Email", "field": "email", "align": "left"},
@@ -107,6 +113,11 @@ async def admin_page(offset: int = 0):
                 user_id = item["id"]
                 is_superuser = item.get("is_superuser", False)
                 return toggle_superuser(user_id, is_superuser)
+
+            def handle_delete_user(item):
+                user_id = item["id"]
+                username = item.get("username", "")
+                return delete_user(user_id, username)
 
             table = ui.table(columns=columns, rows=rows, row_key="id").classes("w-full")
 
@@ -157,6 +168,15 @@ async def admin_page(offset: int = 0):
                         "confirm": True,
                         "confirm_message": "This will change {name} superuser privileges.",
                         "confirm_label": "Change Role",
+                    },
+                    {
+                        "icon": "delete",
+                        "color": "negative",
+                        "on_click": handle_delete_user,
+                        "label_field": "username",
+                        "confirm": True,
+                        "confirm_message": "This will permanently delete user '{name}'. This action cannot be undone.",
+                        "confirm_label": "Delete User",
                     },
                 ],
             )

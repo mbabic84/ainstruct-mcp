@@ -47,5 +47,7 @@ class Settings(BaseSettings):
     pat_default_expiry_days: int = 90
     pat_max_expiry_days: int = 365
 
+    web_records_per_page: int = 25
+
 
 settings = Settings()

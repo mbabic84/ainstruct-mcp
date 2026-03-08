@@ -1,4 +1,5 @@
 from nicegui import APIRouter, ui
+from shared.config import settings
 
 from web_ui.auth import load_tokens_from_storage, require_auth
 from web_ui.components import (
@@ -75,7 +76,9 @@ async def collections_page(sort_by: str = "", sort_desc: bool = False):
                         ]
                     )
 
-                    pagination = create_table_pagination(sort_by, sort_desc)
+                    pagination = create_table_pagination(
+                        sort_by, sort_desc, settings.web_records_per_page
+                    )
 
                     rows = []
                     for c in collections:

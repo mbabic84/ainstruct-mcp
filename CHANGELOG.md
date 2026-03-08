@@ -1,3 +1,10 @@
+## [4.14.1](https://github.com/mbabic84/ainstruct-mcp/compare/v4.14.0...v4.14.1) (2026-03-08)
+
+
+### Bug Fixes
+
+* **ui:** preserve collection filter when navigating back from document viewer ([b0f789f](https://github.com/mbabic84/ainstruct-mcp/commit/b0f789ffd218264170ae832799685a3f0eba7ffc))
+
 # [4.14.0](https://github.com/mbabic84/ainstruct-mcp/compare/v4.13.1...v4.14.0) (2026-03-08)
 
 

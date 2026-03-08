@@ -1,14 +1,21 @@
 from nicegui import APIRouter, ui
 
 from web_ui.auth import load_tokens_from_storage, require_admin
-from web_ui.components import add_table_action_buttons, render_page
+from web_ui.components import (
+    add_table_action_buttons,
+    build_sort_url,
+    create_sort_handler,
+    create_table_pagination,
+    make_columns_sortable,
+    render_page,
+)
 from web_ui.utils import format_date, handle_api_error
 
 router = APIRouter(prefix="")
 
 
 @router.page("/admin")
-async def admin_page(offset: int = 0):
+async def admin_page(offset: int = 0, sort_by: str = "", sort_desc: bool = False):
     await load_tokens_from_storage()
 
     if not require_admin():
@@ -65,14 +72,23 @@ async def admin_page(offset: int = 0):
                 ui.notify(f"User '{username}' deleted successfully", type="positive")
                 ui.navigate.reload()
 
-        columns = [
-            {"name": "username", "label": "Username", "field": "username", "align": "left"},
-            {"name": "email", "label": "Email", "field": "email", "align": "left"},
-            {"name": "is_active", "label": "Status", "field": "is_active", "align": "center"},
-            {"name": "is_superuser", "label": "Role", "field": "is_superuser", "align": "center"},
-            {"name": "created_at", "label": "Created", "field": "created_at", "align": "left"},
-            {"name": "actions", "label": "Actions", "field": "actions", "align": "center"},
-        ]
+        columns = make_columns_sortable(
+            [
+                {"name": "username", "label": "Username", "field": "username", "align": "left"},
+                {"name": "email", "label": "Email", "field": "email", "align": "left"},
+                {"name": "is_active", "label": "Status", "field": "is_active", "align": "center"},
+                {
+                    "name": "is_superuser",
+                    "label": "Role",
+                    "field": "is_superuser",
+                    "align": "center",
+                },
+                {"name": "created_at", "label": "Created", "field": "created_at", "align": "left"},
+                {"name": "actions", "label": "Actions", "field": "actions", "align": "center"},
+            ]
+        )
+
+        pagination = {"rowsPerPage": limit, **create_table_pagination(sort_by, sort_desc)}
 
         rows = []
         total = 0
@@ -119,7 +135,16 @@ async def admin_page(offset: int = 0):
                 username = item.get("username", "")
                 return delete_user(user_id, username)
 
-            table = ui.table(columns=columns, rows=rows, row_key="id").classes("w-full")
+            table = ui.table(
+                columns=columns, rows=rows, row_key="id", pagination=pagination
+            ).classes("w-full")
+
+            table.on(
+                "update:pagination",
+                create_sort_handler(
+                    "/admin", lambda: {"offset": current_offset}, sort_by, sort_desc
+                ),
+            )
 
             table.add_slot(
                 "body-cell-is_active",
@@ -190,13 +215,22 @@ async def admin_page(offset: int = 0):
                     ui.button(
                         "Previous",
                         on_click=lambda: ui.navigate.to(
-                            f"/admin?offset={max(0, current_offset - limit)}"
+                            build_sort_url(
+                                "/admin",
+                                sort_by,
+                                sort_desc,
+                                {"offset": max(0, current_offset - limit)},
+                            )
                         ),
                     ).props("flat")
                 if current_offset + limit < total:
                     ui.button(
                         "Next",
-                        on_click=lambda: ui.navigate.to(f"/admin?offset={current_offset + limit}"),
+                        on_click=lambda: ui.navigate.to(
+                            build_sort_url(
+                                "/admin", sort_by, sort_desc, {"offset": current_offset + limit}
+                            )
+                        ),
                     ).props("flat")
         else:
             ui.notify(f"Error loading users: {response.text}", type="negative")

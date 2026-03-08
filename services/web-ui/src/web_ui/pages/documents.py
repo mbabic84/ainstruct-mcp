@@ -1,14 +1,22 @@
 from nicegui import APIRouter, ui
 
 from web_ui.auth import load_tokens_from_storage, require_auth
-from web_ui.components import add_table_action_buttons, render_page
+from web_ui.components import (
+    add_table_action_buttons,
+    create_sort_handler,
+    create_table_pagination,
+    make_columns_sortable,
+    render_page,
+)
 from web_ui.utils import format_date, handle_api_error
 
 router = APIRouter(prefix="")
 
 
 @router.page("/documents")
-async def documents_page(collection_id: str | None = None):
+async def documents_page(
+    collection_id: str | None = None, sort_by: str = "", sort_desc: bool = False
+):
     await load_tokens_from_storage()
 
     if not require_auth():
@@ -51,33 +59,38 @@ async def documents_page(collection_id: str | None = None):
             documents = docs_data.get("documents", [])
             if documents:
                 with ui.card().classes("w-full"):
-                    columns = [
-                        {"name": "title", "label": "Title", "field": "title", "align": "left"},
-                        {
-                            "name": "collection_name",
-                            "label": "Collection",
-                            "field": "collection_name",
-                            "align": "left",
-                        },
-                        {
-                            "name": "document_type",
-                            "label": "Type",
-                            "field": "document_type",
-                            "align": "left",
-                        },
-                        {
-                            "name": "created_at",
-                            "label": "Created",
-                            "field": "created_at",
-                            "align": "left",
-                        },
-                        {
-                            "name": "actions",
-                            "label": "Actions",
-                            "field": "actions",
-                            "align": "center",
-                        },
-                    ]
+                    columns = make_columns_sortable(
+                        [
+                            {"name": "title", "label": "Title", "field": "title", "align": "left"},
+                            {
+                                "name": "collection_name",
+                                "label": "Collection",
+                                "field": "collection_name",
+                                "align": "left",
+                            },
+                            {
+                                "name": "document_type",
+                                "label": "Type",
+                                "field": "document_type",
+                                "align": "left",
+                            },
+                            {
+                                "name": "created_at",
+                                "label": "Created",
+                                "field": "created_at",
+                                "align": "left",
+                            },
+                            {
+                                "name": "actions",
+                                "label": "Actions",
+                                "field": "actions",
+                                "align": "center",
+                            },
+                        ]
+                    )
+
+                    pagination = create_table_pagination(sort_by, sort_desc)
+
                     rows = []
                     for d in documents:
                         rows.append(
@@ -106,9 +119,18 @@ async def documents_page(collection_id: str | None = None):
                                 ui.navigate.reload()
 
                     table = (
-                        ui.table(columns=columns, rows=rows, row_key="id")
+                        ui.table(columns=columns, rows=rows, row_key="id", pagination=pagination)
                         .classes("w-full")
                         .on("rowClick", handle_view)
+                        .on(
+                            "update:pagination",
+                            create_sort_handler(
+                                "/documents",
+                                lambda: {"collection_id": selected_collection.value},
+                                sort_by,
+                                sort_desc,
+                            ),
+                        )
                     )
                     add_table_action_buttons(
                         table,

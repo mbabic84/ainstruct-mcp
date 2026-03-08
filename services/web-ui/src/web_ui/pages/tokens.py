@@ -1,15 +1,21 @@
 from nicegui import APIRouter, ui
 
 from web_ui.auth import load_tokens_from_storage, require_auth
-from web_ui.components import render_page
-from web_ui.components.common import add_table_action_buttons, mcp_token_dialog
+from web_ui.components import (
+    add_table_action_buttons,
+    create_sort_handler,
+    create_table_pagination,
+    make_columns_sortable,
+    render_page,
+)
+from web_ui.components.common import mcp_token_dialog
 from web_ui.utils import format_date, handle_api_error
 
 router = APIRouter(prefix="")
 
 
 @router.page("/tokens")
-async def tokens_page(tab: str = "pat"):
+async def tokens_page(tab: str = "pat", sort_by: str = "", sort_desc: bool = False):
     await load_tokens_from_storage()
 
     if not require_auth():
@@ -28,14 +34,14 @@ async def tokens_page(tab: str = "pat"):
 
         with ui.tab_panels(tabs, value=default_tab).classes("w-full"):
             with ui.tab_panel(pat_tab):
-                _render_pat_panel(api_client)
+                _render_pat_panel(api_client, sort_by, sort_desc)
             with ui.tab_panel(cat_tab):
-                _render_cat_panel(api_client)
+                _render_cat_panel(api_client, sort_by, sort_desc)
 
     render_page(content)
 
 
-def _render_pat_panel(api_client):
+def _render_pat_panel(api_client, sort_by: str = "", sort_desc: bool = False):
     ui.label("Personal Access Tokens").classes("text-xl font-bold mb-4")
 
     pat_label = ui.input("Token Label").classes("w-full")
@@ -66,22 +72,27 @@ def _render_pat_panel(api_client):
         pats = response.json().get("tokens", [])
         active_pats = [p for p in pats if p.get("is_active")]
         if active_pats:
-            _render_pat_table(api_client, active_pats)
+            _render_pat_table(api_client, active_pats, sort_by, sort_desc)
         else:
             ui.label("No PATs yet.")
     else:
         ui.notify(f"Error loading PATs: {response.text}", type="negative")
 
 
-def _render_pat_table(api_client, pats):
-    columns = [
-        {"name": "label", "label": "Label", "field": "label", "align": "left"},
-        {"name": "scopes", "label": "Scopes", "field": "scopes", "align": "left"},
-        {"name": "is_active", "label": "Active", "field": "is_active", "align": "left"},
-        {"name": "created_at", "label": "Created", "field": "created_at", "align": "left"},
-        {"name": "expires_at", "label": "Expires", "field": "expires_at", "align": "left"},
-        {"name": "actions", "label": "Actions", "field": "actions", "align": "center"},
-    ]
+def _render_pat_table(api_client, pats, sort_by: str = "", sort_desc: bool = False):
+    columns = make_columns_sortable(
+        [
+            {"name": "label", "label": "Label", "field": "label", "align": "left"},
+            {"name": "scopes", "label": "Scopes", "field": "scopes", "align": "left"},
+            {"name": "is_active", "label": "Active", "field": "is_active", "align": "left"},
+            {"name": "created_at", "label": "Created", "field": "created_at", "align": "left"},
+            {"name": "expires_at", "label": "Expires", "field": "expires_at", "align": "left"},
+            {"name": "actions", "label": "Actions", "field": "actions", "align": "center"},
+        ]
+    )
+
+    pagination = create_table_pagination(sort_by, sort_desc)
+
     rows = []
     for p in pats:
         expires = p.get("expires_at")
@@ -119,7 +130,13 @@ def _render_pat_table(api_client, pats):
                 ui.notify("PAT revoked")
                 ui.navigate.reload()
 
-    table = ui.table(columns=columns, rows=rows, row_key="id").classes("w-full")
+    table = ui.table(columns=columns, rows=rows, row_key="id", pagination=pagination).classes(
+        "w-full"
+    )
+    table.on(
+        "update:pagination",
+        create_sort_handler("/tokens", lambda: {"tab": "pat"}, sort_by, sort_desc),
+    )
     add_table_action_buttons(
         table,
         "actions",
@@ -144,7 +161,7 @@ def _render_pat_table(api_client, pats):
     )
 
 
-def _render_cat_panel(api_client):
+def _render_cat_panel(api_client, sort_by: str = "", sort_desc: bool = False):
     ui.label("Collection Access Tokens").classes("text-xl font-bold mb-4")
 
     cat_label = ui.input("Token Label").classes("w-full")
@@ -203,28 +220,33 @@ def _render_cat_panel(api_client):
         cats = response.json().get("tokens", [])
         active_cats = [c for c in cats if c.get("is_active")]
         if active_cats:
-            _render_cat_table(api_client, active_cats)
+            _render_cat_table(api_client, active_cats, sort_by, sort_desc)
         else:
             ui.label("No CATs yet.")
     else:
         ui.notify(f"Error loading CATs: {response.text}", type="negative")
 
 
-def _render_cat_table(api_client, cats):
-    columns = [
-        {"name": "label", "label": "Label", "field": "label", "align": "left"},
-        {
-            "name": "collection_name",
-            "label": "Collection",
-            "field": "collection_name",
-            "align": "left",
-        },
-        {"name": "permission", "label": "Permission", "field": "permission", "align": "left"},
-        {"name": "is_active", "label": "Active", "field": "is_active", "align": "left"},
-        {"name": "created_at", "label": "Created", "field": "created_at", "align": "left"},
-        {"name": "expires_at", "label": "Expires", "field": "expires_at", "align": "left"},
-        {"name": "actions", "label": "Actions", "field": "actions", "align": "center"},
-    ]
+def _render_cat_table(api_client, cats, sort_by: str = "", sort_desc: bool = False):
+    columns = make_columns_sortable(
+        [
+            {"name": "label", "label": "Label", "field": "label", "align": "left"},
+            {
+                "name": "collection_name",
+                "label": "Collection",
+                "field": "collection_name",
+                "align": "left",
+            },
+            {"name": "permission", "label": "Permission", "field": "permission", "align": "left"},
+            {"name": "is_active", "label": "Active", "field": "is_active", "align": "left"},
+            {"name": "created_at", "label": "Created", "field": "created_at", "align": "left"},
+            {"name": "expires_at", "label": "Expires", "field": "expires_at", "align": "left"},
+            {"name": "actions", "label": "Actions", "field": "actions", "align": "center"},
+        ]
+    )
+
+    pagination = create_table_pagination(sort_by, sort_desc)
+
     rows = []
     for c in cats:
         expires = c.get("expires_at")
@@ -263,7 +285,13 @@ def _render_cat_table(api_client, cats):
                 ui.notify("CAT revoked")
                 ui.navigate.to("/tokens?tab=cat")
 
-    table = ui.table(columns=columns, rows=rows, row_key="id").classes("w-full")
+    table = ui.table(columns=columns, rows=rows, row_key="id", pagination=pagination).classes(
+        "w-full"
+    )
+    table.on(
+        "update:pagination",
+        create_sort_handler("/tokens", lambda: {"tab": "cat"}, sort_by, sort_desc),
+    )
     add_table_action_buttons(
         table,
         "actions",
@@ -284,15 +312,5 @@ def _render_cat_table(api_client, cats):
                 "confirm_message": "This action cannot be undone.",
                 "confirm_label": "Revoke",
             },
-        ],
-    )
-
-    table = ui.table(columns=columns, rows=rows, row_key="id").classes("w-full")
-    add_table_action_buttons(
-        table,
-        "actions",
-        [
-            {"icon": "refresh", "color": "warning", "on_click": rotate_cat},
-            {"icon": "delete", "color": "negative", "on_click": revoke_cat},
         ],
     )

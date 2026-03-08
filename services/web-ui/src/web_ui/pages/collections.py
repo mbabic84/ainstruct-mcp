@@ -1,14 +1,20 @@
 from nicegui import APIRouter, ui
 
 from web_ui.auth import load_tokens_from_storage, require_auth
-from web_ui.components import add_table_action_buttons, render_page
+from web_ui.components import (
+    add_table_action_buttons,
+    create_sort_handler,
+    create_table_pagination,
+    make_columns_sortable,
+    render_page,
+)
 from web_ui.utils import format_date, handle_api_error
 
 router = APIRouter(prefix="")
 
 
 @router.page("/collections")
-async def collections_page():
+async def collections_page(sort_by: str = "", sort_desc: bool = False):
     await load_tokens_from_storage()
 
     if not require_auth():
@@ -39,33 +45,38 @@ async def collections_page():
             collections = response.json().get("collections", [])
             if collections:
                 with ui.card().classes("w-full"):
-                    columns = [
-                        {"name": "name", "label": "Name", "field": "name", "align": "left"},
-                        {
-                            "name": "document_count",
-                            "label": "Documents",
-                            "field": "document_count",
-                            "align": "left",
-                        },
-                        {
-                            "name": "cat_count",
-                            "label": "CATs",
-                            "field": "cat_count",
-                            "align": "left",
-                        },
-                        {
-                            "name": "created_at",
-                            "label": "Created",
-                            "field": "created_at",
-                            "align": "left",
-                        },
-                        {
-                            "name": "actions",
-                            "label": "Actions",
-                            "field": "actions",
-                            "align": "center",
-                        },
-                    ]
+                    columns = make_columns_sortable(
+                        [
+                            {"name": "name", "label": "Name", "field": "name", "align": "left"},
+                            {
+                                "name": "document_count",
+                                "label": "Documents",
+                                "field": "document_count",
+                                "align": "left",
+                            },
+                            {
+                                "name": "cat_count",
+                                "label": "CATs",
+                                "field": "cat_count",
+                                "align": "left",
+                            },
+                            {
+                                "name": "created_at",
+                                "label": "Created",
+                                "field": "created_at",
+                                "align": "left",
+                            },
+                            {
+                                "name": "actions",
+                                "label": "Actions",
+                                "field": "actions",
+                                "align": "center",
+                            },
+                        ]
+                    )
+
+                    pagination = create_table_pagination(sort_by, sort_desc)
+
                     rows = []
                     for c in collections:
                         rows.append(
@@ -92,9 +103,13 @@ async def collections_page():
                                 ui.navigate.reload()
 
                     table = (
-                        ui.table(columns=columns, rows=rows, row_key="id")
+                        ui.table(columns=columns, rows=rows, row_key="id", pagination=pagination)
                         .classes("w-full")
                         .on("rowClick", handle_view)
+                        .on(
+                            "update:pagination",
+                            create_sort_handler("/collections", None, sort_by, sort_desc),
+                        )
                     )
                     add_table_action_buttons(
                         table,

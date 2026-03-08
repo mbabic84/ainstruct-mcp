@@ -10,7 +10,7 @@ router = APIRouter(prefix="")
 
 
 @router.page("/viewer/{doc_id}")
-async def viewer_page(doc_id: str):
+async def viewer_page(doc_id: str, collection_id: str | None = None):
     await load_tokens_from_storage()
 
     if not require_auth():
@@ -30,7 +30,12 @@ async def viewer_page(doc_id: str):
 
         with ui.row().classes("w-full items-center justify-between mb-4"):
             with ui.row().classes("items-center gap-2"):
-                ui.button(icon="arrow_back", on_click=lambda: ui.navigate.to("/documents")).props(
+                back_url = (
+                    f"/documents?collection_id={collection_id}"
+                    if collection_id and collection_id != "__all__"
+                    else "/documents"
+                )
+                ui.button(icon="arrow_back", on_click=lambda: ui.navigate.to(back_url)).props(
                     "flat round"
                 )
                 ui.icon("description", size="md")

@@ -110,7 +110,10 @@ async def documents_page(
                     def handle_view(e):
                         row = e.args[1]
                         doc_id = row["id"]
-                        ui.navigate.to(f"/viewer/{doc_id}")
+                        if collection_id and collection_id != "__all__":
+                            ui.navigate.to(f"/viewer/{doc_id}?collection_id={collection_id}")
+                        else:
+                            ui.navigate.to(f"/viewer/{doc_id}")
 
                     async def _delete_document(item_id: str):
                         response = api_client.delete_document(item_id)

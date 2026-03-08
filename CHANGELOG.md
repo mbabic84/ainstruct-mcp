@@ -1,3 +1,10 @@
+# [4.14.0](https://github.com/mbabic84/ainstruct-mcp/compare/v4.13.1...v4.14.0) (2026-03-08)
+
+
+### Features
+
+* add configurable web_records_per_page setting ([9667472](https://github.com/mbabic84/ainstruct-mcp/commit/9667472adad6659a88a8ff015ca39c8a16a1217a))
+
 ## [4.13.1](https://github.com/mbabic84/ainstruct-mcp/compare/v4.13.0...v4.13.1) (2026-03-08)
 
 

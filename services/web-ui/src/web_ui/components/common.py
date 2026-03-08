@@ -1,6 +1,62 @@
 import asyncio
+from collections.abc import Callable
 
 from nicegui import ui
+
+
+def make_columns_sortable(columns: list[dict], exclude: list[str] | None = None) -> list[dict]:
+    """Add sortable=True to all columns except excluded ones."""
+    exclude = exclude or ["actions"]
+    return [{**col, "sortable": True} if col.get("name") not in exclude else col for col in columns]
+
+
+def create_table_pagination(sort_by: str = "", sort_desc: bool = False) -> dict:
+    """Create pagination dict for table with optional sort params."""
+    pagination = {}
+    if sort_by:
+        pagination["sortBy"] = sort_by
+        pagination["descending"] = sort_desc
+    return pagination
+
+
+def build_sort_url(
+    base_url: str,
+    sort_by: str,
+    sort_desc: bool,
+    extra_params: dict | None = None,
+) -> str:
+    """Build URL with sort params. extra_params for non-sort params like collection_id or tab."""
+    params = []
+    if extra_params:
+        for k, v in extra_params.items():
+            if v is not None:
+                params.append(f"{k}={v}")
+    if sort_by:
+        params.append(f"sort_by={sort_by}")
+        if sort_desc:
+            params.append("sort_desc=true")
+    query = "&".join(params)
+    return f"{base_url}?{query}" if query else base_url
+
+
+def create_sort_handler(
+    base_url: str,
+    get_extra_params: Callable[[], dict | None] | None = None,
+    current_sort_by: str = "",
+    current_sort_desc: bool = False,
+) -> Callable:
+    """Create a sort handler that updates URL with sort params."""
+
+    def handle_sort(e):
+        sort_data = e.args
+        if sort_data:
+            new_sort_by = sort_data.get("sortBy", "") or ""
+            new_sort_desc = bool(sort_data.get("descending", False))
+            if new_sort_by != current_sort_by or new_sort_desc != current_sort_desc:
+                extra = get_extra_params() if get_extra_params else None
+                ui.navigate.to(build_sort_url(base_url, new_sort_by, new_sort_desc, extra))
+
+    return handle_sort
 
 
 async def confirm_action(

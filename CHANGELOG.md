@@ -1,3 +1,10 @@
+## [4.13.1](https://github.com/mbabic84/ainstruct-mcp/compare/v4.13.0...v4.13.1) (2026-03-08)
+
+
+### Bug Fixes
+
+* **ui:** action button handlers in tables not executing API calls ([20aa031](https://github.com/mbabic84/ainstruct-mcp/commit/20aa0318e5805101f2123a30194eca4162ca7080))
+
 # [4.13.0](https://github.com/mbabic84/ainstruct-mcp/compare/v4.12.0...v4.13.0) (2026-03-08)
 
 

@@ -1,3 +1,10 @@
+## [4.14.2](https://github.com/mbabic84/ainstruct-mcp/compare/v4.14.1...v4.14.2) (2026-03-09)
+
+
+### Bug Fixes
+
+* **ui:** admin stats button not working ([59be812](https://github.com/mbabic84/ainstruct-mcp/commit/59be812019e761a9c18550e98d35f61d0b5479ac))
+
 ## [4.14.1](https://github.com/mbabic84/ainstruct-mcp/compare/v4.14.0...v4.14.1) (2026-03-08)
 
 

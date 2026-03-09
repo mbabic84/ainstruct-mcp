@@ -45,8 +45,11 @@ class UserResponse(BaseModel):
 
 class UserDetailResponse(UserResponse):
     collection_count: int = 0
-    pat_count: int = 0
-    cat_count: int = 0
+    pat_active_count: int = 0
+    pat_inactive_count: int = 0
+    cat_active_count: int = 0
+    cat_inactive_count: int = 0
+    document_count: int = 0
 
 
 class UserUpdate(BaseModel):

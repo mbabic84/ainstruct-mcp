@@ -38,6 +38,7 @@ async def admin_page(offset: int = 0, sort_by: str = "", sort_desc: bool = False
             stats_user_label = ui.label("").classes("text-xl font-bold")
             with ui.row().classes("w-full gap-4 mt-4"):
                 stats_collections = ui.label("").classes("text-lg")
+                stats_documents = ui.label("").classes("text-lg")
                 stats_pats = ui.label("").classes("text-lg")
                 stats_cats = ui.label("").classes("text-lg")
 
@@ -47,8 +48,13 @@ async def admin_page(offset: int = 0, sort_by: str = "", sort_desc: bool = False
                 user = response.json()
                 stats_user_label.set_text(f"User: {username}")
                 stats_collections.set_text(f"Collections: {user.get('collection_count', 0)}")
-                stats_pats.set_text(f"PATs: {user.get('pat_count', 0)}")
-                stats_cats.set_text(f"CATs: {user.get('cat_count', 0)}")
+                stats_documents.set_text(f"Documents: {user.get('document_count', 0)}")
+                pat_active = user.get("pat_active_count", 0)
+                pat_inactive = user.get("pat_inactive_count", 0)
+                stats_pats.set_text(f"PATs: {pat_active} active, {pat_inactive} inactive")
+                cat_active = user.get("cat_active_count", 0)
+                cat_inactive = user.get("cat_inactive_count", 0)
+                stats_cats.set_text(f"CATs: {cat_active} active, {cat_inactive} inactive")
                 stats_dialog.open()
             else:
                 ui.notify(f"Error loading user stats: {response.text}", type="negative")

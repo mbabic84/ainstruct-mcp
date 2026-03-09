@@ -2,6 +2,7 @@ from fastapi import APIRouter, HTTPException, Query, status
 from shared.db import (
     get_cat_repository,
     get_collection_repository,
+    get_document_repository,
     get_pat_token_repository,
     get_qdrant_service,
     get_user_repository,
@@ -103,6 +104,7 @@ async def get_user(
     collection_repo = get_collection_repository()
     pat_repo = get_pat_token_repository()
     cat_repo = get_cat_repository()
+    document_repo = get_document_repository()
 
     user = await user_repo.get_by_id(user_id)
     if not user:
@@ -114,6 +116,12 @@ async def get_user(
     collections = await collection_repo.list_by_user(user_id)
     pats = await pat_repo.list_by_user(user_id)
     cats = await cat_repo.list_all(user_id)
+    document_count = await document_repo.count_by_user(user_id)
+
+    pat_active = sum(1 for p in pats if p.get("is_active", True))
+    pat_inactive = len(pats) - pat_active
+    cat_active = sum(1 for c in cats if c.get("is_active", True))
+    cat_inactive = len(cats) - cat_active
 
     return UserDetailResponse(
         user_id=user.user_id,
@@ -123,8 +131,11 @@ async def get_user(
         is_superuser=user.is_superuser,
         created_at=user.created_at,
         collection_count=len(collections),
-        pat_count=len(pats),
-        cat_count=len(cats),
+        pat_active_count=pat_active,
+        pat_inactive_count=pat_inactive,
+        cat_active_count=cat_active,
+        cat_inactive_count=cat_inactive,
+        document_count=document_count,
     )
 
 

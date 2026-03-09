@@ -13,11 +13,13 @@ __all__ = [
     "UserRepository",
     "CollectionRepository",
     "PatTokenRepository",
+    "UsageRepository",
     "get_cat_repository",
     "get_document_repository",
     "get_user_repository",
     "get_collection_repository",
     "get_pat_token_repository",
+    "get_usage_repository",
 ]
 
 from .models import (
@@ -42,3 +44,4 @@ from .repository import (
     get_pat_token_repository,
     get_user_repository,
 )
+from .usage_repository import UsageRepository, get_usage_repository

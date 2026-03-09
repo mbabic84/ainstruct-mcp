@@ -7,7 +7,7 @@ from datetime import datetime
 from enum import StrEnum
 
 from pydantic import BaseModel, EmailStr, Field
-from sqlalchemy import JSON, Boolean, DateTime, ForeignKey, String, Text
+from sqlalchemy import JSON, Boolean, DateTime, ForeignKey, String, Text, UniqueConstraint
 from sqlalchemy.dialects.postgresql import ARRAY
 from sqlalchemy.ext.asyncio import AsyncAttrs, create_async_engine
 from sqlalchemy.orm import DeclarativeBase, Mapped, mapped_column, relationship
@@ -101,6 +101,9 @@ class UserModel(Base):
     pat_tokens: Mapped[list[PatTokenModel]] = relationship(
         "PatTokenModel", back_populates="user", cascade="all, delete-orphan"
     )
+    usage_records: Mapped[list[UsageRecordModel]] = relationship(
+        "UsageRecordModel", back_populates="user", cascade="all, delete-orphan"
+    )
 
 
 class CatModel(Base):
@@ -143,6 +146,27 @@ class PatTokenModel(Base):
     created_at: Mapped[datetime] = mapped_column(DateTime, default=datetime.utcnow)
 
     user: Mapped[UserModel] = relationship("UserModel", back_populates="pat_tokens")
+
+
+class UsageRecordModel(Base):
+    __tablename__ = "usage_records"
+
+    id: Mapped[str] = mapped_column(String(36), primary_key=True, default=lambda: str(uuid.uuid4()))
+    user_id: Mapped[str] = mapped_column(
+        String(36), ForeignKey("users.id"), nullable=False, index=True
+    )
+    year_month: Mapped[str] = mapped_column(String(7), nullable=False)
+    source: Mapped[str] = mapped_column(String(10), nullable=False)
+    request_count: Mapped[int] = mapped_column(default=0)
+    updated_at: Mapped[datetime] = mapped_column(
+        DateTime, default=datetime.utcnow, onupdate=datetime.utcnow
+    )
+
+    __table_args__ = (
+        UniqueConstraint("user_id", "year_month", "source", name="uq_user_month_source"),
+    )
+
+    user: Mapped[UserModel] = relationship("UserModel", back_populates="usage_records")
 
 
 class CollectionCreate(BaseModel):

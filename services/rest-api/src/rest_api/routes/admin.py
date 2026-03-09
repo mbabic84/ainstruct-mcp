@@ -5,6 +5,7 @@ from shared.db import (
     get_document_repository,
     get_pat_token_repository,
     get_qdrant_service,
+    get_usage_repository,
     get_user_repository,
 )
 from shared.services import get_auth_service
@@ -13,6 +14,8 @@ from rest_api.deps import AdminApiKeyDep, AdminDep, DbDep
 from rest_api.schemas import (
     ErrorResponse,
     MessageResponse,
+    UsageHistoryResponse,
+    UsageMonthlyResponse,
     UserDetailResponse,
     UserListItem,
     UserListResponse,
@@ -273,4 +276,57 @@ async def promote_user(
         is_active=updated.is_active,
         is_superuser=updated.is_superuser,
         created_at=updated.created_at,
+    )
+
+
+@router.get(
+    "/usage/{user_id}",
+    response_model=UsageMonthlyResponse,
+    responses={
+        404: {"model": ErrorResponse, "description": "User not found"},
+    },
+)
+async def get_user_usage(
+    user_id: str,
+    year_month: str = Query(None, description="Year-month in format YYYY-MM (e.g., 2026-03)"),
+    db: DbDep = None,
+    admin: AdminDep = None,
+):
+    usage_repo = get_usage_repository()
+    result = await usage_repo.get_monthly_usage(user_id, year_month)
+
+    return UsageMonthlyResponse(
+        year_month=result["year_month"],
+        api_requests=result["api_requests"],
+        mcp_requests=result["mcp_requests"],
+        total_requests=result["total_requests"],
+    )
+
+
+@router.get(
+    "/usage/{user_id}/history",
+    response_model=UsageHistoryResponse,
+    responses={
+        404: {"model": ErrorResponse, "description": "User not found"},
+    },
+)
+async def get_user_usage_history(
+    user_id: str,
+    months: int = Query(6, ge=1, le=24, description="Number of months to retrieve"),
+    db: DbDep = None,
+    admin: AdminDep = None,
+):
+    usage_repo = get_usage_repository()
+    history = await usage_repo.get_usage_history(user_id, months=months)
+
+    return UsageHistoryResponse(
+        history=[
+            {
+                "year_month": h["year_month"],
+                "api_requests": h["api_requests"],
+                "mcp_requests": h["mcp_requests"],
+                "total": h["total"],
+            }
+            for h in history
+        ]
     )

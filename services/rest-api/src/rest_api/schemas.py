@@ -301,3 +301,21 @@ class ErrorResponse(BaseModel):
 
 class MessageResponse(BaseModel):
     message: str
+
+
+class UsageMonthlyResponse(BaseModel):
+    year_month: str
+    api_requests: int
+    mcp_requests: int
+    total_requests: int
+
+
+class UsageHistoryItem(BaseModel):
+    year_month: str
+    api_requests: int
+    mcp_requests: int
+    total: int
+
+
+class UsageHistoryResponse(BaseModel):
+    history: list[UsageHistoryItem]

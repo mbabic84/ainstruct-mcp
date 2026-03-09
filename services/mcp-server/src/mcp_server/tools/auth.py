@@ -153,7 +153,13 @@ DOCUMENT_TOOLS: set[str] = {
     "list_documents_tool",
     "delete_document_tool",
     "update_document_tool",
+    "move_document_tool",
 }
+
+
+def is_document_tool(tool_name: str) -> bool:
+    return tool_name in DOCUMENT_TOOLS
+
 
 # Tools requiring admin scope (JWT or PAT with admin)
 ADMIN_TOOLS: set[str] = set()
@@ -189,6 +195,40 @@ PUBLIC_PROTOCOL_METHODS: set[str] = {
 
 def is_public_tool(tool_name: str) -> bool:
     return tool_name in PUBLIC_TOOLS
+
+
+async def _track_usage(tool_name: str | None) -> None:
+    if not tool_name or not is_document_tool(tool_name):
+        return
+
+    from mcp_server.tools.context import (
+        get_cat_info,
+        get_pat_info,
+        get_user_info,
+    )
+
+    user_info = get_user_info()
+    pat_info = get_pat_info()
+    cat_info = get_cat_info()
+
+    user_id = None
+    if user_info:
+        user_id = user_info.get("user_id")
+    elif pat_info:
+        user_id = pat_info.get("user_id")
+    elif cat_info:
+        user_id = cat_info.get("user_id")
+
+    if not user_id:
+        return
+
+    try:
+        from shared.db import get_usage_repository
+
+        usage_repo = get_usage_repository()
+        await usage_repo.increment(user_id, "mcp")
+    except Exception:
+        pass
 
 
 class AuthMiddleware(Middleware):
@@ -266,6 +306,8 @@ class AuthMiddleware(Middleware):
             set_auth_type("cat")
 
         await _load_user_collections()
+
+        await _track_usage(tool_name)
 
         try:
             return await call_next(context)

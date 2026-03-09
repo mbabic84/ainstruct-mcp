@@ -1,3 +1,10 @@
+# [4.15.0](https://github.com/mbabic84/ainstruct-mcp/compare/v4.14.2...v4.15.0) (2026-03-09)
+
+
+### Features
+
+* **admin:** add document count and split PAT/CAT by active status ([6f15ae1](https://github.com/mbabic84/ainstruct-mcp/commit/6f15ae1d82b6eecabab4517af66270d3092b38e6))
+
 ## [4.14.2](https://github.com/mbabic84/ainstruct-mcp/compare/v4.14.1...v4.14.2) (2026-03-09)
 
 

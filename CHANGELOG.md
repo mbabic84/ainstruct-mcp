@@ -1,3 +1,10 @@
+# [4.16.0](https://github.com/mbabic84/ainstruct-mcp/compare/v4.15.0...v4.16.0) (2026-03-09)
+
+
+### Features
+
+* **usage:** add user request counters per month ([b1acb7c](https://github.com/mbabic84/ainstruct-mcp/commit/b1acb7cf4e3630628254d50bbcb1385528c08ced))
+
 # [4.15.0](https://github.com/mbabic84/ainstruct-mcp/compare/v4.14.2...v4.15.0) (2026-03-09)
 
 

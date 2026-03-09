@@ -118,8 +118,8 @@ async def admin_page(offset: int = 0, sort_by: str = "", sort_desc: bool = False
 
             def handle_stats(item):
                 user_id = item["id"]
-                username = item.get("username", "")
-                show_user_stats(user_id, username)
+                username = item.get("label", "")
+                return show_user_stats(user_id, username)
 
             def handle_toggle_active(item):
                 user_id = item["id"]

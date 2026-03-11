@@ -1,3 +1,10 @@
+# [4.18.0](https://github.com/mbabic84/ainstruct-mcp/compare/v4.17.0...v4.18.0) (2026-03-11)
+
+
+### Features
+
+* **admin:** add usage statistics display to user stats dialog ([384e7bd](https://github.com/mbabic84/ainstruct-mcp/commit/384e7bd759bbe173d900ccdaf86917b1dcedcbaf))
+
 # [4.17.0](https://github.com/mbabic84/ainstruct-mcp/compare/v4.16.0...v4.17.0) (2026-03-11)
 
 

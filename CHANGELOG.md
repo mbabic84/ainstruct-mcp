@@ -1,3 +1,10 @@
+## [4.18.1](https://github.com/mbabic84/ainstruct-mcp/compare/v4.18.0...v4.18.1) (2026-03-11)
+
+
+### Bug Fixes
+
+* check token expiration when listing active tokens ([2ee6828](https://github.com/mbabic84/ainstruct-mcp/commit/2ee682806438812e7a9940be255738742d877c72))
+
 # [4.18.0](https://github.com/mbabic84/ainstruct-mcp/compare/v4.17.0...v4.18.0) (2026-03-11)
 
 

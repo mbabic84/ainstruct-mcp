@@ -10,7 +10,7 @@ from web_ui.components import (
     render_page,
 )
 from web_ui.components.common import mcp_token_dialog
-from web_ui.utils import format_date, handle_api_error
+from web_ui.utils import format_time_remaining, handle_api_error
 
 router = APIRouter(prefix="")
 
@@ -80,12 +80,14 @@ def _render_pat_panel(api_client, sort_by: str = "", sort_desc: bool = False):
 
 
 def _render_pat_table(api_client, pats, sort_by: str = "", sort_desc: bool = False):
+    if not sort_by:
+        sort_by = "is_active"
+        sort_desc = True
     columns = make_columns_sortable(
         [
             {"name": "label", "label": "Label", "field": "label", "align": "left"},
             {"name": "scopes", "label": "Scopes", "field": "scopes", "align": "left"},
             {"name": "is_active", "label": "Active", "field": "is_active", "align": "left"},
-            {"name": "created_at", "label": "Created", "field": "created_at", "align": "left"},
             {"name": "expires_at", "label": "Expires", "field": "expires_at", "align": "left"},
             {"name": "actions", "label": "Actions", "field": "actions", "align": "center"},
         ]
@@ -97,13 +99,12 @@ def _render_pat_table(api_client, pats, sort_by: str = "", sort_desc: bool = Fal
     for p in pats:
         expires = p.get("expires_at")
         if expires:
-            expires = format_date(expires)
+            expires = format_time_remaining(expires)
         rows.append(
             {
                 "label": p["label"],
                 "scopes": ", ".join(p.get("scopes", [])),
                 "is_active": p.get("is_active", False),
-                "created_at": format_date(p["created_at"]),
                 "expires_at": expires or "Never",
                 "id": p["pat_id"],
             }
@@ -256,6 +257,9 @@ def _render_cat_panel(api_client, sort_by: str = "", sort_desc: bool = False):
 
 
 def _render_cat_table(api_client, cats, sort_by: str = "", sort_desc: bool = False):
+    if not sort_by:
+        sort_by = "is_active"
+        sort_desc = True
     columns = make_columns_sortable(
         [
             {"name": "label", "label": "Label", "field": "label", "align": "left"},
@@ -267,7 +271,6 @@ def _render_cat_table(api_client, cats, sort_by: str = "", sort_desc: bool = Fal
             },
             {"name": "permission", "label": "Permission", "field": "permission", "align": "left"},
             {"name": "is_active", "label": "Active", "field": "is_active", "align": "left"},
-            {"name": "created_at", "label": "Created", "field": "created_at", "align": "left"},
             {"name": "expires_at", "label": "Expires", "field": "expires_at", "align": "left"},
             {"name": "actions", "label": "Actions", "field": "actions", "align": "center"},
         ]
@@ -279,14 +282,13 @@ def _render_cat_table(api_client, cats, sort_by: str = "", sort_desc: bool = Fal
     for c in cats:
         expires = c.get("expires_at")
         if expires:
-            expires = format_date(expires)
+            expires = format_time_remaining(expires)
         rows.append(
             {
                 "label": c["label"],
                 "collection_name": c.get("collection_name", "N/A"),
                 "permission": c.get("permission", "read"),
                 "is_active": c.get("is_active", False),
-                "created_at": format_date(c["created_at"]),
                 "expires_at": expires or "Never",
                 "id": c["cat_id"],
             }

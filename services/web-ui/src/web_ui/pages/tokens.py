@@ -102,8 +102,7 @@ def _render_pat_table(api_client, pats, sort_by: str = "", sort_desc: bool = Fal
             {
                 "label": p["label"],
                 "scopes": ", ".join(p.get("scopes", [])),
-                "is_active": "Yes" if p.get("is_active") else "No",
-                "is_active_raw": p.get("is_active", False),
+                "is_active": p.get("is_active", False),
                 "created_at": format_date(p["created_at"]),
                 "expires_at": expires or "Never",
                 "id": p["pat_id"],
@@ -126,14 +125,14 @@ def _render_pat_table(api_client, pats, sort_by: str = "", sort_desc: bool = Fal
             ui.navigate.reload()
 
     def rotate_pat(item):
-        if not item.get("is_active_raw", False):
+        if not item.get("is_active", False):
             ui.notify("Inactive PATs cannot be rotated", type="warning")
             return None
         item_id = item["id"]
         return _rotate_pat(item_id)
 
     def revoke_pat(item):
-        if not item.get("is_active_raw", False):
+        if not item.get("is_active", False):
             ui.notify("PAT is already inactive", type="warning")
             return None
         item_id = item["id"]
@@ -146,6 +145,25 @@ def _render_pat_table(api_client, pats, sort_by: str = "", sort_desc: bool = Fal
         "update:pagination",
         create_sort_handler("/tokens", lambda: {"tab": "pat"}, sort_by, sort_desc),
     )
+
+    table.add_slot(
+        "body-cell-is_active",
+        """<q-td :props="props">
+            <q-badge :color="props.value ? 'positive' : 'negative'">
+                {{ props.value ? 'Active' : 'Inactive' }}
+            </q-badge>
+        </q-td>""",
+    )
+
+    table.add_slot(
+        "body-cell-label",
+        """<q-td :props="props">
+            <div :class="props.row.is_active ? '' : 'text-grey text-italic'">
+                {{ props.value }}
+            </div>
+        </q-td>""",
+    )
+
     add_table_action_buttons(
         table,
         "actions",
@@ -154,7 +172,7 @@ def _render_pat_table(api_client, pats, sort_by: str = "", sort_desc: bool = Fal
                 "icon": "refresh",
                 "color": "warning",
                 "on_click": rotate_pat,
-                "extra_fields": {"is_active_raw": "is_active_raw"},
+                "extra_fields": {"is_active": "is_active"},
                 "confirm": True,
                 "confirm_message": "A new token will be generated and the old one will be invalidated.",
                 "confirm_label": "Rotate",
@@ -163,7 +181,7 @@ def _render_pat_table(api_client, pats, sort_by: str = "", sort_desc: bool = Fal
                 "icon": "delete",
                 "color": "negative",
                 "on_click": revoke_pat,
-                "extra_fields": {"is_active_raw": "is_active_raw"},
+                "extra_fields": {"is_active": "is_active"},
                 "confirm": True,
                 "confirm_message": "This action cannot be undone.",
                 "confirm_label": "Revoke",
@@ -267,8 +285,7 @@ def _render_cat_table(api_client, cats, sort_by: str = "", sort_desc: bool = Fal
                 "label": c["label"],
                 "collection_name": c.get("collection_name", "N/A"),
                 "permission": c.get("permission", "read"),
-                "is_active": "Yes" if c.get("is_active") else "No",
-                "is_active_raw": c.get("is_active", False),
+                "is_active": c.get("is_active", False),
                 "created_at": format_date(c["created_at"]),
                 "expires_at": expires or "Never",
                 "id": c["cat_id"],
@@ -291,14 +308,14 @@ def _render_cat_table(api_client, cats, sort_by: str = "", sort_desc: bool = Fal
             ui.navigate.to("/tokens?tab=cat")
 
     def rotate_cat(item):
-        if not item.get("is_active_raw", False):
+        if not item.get("is_active", False):
             ui.notify("Inactive CATs cannot be rotated", type="warning")
             return None
         item_id = item["id"]
         return _rotate_cat(item_id)
 
     def revoke_cat(item):
-        if not item.get("is_active_raw", False):
+        if not item.get("is_active", False):
             ui.notify("CAT is already inactive", type="warning")
             return None
         item_id = item["id"]
@@ -311,6 +328,25 @@ def _render_cat_table(api_client, cats, sort_by: str = "", sort_desc: bool = Fal
         "update:pagination",
         create_sort_handler("/tokens", lambda: {"tab": "cat"}, sort_by, sort_desc),
     )
+
+    table.add_slot(
+        "body-cell-is_active",
+        """<q-td :props="props">
+            <q-badge :color="props.value ? 'positive' : 'negative'">
+                {{ props.value ? 'Active' : 'Inactive' }}
+            </q-badge>
+        </q-td>""",
+    )
+
+    table.add_slot(
+        "body-cell-label",
+        """<q-td :props="props">
+            <div :class="props.row.is_active ? '' : 'text-grey text-italic'">
+                {{ props.value }}
+            </div>
+        </q-td>""",
+    )
+
     add_table_action_buttons(
         table,
         "actions",
@@ -319,7 +355,7 @@ def _render_cat_table(api_client, cats, sort_by: str = "", sort_desc: bool = Fal
                 "icon": "refresh",
                 "color": "warning",
                 "on_click": rotate_cat,
-                "extra_fields": {"is_active_raw": "is_active_raw"},
+                "extra_fields": {"is_active": "is_active"},
                 "confirm": True,
                 "confirm_message": "A new token will be generated and the old one will be invalidated.",
                 "confirm_label": "Rotate",
@@ -328,7 +364,7 @@ def _render_cat_table(api_client, cats, sort_by: str = "", sort_desc: bool = Fal
                 "icon": "delete",
                 "color": "negative",
                 "on_click": revoke_cat,
-                "extra_fields": {"is_active_raw": "is_active_raw"},
+                "extra_fields": {"is_active": "is_active"},
                 "confirm": True,
                 "confirm_message": "This action cannot be undone.",
                 "confirm_label": "Revoke",

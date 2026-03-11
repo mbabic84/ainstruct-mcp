@@ -782,6 +782,10 @@ class CatRepository:
                 )
                 collection = collection_result.scalar_one_or_none()
 
+                # Token is only active if not revoked AND not expired
+                is_effectively_active = k.is_active and (
+                    k.expires_at is None or k.expires_at > datetime.utcnow()
+                )
                 result_list.append(
                     {
                         "cat_id": k.id,
@@ -790,7 +794,7 @@ class CatRepository:
                         "collection_name": collection.name if collection else None,
                         "created_at": k.created_at,
                         "last_used": k.last_used,
-                        "is_active": k.is_active,
+                        "is_active": is_effectively_active,
                         "user_id": k.user_id,
                         "permission": Permission(k.permission),
                         "expires_at": k.expires_at,
@@ -946,7 +950,9 @@ class PatTokenRepository:
                     "scopes": parse_scopes(t.scopes),
                     "created_at": t.created_at,
                     "expires_at": t.expires_at,
-                    "is_active": t.is_active,
+                    # Token is only active if not revoked AND not expired
+                    "is_active": t.is_active
+                    and (t.expires_at is None or t.expires_at > datetime.utcnow()),
                     "last_used": t.last_used,
                 }
                 for t in tokens

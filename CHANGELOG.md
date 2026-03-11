@@ -1,3 +1,10 @@
+# [4.17.0](https://github.com/mbabic84/ainstruct-mcp/compare/v4.16.0...v4.17.0) (2026-03-11)
+
+
+### Features
+
+* **usage:** count only embedding-requiring requests in request counter ([99fd515](https://github.com/mbabic84/ainstruct-mcp/commit/99fd5155e661a7e1b390f6ef0331db2d8597caeb))
+
 # [4.16.0](https://github.com/mbabic84/ainstruct-mcp/compare/v4.15.0...v4.16.0) (2026-03-09)
 
 

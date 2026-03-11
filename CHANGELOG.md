@@ -1,3 +1,10 @@
+# [4.20.0](https://github.com/mbabic84/ainstruct-mcp/compare/v4.19.0...v4.20.0) (2026-03-11)
+
+
+### Features
+
+* **web-ui:** improve tokens page expiration display ([e91e4c4](https://github.com/mbabic84/ainstruct-mcp/commit/e91e4c4467470785121782e43cf943d0276a713e))
+
 # [4.19.0](https://github.com/mbabic84/ainstruct-mcp/compare/v4.18.2...v4.19.0) (2026-03-11)
 
 

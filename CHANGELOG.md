@@ -1,3 +1,10 @@
+# [4.21.0](https://github.com/mbabic84/ainstruct-mcp/compare/v4.20.0...v4.21.0) (2026-03-11)
+
+
+### Features
+
+* add expiration and label to token rotation ([1a535ab](https://github.com/mbabic84/ainstruct-mcp/commit/1a535ab7c96bc0267edb9d3abc629bfbbe42e217))
+
 # [4.20.0](https://github.com/mbabic84/ainstruct-mcp/compare/v4.19.0...v4.20.0) (2026-03-11)
 
 

@@ -10,6 +10,7 @@ from rest_api.schemas import (
     PatListItem,
     PatListResponse,
     PatResponse,
+    RotatePatRequest,
 )
 
 router = APIRouter(prefix="/auth/pat", tags=["PAT Management"])
@@ -63,7 +64,6 @@ async def create_pat(
         scopes=pat["scopes"],
         created_at=pat["created_at"],
         expires_at=pat["expires_at"],
-        is_active=pat["is_active"],
         last_used=pat["last_used"],
     )
 
@@ -87,7 +87,6 @@ async def list_pats(
             scopes=pat["scopes"],
             created_at=pat["created_at"],
             expires_at=pat["expires_at"],
-            is_active=pat["is_active"],
             last_used=pat["last_used"],
         )
         for pat in pats
@@ -96,14 +95,14 @@ async def list_pats(
     return PatListResponse(tokens=tokens)
 
 
-@router.delete(
-    "/{pat_id}",
+@router.post(
+    "/{pat_id}/delete",
     response_model=MessageResponse,
     responses={
         404: {"model": ErrorResponse, "description": "PAT not found"},
     },
 )
-async def revoke_pat(
+async def delete_pat(
     pat_id: str,
     db: DbDep,
     user: UserDep,
@@ -117,8 +116,8 @@ async def revoke_pat(
             detail={"code": "PAT_NOT_FOUND", "message": "PAT not found or not owned by user"},
         )
 
-    await pat_repo.revoke(pat_id)
-    return MessageResponse(message="PAT revoked successfully")
+    await pat_repo.delete(pat_id)
+    return MessageResponse(message="PAT deleted successfully")
 
 
 @router.post(
@@ -132,6 +131,7 @@ async def rotate_pat(
     pat_id: str,
     db: DbDep,
     user: UserDep,
+    body: RotatePatRequest | None = None,
 ):
     pat_repo = get_pat_token_repository()
     user_repo = get_user_repository()
@@ -150,7 +150,11 @@ async def rotate_pat(
             detail={"code": "USER_NOT_FOUND", "message": "User not found"},
         )
 
-    new_pat_id, new_token = await pat_repo.rotate(pat_id)
+    expires_in_days = body.expires_in_days if body else None
+    label = body.label if body else None
+    new_pat_id, new_token = await pat_repo.rotate(
+        pat_id, label=label, expires_in_days=expires_in_days
+    )
 
     if new_pat_id is None:
         raise HTTPException(
@@ -173,6 +177,5 @@ async def rotate_pat(
         scopes=new_pat["scopes"],
         created_at=new_pat["created_at"],
         expires_at=new_pat["expires_at"],
-        is_active=new_pat["is_active"],
         last_used=new_pat["last_used"],
     )

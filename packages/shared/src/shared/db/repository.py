@@ -528,7 +528,6 @@ class CollectionRepository:
             key_count_result = await session.execute(
                 select(func.count(CatModel.id)).where(
                     CatModel.collection_id == collection_id,
-                    CatModel.is_active.is_(True),
                 )
             )
             key_count = key_count_result.scalar() or 0
@@ -561,7 +560,6 @@ class CollectionRepository:
                 key_count_result = await session.execute(
                     select(func.count(CatModel.id)).where(
                         CatModel.collection_id == c.id,
-                        CatModel.is_active.is_(True),
                     )
                 )
                 cat_count = key_count_result.scalar() or 0
@@ -613,7 +611,6 @@ class CollectionRepository:
             key_count_result = await session.execute(
                 select(func.count(CatModel.id)).where(
                     CatModel.collection_id == collection_id,
-                    CatModel.is_active.is_(True),
                 )
             )
             key_count = key_count_result.scalar() or 0
@@ -660,7 +657,6 @@ class CollectionRepository:
             result = await session.execute(
                 select(func.count(CatModel.id)).where(
                     CatModel.collection_id == collection_id,
-                    CatModel.is_active.is_(True),
                 )
             )
             return result.scalar() or 0
@@ -677,12 +673,7 @@ class CatRepository:
     async def validate(self, key: str) -> dict | None:
         async with self.async_session() as session:
             key_hash = self.hash_key(key)
-            result = await session.execute(
-                select(CatModel).where(
-                    CatModel.key_hash == key_hash,
-                    CatModel.is_active,
-                )
-            )
+            result = await session.execute(select(CatModel).where(CatModel.key_hash == key_hash))
             cat_token = result.scalar_one_or_none()
 
             if cat_token:
@@ -733,7 +724,6 @@ class CatRepository:
                 "permission": Permission(cat_token.permission),
                 "created_at": cat_token.created_at,
                 "expires_at": cat_token.expires_at,
-                "is_active": cat_token.is_active,
                 "last_used": cat_token.last_used,
             }
 
@@ -782,10 +772,7 @@ class CatRepository:
                 )
                 collection = collection_result.scalar_one_or_none()
 
-                # Token is only active if not revoked AND not expired
-                is_effectively_active = k.is_active and (
-                    k.expires_at is None or k.expires_at > datetime.utcnow()
-                )
+                is_not_expired = k.expires_at is None or k.expires_at > datetime.utcnow()
                 result_list.append(
                     {
                         "cat_id": k.id,
@@ -794,7 +781,7 @@ class CatRepository:
                         "collection_name": collection.name if collection else None,
                         "created_at": k.created_at,
                         "last_used": k.last_used,
-                        "is_active": is_effectively_active,
+                        "is_active": is_not_expired,
                         "user_id": k.user_id,
                         "permission": Permission(k.permission),
                         "expires_at": k.expires_at,
@@ -812,17 +799,9 @@ class CatRepository:
             await session.commit()
             return True
 
-    async def revoke(self, key_id: str) -> bool:
-        async with self.async_session() as session:
-            result = await session.execute(select(CatModel).where(CatModel.id == key_id))
-            key = result.scalar_one_or_none()
-            if not key:
-                return False
-            key.is_active = False
-            await session.commit()
-            return True
-
-    async def rotate(self, key_id: str) -> tuple[str, str] | None:
+    async def rotate(
+        self, key_id: str, label: str | None = None, expires_in_days: int | None = None
+    ) -> tuple[str, str] | None:
         async with self.async_session() as session:
             result = await session.execute(select(CatModel).where(CatModel.id == key_id))
             token = result.scalar_one_or_none()
@@ -832,6 +811,18 @@ class CatRepository:
             new_key = generate_cat_token()
             key_hash = hash_cat_token(new_key)
             token.key_hash = key_hash
+
+            if label is not None:
+                token.label = label
+
+            if expires_in_days is not None:
+                token.expires_at = datetime.utcnow() + timedelta(days=expires_in_days)
+            elif settings.cat_default_expiry_days is not None:
+                token.expires_at = datetime.utcnow() + timedelta(
+                    days=settings.cat_default_expiry_days
+                )
+            else:
+                token.expires_at = None
 
             await session.commit()
             return token.id, new_key
@@ -852,10 +843,7 @@ class PatTokenRepository:
         async with self.async_session() as session:
             token_hash = self.hash_token(token)
             result = await session.execute(
-                select(PatTokenModel).where(
-                    PatTokenModel.token_hash == token_hash,
-                    PatTokenModel.is_active.is_(True),
-                )
+                select(PatTokenModel).where(PatTokenModel.token_hash == token_hash)
             )
             pat_token = result.scalar_one_or_none()
 
@@ -901,7 +889,6 @@ class PatTokenRepository:
                 "scopes": parse_scopes(pat_token.scopes),
                 "created_at": pat_token.created_at,
                 "expires_at": pat_token.expires_at,
-                "is_active": pat_token.is_active,
                 "last_used": pat_token.last_used,
             }
 
@@ -950,9 +937,7 @@ class PatTokenRepository:
                     "scopes": parse_scopes(t.scopes),
                     "created_at": t.created_at,
                     "expires_at": t.expires_at,
-                    # Token is only active if not revoked AND not expired
-                    "is_active": t.is_active
-                    and (t.expires_at is None or t.expires_at > datetime.utcnow()),
+                    "is_active": t.expires_at is None or t.expires_at > datetime.utcnow(),
                     "last_used": t.last_used,
                 }
                 for t in tokens
@@ -970,19 +955,9 @@ class PatTokenRepository:
             await session.commit()
             return True
 
-    async def revoke(self, token_id: str) -> bool:
-        async with self.async_session() as session:
-            result = await session.execute(
-                select(PatTokenModel).where(PatTokenModel.id == token_id)
-            )
-            token = result.scalar_one_or_none()
-            if not token:
-                return False
-            token.is_active = False
-            await session.commit()
-            return True
-
-    async def rotate(self, token_id: str) -> tuple[str, str] | None:
+    async def rotate(
+        self, token_id: str, label: str | None = None, expires_in_days: int | None = None
+    ) -> tuple[str, str] | None:
         async with self.async_session() as session:
             result = await session.execute(
                 select(PatTokenModel).where(PatTokenModel.id == token_id)
@@ -994,6 +969,18 @@ class PatTokenRepository:
             new_token = generate_pat_token()
             token_hash = hash_pat_token(new_token)
             token.token_hash = token_hash
+
+            if label is not None:
+                token.label = label
+
+            if expires_in_days is not None:
+                token.expires_at = datetime.utcnow() + timedelta(days=expires_in_days)
+            elif settings.pat_default_expiry_days is not None:
+                token.expires_at = datetime.utcnow() + timedelta(
+                    days=settings.pat_default_expiry_days
+                )
+            else:
+                token.expires_at = None
 
             await session.commit()
             return token.id, new_token

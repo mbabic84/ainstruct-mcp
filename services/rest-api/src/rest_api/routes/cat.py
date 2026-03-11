@@ -10,6 +10,7 @@ from rest_api.schemas import (
     CatResponse,
     ErrorResponse,
     MessageResponse,
+    RotateCatRequest,
 )
 
 router = APIRouter(prefix="/auth/cat", tags=["CAT Management"])
@@ -74,7 +75,6 @@ async def create_cat(
         permission=body.permission,
         created_at=cat["created_at"],
         expires_at=cat["expires_at"],
-        is_active=cat["is_active"],
     )
 
 
@@ -106,7 +106,6 @@ async def list_cats(
             else "read",
             created_at=cat["created_at"],
             expires_at=cat.get("expires_at"),
-            is_active=cat["is_active"],
         )
         for cat in cats
     ]
@@ -114,14 +113,14 @@ async def list_cats(
     return CatListResponse(tokens=items)
 
 
-@router.delete(
-    "/{cat_id}",
+@router.post(
+    "/{cat_id}/delete",
     response_model=MessageResponse,
     responses={
         404: {"model": ErrorResponse, "description": "CAT not found"},
     },
 )
-async def revoke_cat(
+async def delete_cat(
     cat_id: str,
     db: DbDep,
     user: UserDep,
@@ -138,11 +137,11 @@ async def revoke_cat(
     if cat["user_id"] != user.user_id and not user.is_superuser:
         raise HTTPException(
             status_code=status.HTTP_403_FORBIDDEN,
-            detail={"code": "FORBIDDEN", "message": "Cannot revoke another user's CAT"},
+            detail={"code": "FORBIDDEN", "message": "Cannot delete another user's CAT"},
         )
 
-    await cat_repo.revoke(cat_id)
-    return MessageResponse(message="CAT revoked successfully")
+    await cat_repo.delete(cat_id)
+    return MessageResponse(message="CAT deleted successfully")
 
 
 @router.post(
@@ -156,6 +155,7 @@ async def rotate_cat(
     cat_id: str,
     db: DbDep,
     user: UserDep,
+    body: RotateCatRequest | None = None,
 ):
     cat_repo = get_cat_repository()
     collection_repo = get_collection_repository()
@@ -173,7 +173,11 @@ async def rotate_cat(
             detail={"code": "FORBIDDEN", "message": "Cannot rotate another user's CAT"},
         )
 
-    new_cat_id, new_token = await cat_repo.rotate(cat_id)
+    expires_in_days = body.expires_in_days if body else None
+    label = body.label if body else None
+    new_cat_id, new_token = await cat_repo.rotate(
+        cat_id, label=label, expires_in_days=expires_in_days
+    )
 
     new_cat = await cat_repo.get_by_id(new_cat_id)
     if new_cat is None:
@@ -195,5 +199,4 @@ async def rotate_cat(
         else "read",
         created_at=new_cat["created_at"],
         expires_at=new_cat.get("expires_at"),
-        is_active=new_cat["is_active"],
     )

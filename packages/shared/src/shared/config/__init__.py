@@ -42,7 +42,7 @@ class Settings(BaseSettings):
     jwt_access_token_expire_minutes: int = 30
     jwt_refresh_token_expire_days: int = 7
 
-    cat_default_expiry_days: int | None = None
+    cat_default_expiry_days: int = 90
 
     pat_default_expiry_days: int = 90
     pat_max_expiry_days: int = 365

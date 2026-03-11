@@ -156,6 +156,14 @@ DOCUMENT_TOOLS: set[str] = {
     "move_document_tool",
 }
 
+# Tools that require embedding generation (counted in usage)
+EMBEDDING_TOOLS: set[str] = {
+    "store_document_tool",
+    "search_documents_tool",
+    "update_document_tool",
+    "move_document_tool",
+}
+
 
 def is_document_tool(tool_name: str) -> bool:
     return tool_name in DOCUMENT_TOOLS
@@ -198,7 +206,7 @@ def is_public_tool(tool_name: str) -> bool:
 
 
 async def _track_usage(tool_name: str | None) -> None:
-    if not tool_name or not is_document_tool(tool_name):
+    if not tool_name or tool_name not in EMBEDDING_TOOLS:
         return
 
     from mcp_server.tools.context import (

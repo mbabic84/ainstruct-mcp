@@ -1,3 +1,10 @@
+## [4.18.2](https://github.com/mbabic84/ainstruct-mcp/compare/v4.18.1...v4.18.2) (2026-03-11)
+
+
+### Bug Fixes
+
+* **tokens:** show all tokens and guard actions for inactive tokens ([be0c8f0](https://github.com/mbabic84/ainstruct-mcp/commit/be0c8f0639ef1f91351ee53799880f5cfa2c052a))
+
 ## [4.18.1](https://github.com/mbabic84/ainstruct-mcp/compare/v4.18.0...v4.18.1) (2026-03-11)
 
 

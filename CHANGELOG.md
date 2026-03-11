@@ -1,3 +1,10 @@
+# [4.19.0](https://github.com/mbabic84/ainstruct-mcp/compare/v4.18.2...v4.19.0) (2026-03-11)
+
+
+### Features
+
+* **web-ui:** differentiate active and inactive tokens on tokens page; active tokens now show a green badge and normal text, while inactive tokens show a red badge and dimmed italicized labels ([a0496d8](https://github.com/mbabic84/ainstruct-mcp/commit/a0496d8f131f9535a424c72d78cf889688f1fab2))
+
 ## [4.18.2](https://github.com/mbabic84/ainstruct-mcp/compare/v4.18.1...v4.18.2) (2026-03-11)
 
 

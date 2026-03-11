@@ -261,5 +261,16 @@ class ApiClient:
     def delete_user(self, user_id: str) -> httpx.Response:
         return self._request("DELETE", f"/api/v1/admin/users/{user_id}")
 
+    def get_user_usage(self, user_id: str, year_month: str = None) -> httpx.Response:
+        params = {}
+        if year_month:
+            params["year_month"] = year_month
+        return self._request("GET", f"/api/v1/admin/usage/{user_id}", params=params)
+
+    def get_user_usage_history(self, user_id: str, months: int = 6) -> httpx.Response:
+        return self._request(
+            "GET", f"/api/v1/admin/usage/{user_id}/history", params={"months": months}
+        )
+
     def close(self):
         self._client.close()

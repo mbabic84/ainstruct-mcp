@@ -8,27 +8,30 @@ from starlette.types import ASGIApp
 
 logger = logging.getLogger(__name__)
 
-TRACKED_PREFIXES = [
-    "/api/v1/documents",
-    "/api/v1/collections",
-]
 
-SKIP_PATHS = [
-    "/health",
-    "/api/v1/auth",
-    "/api/v1/admin",
-    "/api/v1/pat",
-    "/api/v1/cat",
-]
-
-
-def should_track_path(path: str) -> bool:
-    for skip_path in SKIP_PATHS:
+def should_track_path(path: str, method: str) -> bool:
+    # Skip admin, auth, PAT, CAT endpoints
+    skip_paths = [
+        "/health",
+        "/api/v1/auth",
+        "/api/v1/admin",
+        "/api/v1/pat",
+        "/api/v1/cat",
+    ]
+    for skip_path in skip_paths:
         if path.startswith(skip_path):
             return False
 
-    for prefix in TRACKED_PREFIXES:
-        if path.startswith(prefix):
+    # Only track endpoints that require embedding
+    # POST /api/v1/documents (store)
+    # PATCH /api/v1/documents/{id} (update)
+    # POST /api/v1/documents/search (search)
+    if path.startswith("/api/v1/documents"):
+        if path == "/api/v1/documents" and method == "POST":
+            return True
+        if path.startswith("/api/v1/documents/") and method == "PATCH":
+            return True
+        if path == "/api/v1/documents/search" and method == "POST":
             return True
 
     return False
@@ -63,8 +66,9 @@ class UsageMiddleware(BaseHTTPMiddleware):
 
     async def dispatch(self, request: Request, call_next: Callable) -> Response:
         path = request.url.path
+        method = request.method
 
-        if not should_track_path(path):
+        if not should_track_path(path, method):
             return await call_next(request)
 
         user_id = extract_user_id_from_token(request)

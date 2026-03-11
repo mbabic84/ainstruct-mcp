@@ -212,7 +212,6 @@ class CatResponse(BaseModel):
     permission: Permission
     created_at: datetime
     expires_at: datetime | None = None
-    is_active: bool
 
     model_config = {"from_attributes": True}
 
@@ -225,7 +224,6 @@ class CatListItem(BaseModel):
     permission: Permission
     created_at: datetime
     expires_at: datetime | None = None
-    is_active: bool
     last_used: datetime | None = None
 
     model_config = {"from_attributes": True}
@@ -248,7 +246,6 @@ class PatResponse(BaseModel):
     scopes: list[str]
     created_at: datetime
     expires_at: datetime | None = None
-    is_active: bool
     last_used: datetime | None = None
 
     model_config = {"from_attributes": True}
@@ -261,7 +258,6 @@ class PatListItem(BaseModel):
     scopes: list[str]
     created_at: datetime
     expires_at: datetime | None = None
-    is_active: bool
     last_used: datetime | None = None
 
     model_config = {"from_attributes": True}
@@ -269,6 +265,16 @@ class PatListItem(BaseModel):
 
 class PatListResponse(BaseModel):
     tokens: list[PatListItem]
+
+
+class RotatePatRequest(BaseModel):
+    label: str | None = None
+    expires_in_days: int | None = None
+
+
+class RotateCatRequest(BaseModel):
+    label: str | None = None
+    expires_in_days: int | None = None
 
 
 class UserListItem(BaseModel):

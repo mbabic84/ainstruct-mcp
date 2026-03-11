@@ -194,11 +194,20 @@ class ApiClient:
             body["expires_in_days"] = expires_in_days
         return self._request("POST", "/api/v1/auth/pat", json=body)
 
-    def revoke_pat(self, pat_id: str) -> httpx.Response:
-        return self._request("DELETE", f"/api/v1/auth/pat/{pat_id}")
+    def delete_pat(self, pat_id: str) -> httpx.Response:
+        return self._request("POST", f"/api/v1/auth/pat/{pat_id}/delete")
 
-    def rotate_pat(self, pat_id: str) -> httpx.Response:
-        return self._request("POST", f"/api/v1/auth/pat/{pat_id}/rotate")
+    def rotate_pat(
+        self, pat_id: str, label: str | None = None, expires_in_days: int | None = None
+    ) -> httpx.Response:
+        body: dict = {}
+        if label is not None:
+            body["label"] = label
+        if expires_in_days is not None:
+            body["expires_in_days"] = expires_in_days
+        return self._request(
+            "POST", f"/api/v1/auth/pat/{pat_id}/rotate", json=body if body else None
+        )
 
     def list_cats(self, collection_id: str | None = None) -> httpx.Response:
         params: dict = {}
@@ -222,11 +231,20 @@ class ApiClient:
             body["expires_in_days"] = expires_in_days
         return self._request("POST", "/api/v1/auth/cat", json=body)
 
-    def revoke_cat(self, cat_id: str) -> httpx.Response:
-        return self._request("DELETE", f"/api/v1/auth/cat/{cat_id}")
+    def delete_cat(self, cat_id: str) -> httpx.Response:
+        return self._request("POST", f"/api/v1/auth/cat/{cat_id}/delete")
 
-    def rotate_cat(self, cat_id: str) -> httpx.Response:
-        return self._request("POST", f"/api/v1/auth/cat/{cat_id}/rotate")
+    def rotate_cat(
+        self, cat_id: str, label: str | None = None, expires_in_days: int | None = None
+    ) -> httpx.Response:
+        body: dict = {}
+        if label is not None:
+            body["label"] = label
+        if expires_in_days is not None:
+            body["expires_in_days"] = expires_in_days
+        return self._request(
+            "POST", f"/api/v1/auth/cat/{cat_id}/rotate", json=body if body else None
+        )
 
     def list_users(self, limit: int = 50, offset: int = 0) -> httpx.Response:
         return self._request(

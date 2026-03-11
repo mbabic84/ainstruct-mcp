@@ -1,3 +1,5 @@
+from datetime import datetime
+
 from nicegui import APIRouter, ui
 
 from web_ui.auth import get_user, load_tokens_from_storage, require_auth
@@ -41,14 +43,24 @@ async def dashboard_page():
 
             response = api_client.list_pats()
             pats = response.json().get("tokens", []) if response.status_code == 200 else []
-            active_pats = [p for p in pats if p.get("is_active", True)]
+
+            def is_token_active(expires_at):
+                if not expires_at:
+                    return True
+                try:
+                    expiry = datetime.fromisoformat(expires_at.replace("Z", "+00:00"))
+                    return expiry > datetime.now(expiry.tzinfo)
+                except ValueError, AttributeError:
+                    return True
+
+            active_pats = [p for p in pats if is_token_active(p.get("expires_at"))]
             with ui.card().classes("flex-1"):
                 ui.label("PATs").classes("text-lg font-bold")
                 ui.label(str(len(active_pats))).classes("text-4xl")
 
             response = api_client.list_cats()
             cats = response.json().get("tokens", []) if response.status_code == 200 else []
-            active_cats = [c for c in cats if c.get("is_active", True)]
+            active_cats = [c for c in cats if is_token_active(c.get("expires_at"))]
             with ui.card().classes("flex-1"):
                 ui.label("CATs").classes("text-lg font-bold")
                 ui.label(str(len(active_cats))).classes("text-4xl")

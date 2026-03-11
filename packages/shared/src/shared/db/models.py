@@ -120,7 +120,6 @@ class CatModel(Base):
     )
     created_at: Mapped[datetime] = mapped_column(DateTime, default=datetime.utcnow)
     last_used: Mapped[datetime | None] = mapped_column(DateTime, nullable=True)
-    is_active: Mapped[bool] = mapped_column(Boolean, default=True)
     user_id: Mapped[str | None] = mapped_column(
         String(36), ForeignKey("users.id"), nullable=True, index=True
     )
@@ -142,7 +141,6 @@ class PatTokenModel(Base):
     scopes: Mapped[str] = mapped_column(String(100), nullable=False, default="")
     expires_at: Mapped[datetime | None] = mapped_column(DateTime, nullable=True)
     last_used: Mapped[datetime | None] = mapped_column(DateTime, nullable=True)
-    is_active: Mapped[bool] = mapped_column(Boolean, default=True)
     created_at: Mapped[datetime] = mapped_column(DateTime, default=datetime.utcnow)
 
     user: Mapped[UserModel] = relationship("UserModel", back_populates="pat_tokens")
@@ -266,7 +264,6 @@ class CatResponse(BaseModel):
     permission: Permission
     created_at: datetime
     expires_at: datetime | None
-    is_active: bool
     last_used: datetime | None
 
 
@@ -278,7 +275,6 @@ class CatListResponse(BaseModel):
     permission: Permission
     created_at: datetime
     expires_at: datetime | None
-    is_active: bool
     last_used: datetime | None
 
 
@@ -295,7 +291,6 @@ class PatTokenResponse(BaseModel):
     scopes: list[Scope]
     created_at: datetime
     expires_at: datetime | None
-    is_active: bool
     last_used: datetime | None
 
 
@@ -306,7 +301,6 @@ class PatTokenListResponse(BaseModel):
     scopes: list[Scope]
     created_at: datetime
     expires_at: datetime | None
-    is_active: bool
     last_used: datetime | None
 
 

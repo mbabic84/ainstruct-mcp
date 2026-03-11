@@ -1,3 +1,5 @@
+from datetime import datetime
+
 from fastapi import APIRouter, HTTPException, Query, status
 from shared.db import (
     get_cat_repository,
@@ -121,9 +123,12 @@ async def get_user(
     cats = await cat_repo.list_all(user_id)
     document_count = await document_repo.count_by_user(user_id)
 
-    pat_active = sum(1 for p in pats if p.get("is_active", True))
+    def is_token_active(expires_at):
+        return expires_at is None or expires_at > datetime.utcnow()
+
+    pat_active = sum(1 for p in pats if is_token_active(p.get("expires_at")))
     pat_inactive = len(pats) - pat_active
-    cat_active = sum(1 for c in cats if c.get("is_active", True))
+    cat_active = sum(1 for c in cats if is_token_active(c.get("expires_at")))
     cat_inactive = len(cats) - cat_active
 
     return UserDetailResponse(

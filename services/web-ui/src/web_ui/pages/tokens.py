@@ -1,3 +1,5 @@
+from datetime import datetime
+
 from nicegui import APIRouter, ui
 from shared.config import settings
 
@@ -81,13 +83,12 @@ def _render_pat_panel(api_client, sort_by: str = "", sort_desc: bool = False):
 
 def _render_pat_table(api_client, pats, sort_by: str = "", sort_desc: bool = False):
     if not sort_by:
-        sort_by = "is_active"
+        sort_by = "expires_at"
         sort_desc = True
     columns = make_columns_sortable(
         [
             {"name": "label", "label": "Label", "field": "label", "align": "left"},
             {"name": "scopes", "label": "Scopes", "field": "scopes", "align": "left"},
-            {"name": "is_active", "label": "Active", "field": "is_active", "align": "left"},
             {"name": "expires_at", "label": "Expires", "field": "expires_at", "align": "left"},
             {"name": "actions", "label": "Actions", "field": "actions", "align": "center"},
         ]
@@ -95,23 +96,35 @@ def _render_pat_table(api_client, pats, sort_by: str = "", sort_desc: bool = Fal
 
     pagination = create_table_pagination(sort_by, sort_desc, settings.web_records_per_page)
 
+    def is_token_active(expires_at):
+        if not expires_at:
+            return True
+        try:
+            expiry = datetime.fromisoformat(expires_at.replace("Z", "+00:00"))
+            return expiry > datetime.now(expiry.tzinfo)
+        except ValueError, AttributeError:
+            return True
+
     rows = []
     for p in pats:
         expires = p.get("expires_at")
         if expires:
             expires = format_time_remaining(expires)
+        is_active = is_token_active(p.get("expires_at"))
         rows.append(
             {
                 "label": p["label"],
                 "scopes": ", ".join(p.get("scopes", [])),
-                "is_active": p.get("is_active", False),
+                "is_active": is_active,
                 "expires_at": expires or "Never",
                 "id": p["pat_id"],
             }
         )
 
-    async def _rotate_pat(item_id: str):
-        response = api_client.rotate_pat(item_id)
+    async def _rotate_pat(
+        item_id: str, label: str | None = None, expires_in_days: int | None = None
+    ):
+        response = api_client.rotate_pat(item_id, label=label, expires_in_days=expires_in_days)
         if response.status_code == 200:
             data = response.json()
             token = data.get("token", "N/A")
@@ -119,25 +132,50 @@ def _render_pat_table(api_client, pats, sort_by: str = "", sort_desc: bool = Fal
         else:
             ui.notify(f"Error: {response.text}", type="negative")
 
-    async def _revoke_pat(item_id: str):
-        response = api_client.revoke_pat(item_id)
-        if handle_api_error(response, "Failed to revoke PAT"):
-            ui.notify("PAT revoked")
+    async def _show_rotate_pat_dialog(item):
+        item_id = item["id"]
+        item_label = item.get("label", "this token")
+
+        label_input = None
+        expires_input = None
+
+        async def do_rotate():
+            new_label = label_input.value.strip() if label_input.value else None
+            expires_days = None
+            if expires_input.value:
+                try:
+                    expires_days = int(expires_input.value)
+                except ValueError:
+                    ui.notify("Invalid expiration value", type="negative")
+                    return
+            dialog.close()
+            await _rotate_pat(item_id, new_label, expires_days)
+
+        with ui.dialog() as dialog, ui.card().classes("w-[400px]"):
+            ui.label("Rotate PAT").classes("text-lg font-bold")
+            label_input = ui.input("Token Label", value=item_label).classes("w-full")
+            ui.label("A new token will be generated and the old one will be invalidated.").classes(
+                "text-sm text-grey-7 mb-4"
+            )
+            expires_input = ui.input("Expires in (days, optional)").classes("w-full")
+            with ui.row().classes("w-full justify-end gap-2 mt-4"):
+                ui.button("Cancel", on_click=dialog.close).props("flat")
+                ui.button("Rotate", on_click=do_rotate).props("color=warning")
+
+        dialog.open()
+
+    async def _delete_pat(item_id: str):
+        response = api_client.delete_pat(item_id)
+        if handle_api_error(response, "Failed to delete PAT"):
+            ui.notify("PAT deleted")
             ui.navigate.reload()
 
     def rotate_pat(item):
-        if not item.get("is_active", False):
-            ui.notify("Inactive PATs cannot be rotated", type="warning")
-            return None
-        item_id = item["id"]
-        return _rotate_pat(item_id)
+        return _show_rotate_pat_dialog(item)
 
-    def revoke_pat(item):
-        if not item.get("is_active", False):
-            ui.notify("PAT is already inactive", type="warning")
-            return None
+    def delete_pat(item):
         item_id = item["id"]
-        return _revoke_pat(item_id)
+        return _delete_pat(item_id)
 
     table = ui.table(columns=columns, rows=rows, row_key="id", pagination=pagination).classes(
         "w-full"
@@ -145,15 +183,6 @@ def _render_pat_table(api_client, pats, sort_by: str = "", sort_desc: bool = Fal
     table.on(
         "update:pagination",
         create_sort_handler("/tokens", lambda: {"tab": "pat"}, sort_by, sort_desc),
-    )
-
-    table.add_slot(
-        "body-cell-is_active",
-        """<q-td :props="props">
-            <q-badge :color="props.value ? 'positive' : 'negative'">
-                {{ props.value ? 'Active' : 'Inactive' }}
-            </q-badge>
-        </q-td>""",
     )
 
     table.add_slot(
@@ -174,18 +203,14 @@ def _render_pat_table(api_client, pats, sort_by: str = "", sort_desc: bool = Fal
                 "color": "warning",
                 "on_click": rotate_pat,
                 "extra_fields": {"is_active": "is_active"},
-                "confirm": True,
-                "confirm_message": "A new token will be generated and the old one will be invalidated.",
-                "confirm_label": "Rotate",
             },
             {
                 "icon": "delete",
-                "color": "negative",
-                "on_click": revoke_pat,
-                "extra_fields": {"is_active": "is_active"},
+                "color": "grey-8",
+                "on_click": delete_pat,
                 "confirm": True,
-                "confirm_message": "This action cannot be undone.",
-                "confirm_label": "Revoke",
+                "confirm_message": "This will permanently remove the token. This action cannot be undone.",
+                "confirm_label": "Delete",
             },
         ],
     )
@@ -258,7 +283,7 @@ def _render_cat_panel(api_client, sort_by: str = "", sort_desc: bool = False):
 
 def _render_cat_table(api_client, cats, sort_by: str = "", sort_desc: bool = False):
     if not sort_by:
-        sort_by = "is_active"
+        sort_by = "expires_at"
         sort_desc = True
     columns = make_columns_sortable(
         [
@@ -270,7 +295,6 @@ def _render_cat_table(api_client, cats, sort_by: str = "", sort_desc: bool = Fal
                 "align": "left",
             },
             {"name": "permission", "label": "Permission", "field": "permission", "align": "left"},
-            {"name": "is_active", "label": "Active", "field": "is_active", "align": "left"},
             {"name": "expires_at", "label": "Expires", "field": "expires_at", "align": "left"},
             {"name": "actions", "label": "Actions", "field": "actions", "align": "center"},
         ]
@@ -278,24 +302,36 @@ def _render_cat_table(api_client, cats, sort_by: str = "", sort_desc: bool = Fal
 
     pagination = create_table_pagination(sort_by, sort_desc, settings.web_records_per_page)
 
+    def is_token_active(expires_at):
+        if not expires_at:
+            return True
+        try:
+            expiry = datetime.fromisoformat(expires_at.replace("Z", "+00:00"))
+            return expiry > datetime.now(expiry.tzinfo)
+        except ValueError, AttributeError:
+            return True
+
     rows = []
     for c in cats:
         expires = c.get("expires_at")
         if expires:
             expires = format_time_remaining(expires)
+        is_active = is_token_active(c.get("expires_at"))
         rows.append(
             {
                 "label": c["label"],
                 "collection_name": c.get("collection_name", "N/A"),
                 "permission": c.get("permission", "read"),
-                "is_active": c.get("is_active", False),
+                "is_active": is_active,
                 "expires_at": expires or "Never",
                 "id": c["cat_id"],
             }
         )
 
-    async def _rotate_cat(item_id: str):
-        response = api_client.rotate_cat(item_id)
+    async def _rotate_cat(
+        item_id: str, label: str | None = None, expires_in_days: int | None = None
+    ):
+        response = api_client.rotate_cat(item_id, label=label, expires_in_days=expires_in_days)
         if response.status_code == 200:
             data = response.json()
             token = data.get("token", "N/A")
@@ -303,25 +339,50 @@ def _render_cat_table(api_client, cats, sort_by: str = "", sort_desc: bool = Fal
         else:
             ui.notify(f"Error: {response.text}", type="negative")
 
-    async def _revoke_cat(item_id: str):
-        response = api_client.revoke_cat(item_id)
-        if handle_api_error(response, "Failed to revoke CAT"):
-            ui.notify("CAT revoked")
+    async def _show_rotate_cat_dialog(item):
+        item_id = item["id"]
+        item_label = item.get("label", "this token")
+
+        label_input = None
+        expires_input = None
+
+        async def do_rotate():
+            new_label = label_input.value.strip() if label_input.value else None
+            expires_days = None
+            if expires_input.value:
+                try:
+                    expires_days = int(expires_input.value)
+                except ValueError:
+                    ui.notify("Invalid expiration value", type="negative")
+                    return
+            dialog.close()
+            await _rotate_cat(item_id, new_label, expires_days)
+
+        with ui.dialog() as dialog, ui.card().classes("w-[400px]"):
+            ui.label("Rotate CAT").classes("text-lg font-bold")
+            label_input = ui.input("Token Label", value=item_label).classes("w-full")
+            ui.label("A new token will be generated and the old one will be invalidated.").classes(
+                "text-sm text-grey-7 mb-4"
+            )
+            expires_input = ui.input("Expires in (days, optional)").classes("w-full")
+            with ui.row().classes("w-full justify-end gap-2 mt-4"):
+                ui.button("Cancel", on_click=dialog.close).props("flat")
+                ui.button("Rotate", on_click=do_rotate).props("color=warning")
+
+        dialog.open()
+
+    async def _delete_cat(item_id: str):
+        response = api_client.delete_cat(item_id)
+        if handle_api_error(response, "Failed to delete CAT"):
+            ui.notify("CAT deleted")
             ui.navigate.to("/tokens?tab=cat")
 
     def rotate_cat(item):
-        if not item.get("is_active", False):
-            ui.notify("Inactive CATs cannot be rotated", type="warning")
-            return None
-        item_id = item["id"]
-        return _rotate_cat(item_id)
+        return _show_rotate_cat_dialog(item)
 
-    def revoke_cat(item):
-        if not item.get("is_active", False):
-            ui.notify("CAT is already inactive", type="warning")
-            return None
+    def delete_cat(item):
         item_id = item["id"]
-        return _revoke_cat(item_id)
+        return _delete_cat(item_id)
 
     table = ui.table(columns=columns, rows=rows, row_key="id", pagination=pagination).classes(
         "w-full"
@@ -329,15 +390,6 @@ def _render_cat_table(api_client, cats, sort_by: str = "", sort_desc: bool = Fal
     table.on(
         "update:pagination",
         create_sort_handler("/tokens", lambda: {"tab": "cat"}, sort_by, sort_desc),
-    )
-
-    table.add_slot(
-        "body-cell-is_active",
-        """<q-td :props="props">
-            <q-badge :color="props.value ? 'positive' : 'negative'">
-                {{ props.value ? 'Active' : 'Inactive' }}
-            </q-badge>
-        </q-td>""",
     )
 
     table.add_slot(
@@ -358,18 +410,14 @@ def _render_cat_table(api_client, cats, sort_by: str = "", sort_desc: bool = Fal
                 "color": "warning",
                 "on_click": rotate_cat,
                 "extra_fields": {"is_active": "is_active"},
-                "confirm": True,
-                "confirm_message": "A new token will be generated and the old one will be invalidated.",
-                "confirm_label": "Rotate",
             },
             {
                 "icon": "delete",
-                "color": "negative",
-                "on_click": revoke_cat,
-                "extra_fields": {"is_active": "is_active"},
+                "color": "grey-8",
+                "on_click": delete_cat,
                 "confirm": True,
-                "confirm_message": "This action cannot be undone.",
-                "confirm_label": "Revoke",
+                "confirm_message": "This will permanently remove the token. This action cannot be undone.",
+                "confirm_label": "Delete",
             },
         ],
     )

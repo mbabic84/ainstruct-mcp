@@ -1,3 +1,10 @@
+# [4.22.0](https://github.com/mbabic84/ainstruct-mcp/compare/v4.21.0...v4.22.0) (2026-04-09)
+
+
+### Features
+
+* add content_hash field to document models ([9fc7f98](https://github.com/mbabic84/ainstruct-mcp/commit/9fc7f98a3ee41de834cdfcdc1a1d57fc68670f22))
+
 # [4.21.0](https://github.com/mbabic84/ainstruct-mcp/compare/v4.20.0...v4.21.0) (2026-03-11)
 
 

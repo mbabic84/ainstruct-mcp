@@ -219,6 +219,7 @@ class GetDocumentOutput(BaseModel):
     collection_id: str
     title: str
     content: str
+    content_hash: str
     document_type: str
     created_at: str
     updated_at: str
@@ -229,6 +230,7 @@ class DocumentListItem(BaseModel):
     document_id: str
     collection_id: str
     title: str
+    content_hash: str
     document_type: str
     created_at: str
     updated_at: str
@@ -263,6 +265,7 @@ async def get_document(input_data: GetDocumentInput) -> GetDocumentOutput | None
         collection_id=doc.collection_id,
         title=doc.title,
         content=doc.content,
+        content_hash=doc.content_hash,
         document_type=doc.document_type,
         created_at=doc.created_at.isoformat(),
         updated_at=doc.updated_at.isoformat(),
@@ -324,6 +327,7 @@ async def list_documents(input_data: ListDocumentsInput) -> ListDocumentsOutput:
             document_id=d.document_id,
             collection_id=d.collection_id,
             title=d.title,
+            content_hash=d.content_hash,
             document_type=d.document_type,
             created_at=d.created_at.isoformat(),
             updated_at=d.updated_at.isoformat(),

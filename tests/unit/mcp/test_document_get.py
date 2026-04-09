@@ -44,6 +44,7 @@ class TestGetDocument:
                 collection_id="27241155-eaae-4678-a69f-c8003512f1fe",
                 title="Test Doc",
                 content="Test content",
+                content_hash="abc123hash",
                 document_type="markdown",
                 created_at=datetime(2024, 1, 1, 0, 0, 0),
                 updated_at=datetime(2024, 1, 1, 0, 0, 0),

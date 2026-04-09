@@ -113,6 +113,7 @@ class DocumentResponse(BaseModel):
     document_id: str
     title: str
     content: str
+    content_hash: str
     collection_id: str
     document_type: str
     created_at: datetime
@@ -127,6 +128,8 @@ class DocumentListItem(BaseModel):
     title: str
     collection_id: str
     collection_name: str | None = None
+    content_hash: str
+    metadata: dict | None = None
     document_type: str
     created_at: datetime
     updated_at: datetime | None = None
@@ -160,6 +163,7 @@ class DocumentStoreResponse(BaseModel):
     document_id: str
     title: str
     collection_id: str
+    content_hash: str
     chunk_count: int
     token_count: int
     created_at: datetime
@@ -168,6 +172,7 @@ class DocumentStoreResponse(BaseModel):
 class DocumentUpdateResponse(BaseModel):
     document_id: str
     title: str
+    content_hash: str
     chunk_count: int | None = None
     token_count: int | None = None
     updated_at: datetime

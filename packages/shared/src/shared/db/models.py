@@ -199,6 +199,7 @@ class DocumentResponse(BaseModel):
     collection_id: str
     title: str
     content: str
+    content_hash: str
     document_type: str
     created_at: datetime
     updated_at: datetime

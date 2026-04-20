@@ -16,13 +16,22 @@ from shared.config import settings
 
 logger = logging.getLogger(__name__)
 
+_client: AsyncQdrantClient | None = None
 
-class QdrantService:
-    def __init__(self, collection_name: str | None = None, is_admin: bool = False):
-        self.client = AsyncQdrantClient(
+
+def get_qdrant_client() -> AsyncQdrantClient:
+    global _client
+    if _client is None:
+        _client = AsyncQdrantClient(
             url=settings.qdrant_url,
             api_key=settings.qdrant_api_key,
         )
+    return _client
+
+
+class QdrantService:
+    def __init__(self, collection_name: str | None = None, is_admin: bool = False):
+        self.client = get_qdrant_client()
         self.collection_name = collection_name
         self.is_admin = is_admin
         self._collection_initialized = False

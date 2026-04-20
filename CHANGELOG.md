@@ -1,3 +1,10 @@
+## [4.23.1](https://github.com/mbabic84/ainstruct-mcp/compare/v4.23.0...v4.23.1) (2026-04-20)
+
+
+### Bug Fixes
+
+* update release workflow to follow semantic-release standards ([8d5ce8b](https://github.com/mbabic84/ainstruct-mcp/commit/8d5ce8b012ecf00196252826e9fa745b6cd8b4e7))
+
 # [4.23.0](https://github.com/mbabic84/ainstruct-mcp/compare/v4.22.1...v4.23.0) (2026-04-20)
 
 

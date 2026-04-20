@@ -8,7 +8,7 @@
     [
       "@semantic-release/exec",
       {
-        "prepareCmd": "python scripts/update_version.py ${nextRelease.version} && uv lock"
+        "prepareCmd": "python scripts/update_version.py ${nextRelease.version} && uv lock && echo ${nextRelease.version} > .release-version"
       }
     ],
     [

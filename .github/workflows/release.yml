@@ -5,14 +5,20 @@ on:
     branches:
       - main
 
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
 jobs:
   release:
     runs-on: ubuntu-latest
+    timeout-minutes: 20
     permissions:
       contents: write
       issues: write
       pull-requests: write
       packages: write
+      actions: write
     steps:
       - name: Checkout
         uses: actions/checkout@v6
@@ -37,14 +43,26 @@ jobs:
 
       - name: Release
         id: release
-        uses: cycjimmy/semantic-release-action@v6
-        with:
-          extra_plugins: |
-            @semantic-release/changelog@6.0.0
-            @semantic-release/exec@7.0.0
-            @semantic-release/git@10.0.1
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          npx --package semantic-release \
+            --package @semantic-release/commit-analyzer \
+            --package @semantic-release/release-notes-generator \
+            --package @semantic-release/changelog \
+            --package @semantic-release/git \
+            --package @semantic-release/exec \
+            --package conventional-changelog-conventionalcommits \
+            semantic-release
+
+          if [ -f .release-version ]; then
+            VERSION=$(cat .release-version)
+            printf '%s\n' "new_release_published=true" >> "$GITHUB_OUTPUT"
+            printf '%s\n' "new_release_version=$VERSION" >> "$GITHUB_OUTPUT"
+          else
+            printf '%s\n' "new_release_published=false" >> "$GITHUB_OUTPUT"
+            printf '%s\n' "new_release_version=" >> "$GITHUB_OUTPUT"
+          fi
 
       - name: Set up Docker Buildx
         if: ${{ steps.release.outputs.new_release_published == 'true' }}
@@ -68,6 +86,7 @@ jobs:
             type=semver,pattern={{version}},value=v${{ steps.release.outputs.new_release_version }},enable=${{ steps.release.outputs.new_release_version != '' }}
             type=semver,pattern={{major}}.{{minor}},value=v${{ steps.release.outputs.new_release_version }},enable=${{ steps.release.outputs.new_release_version != '' }}
             type=semver,pattern={{major}},value=v${{ steps.release.outputs.new_release_version }},enable=${{ steps.release.outputs.new_release_version != '' }}
+            type=raw,value=latest
 
       - name: Build and push
         if: ${{ steps.release.outputs.new_release_published == 'true' }}

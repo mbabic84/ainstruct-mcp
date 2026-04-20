@@ -29,6 +29,8 @@ jobs:
 
       - name: Install uv
         uses: astral-sh/setup-uv@v7
+        with:
+          cache-suffix: ''
 
       - name: Install Python dependencies
         run: uv sync --frozen
@@ -75,5 +77,5 @@ jobs:
           push: true
           tags: ${{ steps.meta.outputs.tags }}
           labels: ${{ steps.meta.outputs.labels }}
-          cache-from: type=gha,scope=base
-          cache-to: type=gha,scope=base,mode=max
+          cache-from: type=gha,scope=base,cache-key-prefix=ainstruct-mcp
+          cache-to: type=gha,scope=base,mode=max,cache-key-prefix=ainstruct-mcp

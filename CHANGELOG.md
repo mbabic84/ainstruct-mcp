@@ -1,3 +1,10 @@
+## [4.22.1](https://github.com/mbabic84/ainstruct-mcp/compare/v4.22.0...v4.22.1) (2026-04-20)
+
+
+### Bug Fixes
+
+* use singleton pattern for AsyncQdrantClient to prevent connection leaks ([0d87b09](https://github.com/mbabic84/ainstruct-mcp/commit/0d87b0961d8a9a2152438becc5fefed66ee21775))
+
 # [4.22.0](https://github.com/mbabic84/ainstruct-mcp/compare/v4.21.0...v4.22.0) (2026-04-09)
 
 

@@ -1,3 +1,10 @@
+# [4.23.0](https://github.com/mbabic84/ainstruct-mcp/compare/v4.22.1...v4.23.0) (2026-04-20)
+
+
+### Features
+
+* optimize CI cache and Dockerfile for faster builds ([b440cb8](https://github.com/mbabic84/ainstruct-mcp/commit/b440cb85096b4a35e7c7495e3e9946bd9cd39a94))
+
 ## [4.22.1](https://github.com/mbabic84/ainstruct-mcp/compare/v4.22.0...v4.22.1) (2026-04-20)
 
 

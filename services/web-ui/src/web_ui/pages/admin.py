@@ -244,12 +244,14 @@ async def admin_page(offset: int = 0, sort_by: str = "", sort_desc: bool = False
                     {
                         "icon": "analytics",
                         "color": "primary",
+                        "tooltip": "View user stats",
                         "on_click": handle_stats,
                         "label_field": "username",
                     },
                     {
                         "icon": "block",
                         "color": "warning",
+                        "tooltip": "Toggle active status",
                         "on_click": handle_toggle_active,
                         "label_field": "username",
                         "extra_fields": {"is_active": "is_active"},
@@ -260,6 +262,7 @@ async def admin_page(offset: int = 0, sort_by: str = "", sort_desc: bool = False
                     {
                         "icon": "admin_panel_settings",
                         "color": "purple",
+                        "tooltip": "Change superuser role",
                         "on_click": handle_toggle_superuser,
                         "label_field": "username",
                         "extra_fields": {"is_superuser": "is_superuser"},
@@ -270,6 +273,7 @@ async def admin_page(offset: int = 0, sort_by: str = "", sort_desc: bool = False
                     {
                         "icon": "delete",
                         "color": "negative",
+                        "tooltip": "Delete user",
                         "on_click": handle_delete_user,
                         "label_field": "username",
                         "confirm": True,

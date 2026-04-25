@@ -137,6 +137,7 @@ def add_table_action_buttons(
                 for btn in buttons:
                     icon = btn.get("icon", "add")
                     color = btn.get("color", "primary")
+                    tooltip = btn.get("tooltip")
                     id_field = btn.get("id_field", "id")
                     label_field = btn.get("label_field", "label")
                     extra_fields = btn.get("extra_fields") or {}
@@ -148,6 +149,12 @@ def add_table_action_buttons(
                     extra = ""
                     for key, field in extra_fields.items():
                         extra += f", {key}: props.row.{field}"
+
+                    # allow button to run client-side javascript before emitting the event
+                    # e.g. btn can provide "client_js": "navigator.clipboard.writeText(props.row.id);"
+                    client_js = btn.get("client_js", "")
+                    if client_js and not client_js.strip().endswith(";"):
+                        client_js = client_js + ";"
 
                     def make_handler(
                         handler,
@@ -198,8 +205,12 @@ def add_table_action_buttons(
                         else None
                     )
 
-                    ui.button().props(f"icon={icon} flat round color={color}").on(
+                    js = f"(e) => {{ e.stopPropagation(); {client_js or ''} emit({{ id: props.row.{id_field}, label: props.row.{label_field}{extra} }}) }}"
+                    button = ui.button().props(f"icon={icon} flat round color={color}")
+                    if tooltip:
+                        button.tooltip(tooltip)
+                    button.on(
                         "click",
-                        js_handler=f"""(e) => {{ e.stopPropagation(); emit({{ id: props.row.{id_field}, label: props.row.{label_field}{extra} }}) }}""",
+                        js_handler=js,
                         handler=handler,
                     )

@@ -201,12 +201,14 @@ def _render_pat_table(api_client, pats, sort_by: str = "", sort_desc: bool = Fal
             {
                 "icon": "refresh",
                 "color": "warning",
+                "tooltip": "Rotate PAT",
                 "on_click": rotate_pat,
                 "extra_fields": {"is_active": "is_active"},
             },
             {
                 "icon": "delete",
                 "color": "grey-8",
+                "tooltip": "Delete PAT",
                 "on_click": delete_pat,
                 "confirm": True,
                 "confirm_message": "This will permanently remove the token. This action cannot be undone.",
@@ -408,12 +410,14 @@ def _render_cat_table(api_client, cats, sort_by: str = "", sort_desc: bool = Fal
             {
                 "icon": "refresh",
                 "color": "warning",
+                "tooltip": "Rotate CAT",
                 "on_click": rotate_cat,
                 "extra_fields": {"is_active": "is_active"},
             },
             {
                 "icon": "delete",
                 "color": "grey-8",
+                "tooltip": "Delete CAT",
                 "on_click": delete_cat,
                 "confirm": True,
                 "confirm_message": "This will permanently remove the token. This action cannot be undone.",

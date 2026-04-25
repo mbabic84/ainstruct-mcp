@@ -23,6 +23,10 @@ RUN --mount=type=cache,target=/root/.cache/uv \
 COPY --chown=appuser:appgroup packages/ ./packages/
 COPY --chown=appuser:appgroup services/ ./services/
 
+# Install all workspace packages and their console scripts after sources are available.
+RUN --mount=type=cache,target=/root/.cache/uv \
+    uv sync --frozen --no-dev --all-packages
+
 # Runtime stage - inherits everything from base, no extra installs needed
 FROM base AS runtime
 

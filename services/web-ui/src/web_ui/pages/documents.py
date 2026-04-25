@@ -144,8 +144,23 @@ async def documents_page(
                         "actions",
                         [
                             {
+                                "icon": "content_copy",
+                                "color": "primary",
+                                "tooltip": "Copy document ID",
+                                "client_js": "navigator.clipboard.writeText(props.row.id)",
+                                "label_field": "title",
+                            },
+                            {
+                                "icon": "file_copy",
+                                "color": "primary",
+                                "tooltip": "Copy document title",
+                                "client_js": "navigator.clipboard.writeText(props.row.title)",
+                                "label_field": "title",
+                            },
+                            {
                                 "icon": "delete",
                                 "color": "negative",
+                                "tooltip": "Delete document",
                                 "on_click": handle_delete,
                                 "label_field": "title",
                                 "confirm": True,

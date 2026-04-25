@@ -120,8 +120,23 @@ async def collections_page(sort_by: str = "", sort_desc: bool = False):
                         "actions",
                         [
                             {
+                                "icon": "content_copy",
+                                "color": "primary",
+                                "tooltip": "Copy collection ID",
+                                "client_js": "navigator.clipboard.writeText(props.row.id)",
+                                "label_field": "name",
+                            },
+                            {
+                                "icon": "file_copy",
+                                "color": "primary",
+                                "tooltip": "Copy collection name",
+                                "client_js": "navigator.clipboard.writeText(props.row.name)",
+                                "label_field": "name",
+                            },
+                            {
                                 "icon": "delete",
                                 "color": "negative",
+                                "tooltip": "Delete collection",
                                 "on_click": handle_delete,
                                 "label_field": "name",
                                 "confirm": True,

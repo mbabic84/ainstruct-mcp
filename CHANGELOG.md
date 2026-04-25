@@ -1,3 +1,10 @@
+# [4.24.0](https://github.com/mbabic84/ainstruct-mcp/compare/v4.23.1...v4.24.0) (2026-04-25)
+
+
+### Features
+
+* **web-ui): add Documents action buttons; chore(deps:** upgrade workspace dependencies to latest\n\n- Add copy-id and copy-title action buttons to Documents table\n- Add tooltips for actions and reuse shared helper\n- Bump dependency constraints and refresh uv.lock\n\nVerification: uv lock --upgrade, uv sync --all-packages, ./scripts/test.sh (237 tests passed)\n\nTime: 2026-04-26T01:06:37+02:00 ([634ad9e](https://github.com/mbabic84/ainstruct-mcp/commit/634ad9efaf4de5da6d2b8440e7dc18a46f3cc534))
+
 ## [4.23.1](https://github.com/mbabic84/ainstruct-mcp/compare/v4.23.0...v4.23.1) (2026-04-20)
 
 
